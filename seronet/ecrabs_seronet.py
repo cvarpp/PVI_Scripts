@@ -5,6 +5,7 @@ import datetime
 from dateutil import parser
 from dateutil.relativedelta import relativedelta
 from bisect import bisect_left
+import sys
 
 # Priority does not use CRF or CPT
 
@@ -38,6 +39,12 @@ def get_catalog_lot_exp(coll_date, material, lot_log):
 
 
 if __name__ == '__main__':
+    output_fname = 'tmp'
+    if len(sys.argv) != 2:
+        print("usage: python ecrabs_seronet.py output_file_name")
+        exit(1)
+    else:
+        output_fname = sys.argv[1]
     script_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Scripts/'
     script_input = script_folder + 'input/'
     script_output = script_folder + 'output/'
@@ -856,7 +863,7 @@ if __name__ == '__main__':
             add_to['Vial Warnings'].append('')
             add_to['Vial Modifiers'].append('')
 
-    writer = pd.ExcelWriter('~/The Mount Sinai Hospital/Simon Lab - Processing Team/Task D4 P4 (PRIORITY) WIP.xlsx') # Name of Output File
+    writer = pd.ExcelWriter('~/The Mount Sinai Hospital/Simon Lab - Processing Team/{}.xlsx'.format(output_fname)) # Name of Output File
     for sname, df in future_output.items():
         # print(sname)
         # print()
