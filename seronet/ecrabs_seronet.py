@@ -7,8 +7,6 @@ from dateutil.relativedelta import relativedelta
 from bisect import bisect_left
 import sys
 
-# Priority does not use CRF or CPT
-
 def process_lots():
     lots = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - Processing Team/Data Sample Collection Form.xlsx', sheet_name='Lot # Sheet')
     lot_log = {}
@@ -278,10 +276,6 @@ if __name__ == '__main__':
             missing_info['PBMC Vial Count'].append(vial_count)
     mit_days = [0, 30, 60, 90, 180, 300, 540, 720]
     pri_months = [0, 6, 12]
-    # header_1 = ['', '']
-    # for i in range(1,9):
-        # header_1.extend(['Visit {}'.format(i), '', ''])
-    # header_2 = ['Cohort', 'Seronet Participant ID'] + ['Volume of  Serum Collected (mL)', 'PBMCs concentration per ml (x10^6)', '# of 1 vials'] * 8
     data = {'Cohort': [], 'SERONET ID': [], 'Days from Index': [], 'Vaccine': [], '1st Dose Date': [], 'Days to 1st': [], '2nd Dose Date': [], 'Days to 2nd': [], 'Boost Vaccine': [], 'Boost Date': [], 'Days to Boost': [], 'Participant ID': [], 'Date': [], 'Post-Baseline': [], 'Sample ID': [], 'Visit Type': [], 'Qualitative': [], 'Quantitative': [], 'Spike endpoint': [], 'AUC': [], 'Log2AUC': [], 'Volume of Serum Collected (mL)': [], 'PBMC concentration per mL (x10^6)': [], '# of PBMC vials': [], 'coll_time': [], 'rec_time': [], 'proc_time': [], 'serum_freeze_time': [], 'cell_freeze_time': [], 'proc_inits': [], 'viability': [], 'cpt_vol': [], 'sst_vol': [], 'proc_comment': []}
     short_window = 14
     long_window = 21
@@ -377,7 +371,6 @@ if __name__ == '__main__':
         if start_idx > 0:
             start_idx -= 1
         samples = samples[start_idx:] # This is our messy "remove all but one pre-index sample"
-        # samples_to_write = [participant_study[participant], seronet_id]
         one_in_window = False
         for date_, sample_id, visit_type, result, result_new in samples:
             include = False
@@ -400,7 +393,6 @@ if __name__ == '__main__':
                         times.pop(0)
                         break
                     else:
-                        # samples_to_write.extend(['No Visit', 'No Visit', 'No Visit'])
                         times.pop(0) # Hopefully we're TIM and we missed the baseline
                 elif type(index_date) == datetime.date:
                     if abs(int((index_date + timediff - date_).days)) <= window:
@@ -556,17 +548,6 @@ if __name__ == '__main__':
         if type(vial_count) == str or (type(vial_count) == float and pd.isna(vial_count)):
             print(sample_id, vial_count, " PBMCs is not formatted well. Please fix")
         for _, mat_row in df.iterrows():
-            # if type(serum_vol) == str or (type(serum_vol) == float and pd.isna(serum_vol)):
-            #     print(sample_id, serum_vol, " is not formatted well. Please fix")
-            # elif serum_vol > 0 and (mat_row['Stype'] == 'Serum' or mat_row['Stype'] == 'Both'):
-            #     add_to['Participant ID'].append(participant)
-            #     add_to['Sample ID'].append(sample_id)
-            #     add_to['Date'].append(row['Date'])
-            #     add_to['Biospecimen_ID'].append(serum_id)
-            #     add_to['Equipment_ID'].append(mat_row['Equipment_ID'])
-            #     add_to['Equipment_Type'].append(mat_row['Equipment_Type'])
-            #     add_to['Equipment_Calibration_Due_Date'].append(mat_row['Equipment_Calibration_Due_Date'])
-            #     add_to['Comments'].append(mat_row['Comments'])
             if type(vial_count) == str or (type(vial_count) == float and pd.isna(vial_count)):
                 # print(sample_id, vial_count, " PBMCs is not formatted well. Please fix")
                 continue
@@ -588,20 +569,6 @@ if __name__ == '__main__':
         df = necessities_df[sec]
         add_to = future_output[sec]
         for _, mat_row in df.iterrows():
-            # if type(serum_vol) == str or (type(serum_vol) == float and pd.isna(serum_vol)):
-            #     print(sample_id, serum_vol, " is not formatted well. Please fix")
-            # elif row['Volume of Serum Collected (mL)'] > 0 and (mat_row['Stype'] == 'Serum' or mat_row['Stype'] == 'Both'):
-            #     add_to['Participant ID'].append(participant)
-            #     add_to['Sample ID'].append(sample_id)
-            #     add_to['Date'].append(row['Date'])
-            #     add_to['Biospecimen_ID'].append(serum_id)
-            #     cname = mat_row['Consumable_Name']
-            #     add_to['Consumable_Name'].append(cname)
-            #     odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], cname, lot_log)
-            #     add_to['Consumable_Catalog_Number'].append(cat)
-            #     add_to['Consumable_Lot_Number'].append(lot)
-            #     add_to['Consumable_Expiration_Date'].append(exp)
-            #     add_to['Comments'].append('')
             if type(vial_count) == str or (type(vial_count) == float and pd.isna(vial_count)):
                 # print(sample_id, vial_count, " serum is not formatted well. Please fix")
                 continue
@@ -626,20 +593,6 @@ if __name__ == '__main__':
         df = necessities_df[sec]
         add_to = future_output[sec]
         for _, mat_row in df.iterrows():
-            # if type(serum_vol) == str or (type(serum_vol) == float and pd.isna(serum_vol)):
-            #     print(sample_id, serum_vol, " is not formatted well. Please fix")
-            # elif row['Volume of Serum Collected (mL)'] > 0 and (mat_row['Stype'] == 'Serum' or mat_row['Stype'] == 'Both'):
-            #     add_to['Participant ID'].append(participant)
-            #     add_to['Sample ID'].append(sample_id)
-            #     add_to['Date'].append(row['Date'])
-            #     add_to['Biospecimen_ID'].append(serum_id)
-            #     rname = mat_row['Reagent_Name']
-            #     add_to['Reagent_Name'].append(rname)
-            #     odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], rname, lot_log)
-            #     add_to['Reagent_Catalog_Number'].append(cat)
-            #     add_to['Reagent_Lot_Number'].append(lot)
-            #     add_to['Reagent_Expiration_Date'].append(exp)
-            #     add_to['Comments'].append('')
             if type(vial_count) == str or (type(vial_count) == float and pd.isna(vial_count)):
                 # print(sample_id, vial_count, " serum is not formatted well. Please fix")
                 continue
@@ -845,7 +798,6 @@ if __name__ == '__main__':
         '''
         # ship_cols = ['Participant ID', 'Sample ID', 'Date', 'Study ID', 'Current Label', 'Material Type', 'Volume', 'Volume Unit', 'Volume Estimate', 'Vial Type', 'Vial Warnings', 'Vial Modifiers']
         sec = 'Shipping Manifest'
-        # df = necessities_df[sec] # This isn't needed, since shipping manifest has no lot number
         add_to = future_output[sec]
         study_id = 'LP003'
         if type(serum_vol) != str and not (type(serum_vol) == float and pd.isna(serum_vol)) and serum_vol > 0:
@@ -863,13 +815,8 @@ if __name__ == '__main__':
             add_to['Vial Warnings'].append('')
             add_to['Vial Modifiers'].append('')
 
-    writer = pd.ExcelWriter('~/The Mount Sinai Hospital/Simon Lab - Processing Team/{}.xlsx'.format(output_fname)) # Name of Output File
+    writer = pd.ExcelWriter('~/The Mount Sinai Hospital/Simon Lab - Processing Team/{}.xlsx'.format(output_fname))
     for sname, df in future_output.items():
-        # print(sname)
-        # print()
-        # for k, vs in df.items():
-        #     print(k, len(vs))
-        # print()
         pd.DataFrame(df).to_excel(writer, sheet_name=sname, index=False)
     writer.save()
     report.to_excel(script_output + 'SERONET_In_Window_Data_biospecimen_companion.xlsx', index=False)
