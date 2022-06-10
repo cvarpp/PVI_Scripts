@@ -73,8 +73,6 @@ if __name__ == '__main__':
 
     CRF = "Controlled-Rate Freezer"
 
-    newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
-    newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
     iris_data = pd.read_excel(iris_folder + 'Participant Tracking - IRIS.xlsx', sheet_name='Main Project', header=4).dropna(subset=['Participant ID'])
     iris_data['Participant ID'] = iris_data['Participant ID'].apply(lambda val: val.strip().upper())
@@ -109,16 +107,6 @@ if __name__ == '__main__':
                 participant_samples[participant] = []
                 participant_study[participant] = 'PRIORITY'
         if participant in participant_samples.keys():
-            if str(sample[newCol]).strip().upper() == "NEGATIVE":
-                sample[newCol2] = "Negative"
-            if pd.isna(sample[newCol2]):
-                result_new = '-'
-            elif type(sample[newCol2]) == int:
-                result_new = sample[newCol2]
-            elif str(sample[newCol2]).strip().upper() == "NEGATIVE":
-                result_new = 1.
-            else:
-                result_new = sample[newCol2]
             try:
                 sample_date = parser.parse(str(sample['Date Collected'])).date()
                 if sample_date > last_date or sample_date < first_date:
@@ -145,30 +133,8 @@ if __name__ == '__main__':
                 elif iris_data.loc[participant, 'First Dose Date'].date() < sample_date and (
                     iris_data.loc[participant, 'Second Dose Date'].date() >= sample_date):
                     continue
-            participant_samples[participant].append((sample_date,sample_id, sample[visit_type], sample[newCol], result_new))
+            participant_samples[participant].append((sample_date,sample_id))
             samples_of_interest.add(sample_id)
-    # There's no way we need to pull research data...
-    research_samples_1 = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Reports & Data/From Krammer Lab/Master Sheet.xlsx', sheet_name='Inputs')
-    research_samples_2 = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Reports & Data/From Krammer Lab/Master Sheet.xlsx', sheet_name='Archive')
-    research_results = {}
-    for _, sample in research_samples_1.iterrows():
-        sample_id = str(sample['Sample ID']).strip().upper()
-        spike = sample['Spike endpoint']
-        if str(spike).strip().upper() == "NEG":
-            auc = 1.
-        else:
-            auc = sample['AUC']
-        if not pd.isna(auc):
-            research_results[sample_id] = [spike, auc]
-    for _, sample in research_samples_2.iterrows():
-        sample_id = str(sample['Sample ID']).strip().upper()
-        spike = sample['Spike endpoint']
-        if str(spike).strip().upper() == "NEG":
-            auc = 1.
-        else:
-            auc = sample['AUC']
-        if not pd.isna(auc) and sample_id not in research_results.keys():
-            research_results[sample_id] = [spike, auc]
     bsl2p_samples = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - Processing Team/Data Sample Collection Form.xlsx', sheet_name='BSL2+ Samples', header=1)
     bsl2_samples = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - Processing Team/Data Sample Collection Form.xlsx', sheet_name='BSL2 Samples')
     shared_samples = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - Sample Tracking/Released Samples/Collaborator Samples Tracker.xlsx', sheet_name='Released Samples')
@@ -276,7 +242,7 @@ if __name__ == '__main__':
             missing_info['PBMC Vial Count'].append(vial_count)
     mit_days = [0, 30, 60, 90, 180, 300, 540, 720]
     pri_months = [0, 6, 12]
-    data = {'Cohort': [], 'SERONET ID': [], 'Days from Index': [], 'Vaccine': [], '1st Dose Date': [], 'Days to 1st': [], '2nd Dose Date': [], 'Days to 2nd': [], 'Boost Vaccine': [], 'Boost Date': [], 'Days to Boost': [], 'Participant ID': [], 'Date': [], 'Post-Baseline': [], 'Sample ID': [], 'Visit Type': [], 'Qualitative': [], 'Quantitative': [], 'Spike endpoint': [], 'AUC': [], 'Log2AUC': [], 'Volume of Serum Collected (mL)': [], 'PBMC concentration per mL (x10^6)': [], '# of PBMC vials': [], 'coll_time': [], 'rec_time': [], 'proc_time': [], 'serum_freeze_time': [], 'cell_freeze_time': [], 'proc_inits': [], 'viability': [], 'cpt_vol': [], 'sst_vol': [], 'proc_comment': []}
+    data = {'Cohort': [], 'SERONET ID': [], 'Days from Index': [], 'Vaccine': [], '1st Dose Date': [], 'Days to 1st': [], '2nd Dose Date': [], 'Days to 2nd': [], 'Boost Vaccine': [], 'Boost Date': [], 'Days to Boost': [], 'Participant ID': [], 'Date': [], 'Post-Baseline': [], 'Sample ID': [], 'Volume of Serum Collected (mL)': [], 'PBMC concentration per mL (x10^6)': [], '# of PBMC vials': [], 'coll_time': [], 'rec_time': [], 'proc_time': [], 'serum_freeze_time': [], 'cell_freeze_time': [], 'proc_inits': [], 'viability': [], 'cpt_vol': [], 'sst_vol': [], 'proc_comment': []}
     short_window = 14
     long_window = 21
     participant_data = {}
@@ -372,7 +338,7 @@ if __name__ == '__main__':
             start_idx -= 1
         samples = samples[start_idx:] # This is our messy "remove all but one pre-index sample"
         one_in_window = False
-        for date_, sample_id, visit_type, result, result_new in samples:
+        for date_, sample_id in samples:
             include = False
             while True: # Very slapdash
                 if len(times) == 0:
@@ -444,21 +410,6 @@ if __name__ == '__main__':
             data['Date'].append(date_)
             data['Post-Baseline'].append((date_ - baseline).days)
             data['Sample ID'].append(sample_id)
-            data['Visit Type'].append(visit_type)
-            data['Qualitative'].append(result)
-            data['Quantitative'].append(result_new)
-            if sample_id in research_results.keys():
-                res = research_results[sample_id]
-            else:
-                res = ['-', '-']
-            if res[1] == '-':
-                data['Log2AUC'].append('-')
-            elif float(res[1]) == 0.:
-                data['Log2AUC'].append(0.)
-            else:
-                data['Log2AUC'].append(np.log2(res[1]))
-            data['Spike endpoint'].append(res[0])
-            data['AUC'].append(res[1])
             unknown = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', 'Processing Data Unavailable']
             if sample_id in sample_info.keys():
                 serum_volume, pbmc_conc, vial_count, coll_time, rec_time, proc_time, serum_freeze_time, cell_freeze_time, proc_inits, viability, cpt_vol, sst_vol, comment = sample_info[sample_id]
