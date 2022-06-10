@@ -348,10 +348,10 @@ if __name__ == '__main__':
             except:
                 participant_data[participant]['2nd Dose Date'] = mars_data.loc[participant, 'Vaccine #2 Date']
             try:
-                participant_data[participant]['Boost Date'] = mars_data.loc[participant, 'Additional Vaccinations'].date()
+                participant_data[participant]['Boost Date'] = mars_data.loc[participant, '3rd Vaccine'].date()
             except:
-                participant_data[participant]['Boost Date'] = mars_data.loc[participant, 'Additional Vaccinations']
-            participant_data[participant]['Boost Vaccine'] = mars_data.loc[participant, 'Additional Vaccine Type ']
+                participant_data[participant]['Boost Date'] = mars_data.loc[participant, '3rd Vaccine']
+            participant_data[participant]['Boost Vaccine'] = mars_data.loc[participant, '3rd Vaccine Type ']
         elif participant_study[participant] == 'PRIORITY':
             seronet_id = "14_P{}".format(samples[0][1])
             index_date = baseline
