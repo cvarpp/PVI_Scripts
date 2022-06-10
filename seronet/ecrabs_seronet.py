@@ -38,6 +38,9 @@ def get_catalog_lot_exp(coll_date, material, lot_log):
 
 
 if __name__ == '__main__':
+    script_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Scripts/'
+    script_input = script_folder + 'input/'
+    script_output = script_folder + 'output/'
 
     equip_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Equipment_ID', 'Equipment_Type', 'Equipment_Calibration_Due_Date', 'Comments']
     consum_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Consumable_Name', 'Consumable_Catalog_Number', 'Consumable_Lot_Number', 'Consumable_Expiration_Date', 'Comments']
@@ -58,7 +61,7 @@ if __name__ == '__main__':
     last_date = parser.parse('12/31/2021').date()
 
     ecrabs_sheets = ['Equipment', 'Consumables', 'Reagent', 'Aliquot', 'Biospecimen', 'Shipping Manifest']
-    necessities_df = pd.read_excel('input/ECRAB_SERONET.xlsx', sheet_name=None)
+    necessities_df = pd.read_excel(script_input + 'ECRAB_SERONET.xlsx', sheet_name=None)
 
     lot_log = process_lots()
 
@@ -861,5 +864,5 @@ if __name__ == '__main__':
         # print()
         pd.DataFrame(df).to_excel(writer, sheet_name=sname, index=False)
     writer.save()
-    report.to_excel('output/SERONET_In_Window_Data_biospecimen_companion.xlsx', index=False)
+    report.to_excel(script_output + 'SERONET_In_Window_Data_biospecimen_companion.xlsx', index=False)
 

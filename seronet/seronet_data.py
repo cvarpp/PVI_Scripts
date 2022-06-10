@@ -11,6 +11,8 @@ import pickle
 import sys
 
 if __name__ == '__main__':
+    script_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Scripts/'
+    script_output = script_folder + 'output/'
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
@@ -188,7 +190,7 @@ if __name__ == '__main__':
     short_window = 14
     long_window = 21
     participant_data = {}
-    with open('output/SERONET.csv', 'w+', newline='') as f:
+    with open(script_output + 'SERONET.csv', 'w+', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header_1)
         writer.writerow(header_2)
@@ -396,5 +398,5 @@ if __name__ == '__main__':
             if one_in_window:
                 writer.writerow(samples_to_write)
     report = pd.DataFrame(data)
-    report.to_excel('output/SERONET_In_Window_Data.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
+    report.to_excel(script_output + 'SERONET_In_Window_Data.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
 

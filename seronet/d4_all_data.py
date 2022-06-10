@@ -4,6 +4,8 @@ from datetime import date
 from dateutil import parser
 
 if __name__ == '__main__':
+    script_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Scripts/'
+    script_output = script_folder + 'output/'
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
@@ -256,5 +258,5 @@ if __name__ == '__main__':
             data['PBMC concentration per mL (x10^6)'].append(vols[1])
             data['# of PBMC vials'].append(vols[2])
     report = pd.DataFrame(data)
-    report.to_excel('output/all_D4.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
+    report.to_excel(script_output + 'all_D4.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
 
