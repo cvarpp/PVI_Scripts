@@ -53,10 +53,11 @@ if __name__ == '__main__':
     titan_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/TITAN/'
     mars_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/MARS/'
     
-    include_file = mars_folder + 'MARS for D4 Long.xlsx'
-    include_sheet = 'Source Short' # Participants to include
+    # include_file = mars_folder + 'MARS for D4 Long.xlsx'
+    # include_sheet = 'Source Short' # Participants to include
     
-    include_ppl = pd.read_excel(include_file, sheet_name=include_sheet)['Participant ID'].unique()
+    # include_ppl = pd.read_excel(include_file, sheet_name=include_sheet)['Participant ID'].unique()
+    include_ppl = []
     first_date = parser.parse('1/1/2021').date()
     last_date = parser.parse('12/31/2021').date()
 
@@ -98,10 +99,10 @@ if __name__ == '__main__':
         if len(sample_id) != 5:
             continue
         participant = str(sample['Participant ID']).strip().upper()
-        # if str(sample['Study']).strip().upper() == 'PRIORITY':
-        #     if participant not in participant_samples.keys():
-        #         participant_samples[participant] = []
-        #         participant_study[participant] = 'PRIORITY'
+        if str(sample['Study']).strip().upper() == 'PRIORITY':
+            if participant not in participant_samples.keys():
+                participant_samples[participant] = []
+                participant_study[participant] = 'PRIORITY'
         if participant in participant_samples.keys():
             if str(sample[newCol]).strip().upper() == "NEGATIVE":
                 sample[newCol2] = "Negative"
@@ -115,7 +116,7 @@ if __name__ == '__main__':
                 result_new = sample[newCol2]
             try:
                 sample_date = parser.parse(str(sample['Date Collected'])).date()
-                if sample_date > last_date:
+                if sample_date > last_date or sample_date < first_date:
                     continue
             except:
                 print(sample['Date Collected'])
@@ -855,7 +856,7 @@ if __name__ == '__main__':
             add_to['Vial Warnings'].append('')
             add_to['Vial Modifiers'].append('')
 
-    writer = pd.ExcelWriter('~/The Mount Sinai Hospital/Simon Lab - Processing Team/Task D4 P3 (MARS) WIP.xlsx') # Name of Output File
+    writer = pd.ExcelWriter('~/The Mount Sinai Hospital/Simon Lab - Processing Team/Task D4 P4 (PRIORITY) WIP.xlsx') # Name of Output File
     for sname, df in future_output.items():
         # print(sname)
         # print()
