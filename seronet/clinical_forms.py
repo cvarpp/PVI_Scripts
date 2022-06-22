@@ -29,19 +29,22 @@ if __name__ == '__main__':
     iris_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/IRIS/'
     titan_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/TITAN/'
     mars_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/MARS/'
+    priority_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/PRIORITY/'
 
     # include_file = iris_folder + 'IRIS for D4 Long.xlsx'
-    include_file = mars_folder + 'MARS for D4 Long.xlsx'
-    include_sheet = 'Source Short' # People to include
+    # include_file = mars_folder + 'MARS for D4 Long.xlsx'
+    include_file = priority_folder + 'PRIORITY for D4 Long.xlsx'
+    include_sheet = 'Biospecimen Ref' # People to include
     include_ppl = pd.read_excel(include_file, sheet_name=include_sheet)['Participant ID'].unique()
     participant_study = {}
     for participant in include_ppl:
-        participant_study[participant] = 'MARS' # once again, hacky
+        participant_study[participant] = 'PRIORITY' # once again, hacky
     first_date = parser.parse('1/1/2021').date()
     last_date = parser.parse('12/31/2021').date()
 
     # long_form = iris_folder + 'IRIS for D4 Long.xlsx'
-    long_form = mars_folder + 'MARS for D4 Long.xlsx'
+    # long_form = mars_folder + 'MARS for D4 Long.xlsx'
+    long_form = priority_folder + 'PRIORITY for D4 Long.xlsx'
     all_samples = pd.read_excel(long_form, sheet_name='Biospecimen Ref') # streamline this
     specimen_ids = all_samples['Biospecimen_ID'].unique() # samples to include 
     one_per = all_samples.drop_duplicates('Visit ID')
@@ -58,7 +61,7 @@ if __name__ == '__main__':
     future_output['Meds'] = {col: [] for col in meds_cols}
     future_output['Auto'] = {col: [] for col in auto_cols}
     future_output['Transplant'] = {col: [] for col in trans_cols}
-    future_output['Cancer'] = {col: [] for col in cancer_cols}
+    # future_output['Cancer'] = {col: [] for col in cancer_cols}
 
     current_input = {}
     current_input['Baseline'] = pd.read_excel(long_form, sheet_name='Baseline Info', keep_default_na=False).set_index('Research_Participant_ID')
@@ -67,8 +70,8 @@ if __name__ == '__main__':
     current_input['Meds'] = pd.read_excel(long_form, sheet_name='Medications', keep_default_na=False)
     # Refine this later for the multi-output
     # current_input['Transplant'] = pd.read_excel(long_form, sheet_name='Transplant-Specific', keep_default_na=False).set_index('Research_Participant_ID')
-    current_input['Cancer'] = pd.read_excel(long_form, sheet_name='Cancer-specific', keep_default_na=False).set_index('Research_Participant_ID')
-    print(current_input['Cancer'].head())
+    # current_input['Cancer'] = pd.read_excel(long_form, sheet_name='Cancer-specific', keep_default_na=False).set_index('Research_Participant_ID')
+    # print(current_input['Cancer'].head())
     current_input['Meds']['Reported'] = 'No'
     current_input['Vax']['Reported'] = 'No'
     current_input['COVID']['Reported'] = 'No'
@@ -173,7 +176,7 @@ if __name__ == '__main__':
         add_to['Visit_Number'].append(visit)
         if participant not in source_df['Participant ID'].unique():
             add_to['Vaccination_Status'].append('No vaccination event reported')
-            for col in covid_cols[4:-1]:
+            for col in vax_cols[4:-1]:
                 add_to[col].append('N/A')
             add_to['Comments'].append('')
         else:
@@ -323,8 +326,8 @@ if __name__ == '__main__':
                 add_to['Update'].append('No Update Reported')
             add_to['Comments'].append(source_df.loc[seronet_id, 'Comments'])
 
-    output_folder = mars_folder
-    writer = pd.ExcelWriter(output_folder + 'CLINICAL FORMS Task D4 P3 WIP.xlsx') # Output sheet
+    output_folder = priority_folder
+    writer = pd.ExcelWriter(output_folder + 'CLINICAL FORMS Task D4 P4 WIP.xlsx') # Output sheet
     for sname, df in future_output.items():
         print(sname)
         for k, vs in df.items():
