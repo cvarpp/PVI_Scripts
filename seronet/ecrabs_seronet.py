@@ -584,6 +584,8 @@ if __name__ == '__main__':
             add_to['Aliquot_Tube_Type_Lot_Number'].append(lot)
             add_to['Aliquot_Tube_Type_Expiration_Date'].append(exp)
             add_to['Comments'].append('')
+        else:
+            print("{} for {} has no serum".format(sample_id, participant))
         if not (type(vial_count) == str or (type(vial_count) == float and pd.isna(vial_count))):
             for i in range(min(int(vial_count), 2)):
                 add_to['Participant ID'].append(participant)
