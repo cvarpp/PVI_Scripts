@@ -1,23 +1,22 @@
 import pandas as pd
 import numpy as np
+import datetime
 from datetime import date
 from dateutil import parser
+import util
+import sys
+import pickle
 
-if __name__ == '__main__':
-    script_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Scripts/'
-    script_output = script_folder + 'output/'
+def pull_from_source():
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
-    iris_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/IRIS/'
-    iris_data = pd.read_excel(iris_folder + 'Participant Tracking - IRIS.xlsx', sheet_name='Main Project', header=4).dropna(subset=['Participant ID'])
+    iris_data = pd.read_excel(util.iris_folder + 'Participant Tracking - IRIS.xlsx', sheet_name='Main Project', header=4).dropna(subset=['Participant ID'])
     iris_data['Participant ID'] = iris_data['Participant ID'].apply(lambda val: val.strip().upper())
-    titan_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/TITAN/'
-    titan_data = pd.read_excel(titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Tracker', header=4).dropna(subset=['Umbrella Corresponding Participant ID'])
+    titan_data = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Tracker', header=4).dropna(subset=['Umbrella Corresponding Participant ID'])
     titan_data['Participant ID'] = titan_data['Umbrella Corresponding Participant ID'].apply(lambda val: val.strip().upper())
     visit_type = "Visit Type / Samples Needed"
-    mars_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/MARS/'
-    mars_data = pd.read_excel(mars_folder + 'MARS tracker.xlsx', sheet_name='Pt List').dropna(subset=['Participant ID'])
+    mars_data = pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name='Pt List').dropna(subset=['Participant ID'])
     mars_data['Participant ID'] = mars_data['Participant ID'].apply(lambda val: val.strip().upper())
     participants = [p for p in mars_data['Participant ID'].unique()] + [p for p in titan_data['Participant ID'].unique()] + [p for p in iris_data['Participant ID'].unique()]
     participant_study = {p: 'MARS' for p in mars_data['Participant ID'].unique()}
@@ -26,11 +25,11 @@ if __name__ == '__main__':
     mars_data.set_index('Participant ID', inplace=True)
     iris_data.set_index('Participant ID', inplace=True)
     titan_data.set_index('Participant ID', inplace=True)
-    samples = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - Sample Tracking/Sample Intake Log.xlsx', sheet_name='Sample Intake Log', header=6, dtype=str)
+    samples = pd.read_excel(util.intake, sheet_name='Sample Intake Log', header=util.header_intake, dtype=str)
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     samplesClean = samples.dropna(subset=['Participant ID'])
-    participant_samples = {participant: [] for participant in participants}
+    participant_samples = {participant: [] for participant in participants}# if str(participant).upper()[:4] != 'CITI'}
     for _, sample in samplesClean.iterrows():
         if len(str(sample['Sample ID'])) != 5:
             continue
@@ -51,10 +50,29 @@ if __name__ == '__main__':
             else:
                 result_new = sample[newCol2]
             try:
-                participant_samples[participant].append((parser.parse(str(sample['Date Collected'])).date(), sample['Sample ID'], sample[visit_type], sample[newCol], result_new))
+                sample_date = parser.parse(str(sample['Date Collected'])).date()
             except:
                 print(sample['Date Collected'])
-                participant_samples[participant].append((parser.parse('1/1/1900').date(), sample['Sample ID'], sample[visit_type], sample[newCol], result_new))
+                sample_date = parser.parse('1/1/1900').date()
+            #     continue # because we're in TIMP, we don't want dateless samples
+            # if participant_study[participant] == "MARS":
+            #     if type(mars_data.loc[participant, 'Vaccine #1 Date']) != datetime.datetime or (
+            #         type(mars_data.loc[participant, 'Vaccine #2 Date']) != datetime.datetime
+            #     ):
+            #         print("Try to find vaccine dates for ", participant)
+            #     elif mars_data.loc[participant, 'Vaccine #1 Date'].date() < sample_date and (
+            #          mars_data.loc[participant, 'Vaccine #2 Date'].date() >= sample_date):
+            #         continue
+            # if participant_study[participant] == "IRIS":
+            #     if type(iris_data.loc[participant, 'First Dose Date']) != datetime.datetime or (
+            #         type(iris_data.loc[participant, 'Second Dose Date']) != datetime.datetime
+            #     ):
+            #         print("Try to find vaccine dates for ", participant)
+            #     elif iris_data.loc[participant, 'First Dose Date'].date() < sample_date and (
+            #         iris_data.loc[participant, 'Second Dose Date'].date() >= sample_date):
+            #         continue
+            participant_samples[participant].append((sample_date, sample['Sample ID'], sample[visit_type], sample[newCol], result_new))
+            
     research_samples_1 = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Reports & Data/From Krammer Lab/Master Sheet.xlsx', sheet_name='Inputs')
     research_samples_2 = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Reports & Data/From Krammer Lab/Master Sheet.xlsx', sheet_name='Archive')
     research_results = {}
@@ -76,71 +94,85 @@ if __name__ == '__main__':
             auc = sample['AUC']
         if not pd.isna(auc) and sample_id not in research_results.keys():
             research_results[sample_id] = [spike, auc]
-    bsl2p_samples = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - Processing Team/Data Sample Collection Form.xlsx', sheet_name='BSL2+ Samples', header=1)
-    bsl2_samples = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - Processing Team/Data Sample Collection Form.xlsx', sheet_name='BSL2 Samples')
-    shared_samples = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - Sample Tracking/Released Samples/Collaborator Samples Tracker.xlsx', sheet_name='Released Samples')
+    bsl2p_samples = pd.read_excel(util.dscf, sheet_name='BSL2+ Samples', header=1)
+    bsl2_samples = pd.read_excel(util.dscf, sheet_name='BSL2 Samples')
+    shared_samples = pd.read_excel(util.shared_samples, sheet_name='Released Samples')
     no_pbmcs = set([str(sid).strip() for sid in shared_samples[shared_samples['Sample Type'] == 'PBMC']['Sample ID'].unique()])
     missing_info = {'Sample ID': [], 'Serum Volume': [], 'PBMC Conc': [], 'PBMC Vial Count': []}
-    sample_volumes = {}
-    for _, sample in bsl2p_samples.iterrows():
-        sample_id = str(sample['Sample ID']).strip()
-        try:
-            serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("mlML ").split()[0])
-        except:
+    if len(sys.argv) == 1 or sys.argv[1] != 'maintain_volumes':
+        sample_volumes = {}
+        for _, sample in bsl2p_samples.iterrows():
+            sample_id = str(sample['Sample ID']).strip()
             try:
-                serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("ulUL ").split()[0]) / 1000.
+                serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("mlML ").split()[0])
             except:
-                print(sample_id, sample['Total volume of serum (ml)'], type(sample['Total volume of serum (ml)']))
-                if type(sample['Total volume of serum (ml)']) == str:
-                    serum_volume = 0
-                else:
-                    serum_volume = sample['Total volume of serum (ml)']
-        if sample_id in no_pbmcs:
-            pbmc_conc = "N/A"
-            vial_count = "N/A"
-        else:
-            pbmc_conc = sample['# cells per aliquot']
-            vial_count = sample['# of aliquots frozen']
-            if (type(pbmc_conc) != float or pd.isna(pbmc_conc)) and type(pbmc_conc) != int:
-                pbmc_conc = "N/A"
-                vial_count = "N/A"
-        if not ((pd.isna(serum_volume) or serum_volume == 0) and (type(pbmc_conc) == str or pd.isna(pbmc_conc) or pbmc_conc == 0)):
-            sample_volumes[sample_id] = [serum_volume, pbmc_conc, vial_count]
-        else:
-            missing_info['Sample ID'].append(sample_id)
-            missing_info['Serum Volume'].append(serum_volume)
-            missing_info['PBMC Conc'].append(pbmc_conc)
-            missing_info['PBMC Vial Count'].append(vial_count)
-    for _, sample in bsl2_samples.iterrows():
-        sample_id = str(sample['Sample ID']).strip()
-        try:
-            serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("mlML ").split()[0])
-        except:
+                try:
+                    serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("ulUL ").split()[0]) / 1000.
+                except:
+                    print(sample_id, sample['Total volume of serum (ml)'], type(sample['Total volume of serum (ml)']))
+                    if type(sample['Total volume of serum (ml)']) == str:
+                        serum_volume = 0
+                    else:
+                        serum_volume = sample['Total volume of serum (ml)']
+            if type(serum_volume) != str and serum_volume > 4.5:
+                serum_volume = 4.5
+            if sample_id in no_pbmcs:
+                pbmc_conc = 0
+                vial_count = 0
+            else:
+                pbmc_conc = sample['# cells per aliquot']
+                vial_count = sample['# of aliquots frozen']
+                if (type(pbmc_conc) != float or pd.isna(pbmc_conc)) and type(pbmc_conc) != int:
+                    pbmc_conc = 0
+                    vial_count = 0
+            if type(vial_count) in [int, float] and vial_count > 2:
+                vial_count = 2
+            if not ((pd.isna(serum_volume) or serum_volume == 0) and (type(pbmc_conc) == str or pd.isna(pbmc_conc) or pbmc_conc == 0)):
+                sample_volumes[sample_id] = [serum_volume, pbmc_conc, vial_count]
+            else:
+                missing_info['Sample ID'].append(sample_id)
+                missing_info['Serum Volume'].append(serum_volume)
+                missing_info['PBMC Conc'].append(pbmc_conc)
+                missing_info['PBMC Vial Count'].append(vial_count)
+        for _, sample in bsl2_samples.iterrows():
+            sample_id = str(sample['Sample ID']).strip()
             try:
-                serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("ulUL ").split()[0]) / 1000.
+                serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("mlML ").split()[0])
             except:
-                print(sample_id, sample['Total volume of serum (ml)'], type(sample['Total volume of serum (ml)']))
-                if type(sample['Total volume of serum (ml)']) == str:
-                    serum_volume = 0
-                else:
-                    serum_volume = sample['Total volume of serum (ml)']
-        if sample_id in no_pbmcs:
-            pbmc_conc = "N/A"
-            vial_count = "N/A"
-        else:
-            pbmc_conc = sample['# cell per aliquot']
-            vial_count = sample['# of aliquots frozen']
-            if (type(pbmc_conc) != float or pd.isna(pbmc_conc)) and type(pbmc_conc) != int:
-                pbmc_conc = "N/A"
-                vial_count = "N/A"
-        if not pd.isna(serum_volume):
-            sample_volumes[sample_id] = [serum_volume, pbmc_conc, vial_count]
-        else:
-            missing_info['Sample ID'].append(sample_id)
-            missing_info['Serum Volume'].append(serum_volume)
-            missing_info['PBMC Conc'].append(pbmc_conc)
-            missing_info['PBMC Vial Count'].append(vial_count)
-    data = {'Cohort': [], 'Vaccine': [], '1st Dose Date': [], 'Days to 1st': [], '2nd Dose Date': [], 'Days to 2nd': [], 'Boost Vaccine': [], 'Boost Date': [], 'Days to Boost': [], 'Participant ID': [], 'Date': [], 'Post-Baseline': [], 'Sample ID': [], 'Visit Type': [], 'Qualitative': [], 'Quantitative': [], 'Spike endpoint': [], 'AUC': [], 'Log2AUC': [], 'Volume of Serum Collected (mL)': [], 'PBMC concentration per mL (x10^6)': [], '# of PBMC vials': []}
+                try:
+                    serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("ulUL ").split()[0]) / 1000.
+                except:
+                    print(sample_id, sample['Total volume of serum (ml)'], type(sample['Total volume of serum (ml)']))
+                    if type(sample['Total volume of serum (ml)']) == str:
+                        serum_volume = 0
+                    else:
+                        serum_volume = sample['Total volume of serum (ml)']
+            if type(serum_volume) != str and serum_volume > 4.5:
+                serum_volume = 4.5
+            if sample_id in no_pbmcs:
+                pbmc_conc = 0
+                vial_count = 0
+            else:
+                pbmc_conc = sample['# cell per aliquot']
+                vial_count = sample['# of aliquots frozen']
+                if (type(pbmc_conc) != float or pd.isna(pbmc_conc)) and type(pbmc_conc) != int:
+                    pbmc_conc = 0
+                    vial_count = 0
+            if type(vial_count) in [int, float] and vial_count > 2:
+                vial_count = 2
+            if not pd.isna(serum_volume):
+                sample_volumes[sample_id] = [serum_volume, pbmc_conc, vial_count]
+            else:
+                missing_info['Sample ID'].append(sample_id)
+                missing_info['Serum Volume'].append(serum_volume)
+                missing_info['PBMC Conc'].append(pbmc_conc)
+                missing_info['PBMC Vial Count'].append(vial_count)
+        with open(util.script_folder + "data/mit_volumes.pkl", "wb+") as f:
+            pickle.dump(sample_volumes, f)
+    else:
+        with open(util.script_folder + 'data/mit_volumes.pkl', 'rb') as f:
+            sample_volumes = pickle.load(f)
+    data = {'Cohort': [], 'Vaccine': [], '1st Dose Date': [], 'Days to 1st': [], '2nd Dose Date': [], 'Days to 2nd': [], 'Boost Vaccine': [], 'Boost Date': [], 'Days to Boost': [], 'Seronet ID': [], 'Participant ID': [], 'Date': [], 'Post-Baseline': [], 'Sample ID': [], 'Visit Type': [], 'Qualitative': [], 'Quantitative': [], 'Spike endpoint': [], 'AUC': [], 'Log2AUC': [], 'Volume of Serum Collected (mL)': [], 'PBMC concentration per mL (x10^6)': [], '# of PBMC vials': []}
     participant_data = {}
     for participant, samples in participant_samples.items():
         try:
@@ -231,6 +263,7 @@ if __name__ == '__main__':
             except:
                 data['Days to Boost'].append('')
             data['Boost Vaccine'].append(participant_data[participant]['Boost Vaccine'])
+            data['Seronet ID'].append(seronet_id)
             data['Participant ID'].append(participant)
             data['Date'].append(date_)
             data['Post-Baseline'].append((date_ - baseline).days)
@@ -258,5 +291,8 @@ if __name__ == '__main__':
             data['PBMC concentration per mL (x10^6)'].append(vols[1])
             data['# of PBMC vials'].append(vols[2])
     report = pd.DataFrame(data)
-    report.to_excel(script_output + 'all_D4.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
+    report.to_excel(util.unfiltered, index=False)
+    return report
 
+if __name__ == '__main__':
+    pull_from_source()
