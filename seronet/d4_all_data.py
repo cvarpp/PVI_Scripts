@@ -90,7 +90,7 @@ if __name__ == '__main__':
             try:
                 serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("ulUL ").split()[0]) / 1000.
             except:
-                print(serum_volume, type(serum_volume))
+                print(sample_id, sample['Total volume of serum (ml)'], type(sample['Total volume of serum (ml)']))
                 if type(sample['Total volume of serum (ml)']) == str:
                     serum_volume = 0
                 else:
@@ -119,11 +119,11 @@ if __name__ == '__main__':
             try:
                 serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("ulUL ").split()[0]) / 1000.
             except:
+                print(sample_id, sample['Total volume of serum (ml)'], type(sample['Total volume of serum (ml)']))
                 if type(sample['Total volume of serum (ml)']) == str:
                     serum_volume = 0
                 else:
                     serum_volume = sample['Total volume of serum (ml)']
-                print(serum_volume, type(serum_volume))
         if sample_id in no_pbmcs:
             pbmc_conc = "N/A"
             vial_count = "N/A"
@@ -200,10 +200,10 @@ if __name__ == '__main__':
             except:
                 participant_data[participant]['2nd Dose Date'] = mars_data.loc[participant, 'Vaccine #2 Date']
             try:
-                participant_data[participant]['Boost Date'] = mars_data.loc[participant, 'Additional Vaccinations'].date()
+                participant_data[participant]['Boost Date'] = mars_data.loc[participant, '3rd Vaccine'].date()
             except:
-                participant_data[participant]['Boost Date'] = mars_data.loc[participant, 'Additional Vaccinations']
-            participant_data[participant]['Boost Vaccine'] = mars_data.loc[participant, 'Additional Vaccine Type ']
+                participant_data[participant]['Boost Date'] = mars_data.loc[participant, '3rd Vaccine']
+            participant_data[participant]['Boost Vaccine'] = mars_data.loc[participant, '3rd Vaccine Type ']
         elif participant_study[participant] == 'PRIORITY':
             seronet_id = "14_P{}".format(samples[0][1])
             participant_data[participant]['Vaccine'] = ''
