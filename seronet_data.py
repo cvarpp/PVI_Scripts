@@ -9,22 +9,19 @@ from dateutil.relativedelta import relativedelta
 from bisect import bisect_left
 import pickle
 import sys
+import util
+from util import script_folder, script_output
 
 if __name__ == '__main__':
-    script_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Scripts/'
-    script_output = script_folder + 'output/'
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
-    iris_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/IRIS/'
-    iris_data = pd.read_excel(iris_folder + 'Participant Tracking - IRIS.xlsx', sheet_name='Main Project', header=4).dropna(subset=['Participant ID'])
+    iris_data = pd.read_excel(util.iris_folder + 'Participant Tracking - IRIS.xlsx', sheet_name='Main Project', header=4).dropna(subset=['Participant ID'])
     iris_data['Participant ID'] = iris_data['Participant ID'].apply(lambda val: val.strip().upper())
-    titan_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/TITAN/'
-    titan_data = pd.read_excel(titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Tracker', header=4).dropna(subset=['Umbrella Corresponding Participant ID'])
+    titan_data = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Tracker', header=4).dropna(subset=['Umbrella Corresponding Participant ID'])
     titan_data['Participant ID'] = titan_data['Umbrella Corresponding Participant ID'].apply(lambda val: val.strip().upper())
     visit_type = "Visit Type / Samples Needed"
-    mars_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/MARS/'
-    mars_data = pd.read_excel(mars_folder + 'MARS tracker.xlsx', sheet_name='Pt List').dropna(subset=['Participant ID'])
+    mars_data = pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name='Pt List').dropna(subset=['Participant ID'])
     mars_data['Participant ID'] = mars_data['Participant ID'].apply(lambda val: val.strip().upper())
     participants = [p for p in mars_data['Participant ID'].unique()] + [p for p in titan_data['Participant ID'].unique()] + [p for p in iris_data['Participant ID'].unique()]
     participant_study = {p: 'MARS' for p in mars_data['Participant ID'].unique()}
@@ -33,7 +30,7 @@ if __name__ == '__main__':
     mars_data.set_index('Participant ID', inplace=True)
     iris_data.set_index('Participant ID', inplace=True)
     titan_data.set_index('Participant ID', inplace=True)
-    samples = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - Sample Tracking/Sample Intake Log.xlsx', sheet_name='Sample Intake Log', header=6, dtype=str)
+    samples = pd.read_excel(util.intake, sheet_name='Sample Intake Log', header=util.header_intake, dtype=str)
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     samplesClean = samples.dropna(subset=['Participant ID'])
@@ -102,9 +99,9 @@ if __name__ == '__main__':
             auc = sample['AUC']
         if not pd.isna(auc) and sample_id not in research_results.keys():
             research_results[sample_id] = [spike, auc]
-    bsl2p_samples = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - Processing Team/Data Sample Collection Form.xlsx', sheet_name='BSL2+ Samples', header=1)
-    bsl2_samples = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - Processing Team/Data Sample Collection Form.xlsx', sheet_name='BSL2 Samples')
-    shared_samples = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - Sample Tracking/Released Samples/Collaborator Samples Tracker.xlsx', sheet_name='Released Samples')
+    bsl2p_samples = pd.read_excel(util.dscf, sheet_name='BSL2+ Samples', header=1)
+    bsl2_samples = pd.read_excel(util.dscf, sheet_name='BSL2 Samples')
+    shared_samples = pd.read_excel(util.shared_samples, sheet_name='Released Samples')
     no_pbmcs = set([str(sid).strip() for sid in shared_samples[shared_samples['Sample Type'] == 'PBMC']['Sample ID'].unique()])
     missing_info = {'Sample ID': [], 'Serum Volume': [], 'PBMC Conc': [], 'PBMC Vial Count': []}
     if len(sys.argv) == 1 or sys.argv[1] != 'maintain_volumes':
