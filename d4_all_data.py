@@ -52,25 +52,8 @@ def pull_from_source():
             try:
                 sample_date = parser.parse(str(sample['Date Collected'])).date()
             except:
-                print(sample['Date Collected'])
+                print(sample['Sample ID'], "has invalid date", sample['Date Collected'])
                 sample_date = parser.parse('1/1/1900').date()
-            #     continue # because we're in TIMP, we don't want dateless samples
-            # if participant_study[participant] == "MARS":
-            #     if type(mars_data.loc[participant, 'Vaccine #1 Date']) != datetime.datetime or (
-            #         type(mars_data.loc[participant, 'Vaccine #2 Date']) != datetime.datetime
-            #     ):
-            #         print("Try to find vaccine dates for ", participant)
-            #     elif mars_data.loc[participant, 'Vaccine #1 Date'].date() < sample_date and (
-            #          mars_data.loc[participant, 'Vaccine #2 Date'].date() >= sample_date):
-            #         continue
-            # if participant_study[participant] == "IRIS":
-            #     if type(iris_data.loc[participant, 'First Dose Date']) != datetime.datetime or (
-            #         type(iris_data.loc[participant, 'Second Dose Date']) != datetime.datetime
-            #     ):
-            #         print("Try to find vaccine dates for ", participant)
-            #     elif iris_data.loc[participant, 'First Dose Date'].date() < sample_date and (
-            #         iris_data.loc[participant, 'Second Dose Date'].date() >= sample_date):
-            #         continue
             participant_samples[participant].append((sample_date, sample['Sample ID'], sample[visit_type], sample[newCol], result_new))
             
     research_samples_1 = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Reports & Data/From Krammer Lab/Master Sheet.xlsx', sheet_name='Inputs')
@@ -109,7 +92,7 @@ def pull_from_source():
                 try:
                     serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("ulUL ").split()[0]) / 1000.
                 except:
-                    print(sample_id, sample['Total volume of serum (ml)'], type(sample['Total volume of serum (ml)']))
+                    print(sample_id, sample['Total volume of serum (ml)'], type(sample['Total volume of serum (ml)']), "is invalid")
                     if type(sample['Total volume of serum (ml)']) == str:
                         serum_volume = 0
                     else:
@@ -178,12 +161,12 @@ def pull_from_source():
         try:
             samples.sort(key=lambda x: x[0])
         except:
-            print(participant)
+            print(participant, "has samples that won't sort (see below)")
             print(samples)
             print()
             continue
         if len(samples) < 1:
-            print(participant)
+            print(participant, "has no samples")
             print()
             continue
         baseline = samples[0][0]

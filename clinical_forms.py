@@ -14,7 +14,7 @@ def specimenize(row):
     elif row['PBMC']:
         return "PBMC|Plasma"
     else:
-        print(row['Sample ID'], 'has nothing and probably should be dropped!')
+        print(row['Sample ID'], 'has neither serum nor plasma and probably should be dropped!')
         return "OOPS"
 
 if __name__ == '__main__':
@@ -250,7 +250,7 @@ if __name__ == '__main__':
                     else:
                         source_df.loc[idx, 'Reported'] = 'Partial'
             except:
-                print(participant, row['Treatment'])
+                print("Error processing treatment info for", participant, "taking", row['Treatment'])
         while len(add_to['Visit_Number']) < len(add_to['Treatment']):
             add_to['Research_Participant_ID'].append(seronet_id)
             add_to['Cohort'].append(study)
@@ -293,7 +293,6 @@ if __name__ == '__main__':
                     if source_df.loc[seronet_id, cropped_col] == "N/A":
                         add_to[col].append("N/A")
                     else:
-                        # print(source_df.loc[seronet_id, cropped_col], type(source_df.loc[seronet_id, cropped_col]))
                         add_to[col].append(int((source_df.loc[seronet_id, cropped_col].date() - index_date).days))
                 else:
                     add_to[col].append(source_df.loc[seronet_id, col])
@@ -316,7 +315,6 @@ if __name__ == '__main__':
                     if source_df.loc[seronet_id, cropped_col].lower() == "not reported":
                         add_to[col].append("Not Reported")
                     else:
-                        # print(source_df.loc[seronet_id, cropped_col], type(source_df.loc[seronet_id, cropped_col]))
                         add_to[col].append(int(source_df.loc[seronet_id, cropped_col]) - index_date.year)
                 else:
                     add_to[col].append(source_df.loc[seronet_id, col])

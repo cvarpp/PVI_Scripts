@@ -112,7 +112,7 @@ if __name__ == '__main__':
                 if sample_date > last_date or sample_date < first_date:
                     continue
             except:
-                print(sample['Date Collected'])
+                print(sample['Date Collected'], "for", participant, "is invalid for sample ID", sample_id)
                 sample_date = parser.parse('1/1/1900').date()
                 continue # because we're in TIMP, we don't want dateless samples
             if participant_study[participant] == "MARS":
@@ -202,7 +202,7 @@ if __name__ == '__main__':
             try:
                 serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("ulUL ").split()[0]) / 1000.
             except:
-                print(sample_id, sample['Total volume of serum (ml)'], type(serum_volume))
+                print(sample_id, sample['Total volume of serum (ml)'], type(sample['Total volume of serum (ml)']), "is invalid")
                 if type(sample['Total volume of serum (ml)']) == str:
                     serum_volume = 0
                 else:
@@ -250,12 +250,12 @@ if __name__ == '__main__':
         try:
             samples.sort(key=lambda x: x[0])
         except:
-            print(participant)
+            print(participant, "has samples that don't sort")
             print(samples)
             print()
             continue
         if len(samples) < 1:
-            print(participant)
+            print(participant, "has no samples")
             print()
             continue
         baseline = samples[0][0]
@@ -372,7 +372,7 @@ if __name__ == '__main__':
                     else:
                         break
                 else:
-                    print(index_date)
+                    print(index_date, "for", participant, "is invalid")
                     print()
                     for time in times:
                         pass
@@ -486,7 +486,7 @@ if __name__ == '__main__':
             live_cells = cell_count
             all_cells = '???'
             proc_comment = str(proc_comment) + '; cell count is not number, please fix'
-            print(sample_id, cell_count)
+            print(sample_id, "has invalid cell count:", cell_count)
         '''
         Equipment First
         '''
@@ -500,7 +500,6 @@ if __name__ == '__main__':
             print(sample_id, vial_count, " PBMCs is not formatted well. Please fix")
         for _, mat_row in df.iterrows():
             if type(vial_count) == str or (type(vial_count) == float and pd.isna(vial_count)):
-                # print(sample_id, vial_count, " PBMCs is not formatted well. Please fix")
                 continue
             elif row['# of PBMC vials'] > 0 and (mat_row['Stype'] == 'Cells' or mat_row['Stype'] == 'Both'):
                 add_to['Participant ID'].append(participant)
@@ -521,7 +520,6 @@ if __name__ == '__main__':
         add_to = future_output[sec]
         for _, mat_row in df.iterrows():
             if type(vial_count) == str or (type(vial_count) == float and pd.isna(vial_count)):
-                # print(sample_id, vial_count, " serum is not formatted well. Please fix")
                 continue
             elif row['# of PBMC vials'] > 0 and (mat_row['Stype'] == 'Cells' or mat_row['Stype'] == 'Both'):
                 add_to['Participant ID'].append(participant)
@@ -545,7 +543,6 @@ if __name__ == '__main__':
         add_to = future_output[sec]
         for _, mat_row in df.iterrows():
             if type(vial_count) == str or (type(vial_count) == float and pd.isna(vial_count)):
-                # print(sample_id, vial_count, " serum is not formatted well. Please fix")
                 continue
             elif row['# of PBMC vials'] > 0 and (mat_row['Stype'] == 'Cells' or mat_row['Stype'] == 'Both'):
                 add_to['Participant ID'].append(participant)

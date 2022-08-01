@@ -26,7 +26,7 @@ def filter_windows(unfiltered):
     data = {'Cohort': [], 'SERONET ID': [], 'Days from Index': [], 'Vaccine': [], '1st Dose Date': [], 'Days to 1st': [], '2nd Dose Date': [], 'Days to 2nd': [], 'Boost Vaccine': [], 'Boost Date': [], 'Days to Boost': [], 'Participant ID': [], 'Date': [], 'Post-Baseline': [], 'Sample ID': [], 'Visit Type': [], 'Qualitative': [], 'Quantitative': [], 'Spike endpoint': [], 'AUC': [], 'Volume of Serum Collected (mL)': [], 'PBMC concentration per mL (x10^6)': [], '# of PBMC vials': []}
     short_window = 14
     long_window = 21
-    with open(script_output + 'SERONET.csv', 'w+', newline='') as f:
+    with open(script_output + 'SERONET tmp.csv', 'w+', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header_1)
         writer.writerow(header_2)
@@ -34,7 +34,8 @@ def filter_windows(unfiltered):
             try:
                 samples = unfiltered[unfiltered['Participant ID'] == participant].sort_values(by='Date')
             except:
-                print(participant, "doesn't sort")
+                print(participant, "has samples that don't sort (see below)")
+                print(samples)
                 print()
                 continue
             if samples.shape[0] < 1:
@@ -115,7 +116,7 @@ def filter_windows(unfiltered):
                         else:
                             break
                     else:
-                        print(index_date)
+                        print(index_date, "for participant", participant, "is invalid")
                         print()
                         for _ in times:
                             samples_to_write.extend(['-', '-', '-'])
@@ -171,8 +172,10 @@ def filter_windows(unfiltered):
             if one_in_window:
                 writer.writerow(samples_to_write)
     report = pd.DataFrame(data)
-    report.to_excel(script_output + 'SERONET_In_Window_Data.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
+    report.to_excel(script_output + 'SERONET_In_Window_Data tmp.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
+    print("Participants with no index date:")
     print(no_index_date)
+    print()
 
 
 
