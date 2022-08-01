@@ -4,6 +4,8 @@ import datetime
 from datetime import date
 from dateutil import parser
 import util
+import sys
+import pickle
 
 def pull_from_source():
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
@@ -165,12 +167,12 @@ def pull_from_source():
                 missing_info['Serum Volume'].append(serum_volume)
                 missing_info['PBMC Conc'].append(pbmc_conc)
                 missing_info['PBMC Vial Count'].append(vial_count)
-        with open(script_folder + "data/mit_volumes.pkl", "wb+") as f:
+        with open(util.script_folder + "data/mit_volumes.pkl", "wb+") as f:
             pickle.dump(sample_volumes, f)
     else:
-        with open(script_folder + 'data/mit_volumes.pkl', 'rb') as f:
+        with open(util.script_folder + 'data/mit_volumes.pkl', 'rb') as f:
             sample_volumes = pickle.load(f)
-    data = {'Cohort': [], 'Vaccine': [], '1st Dose Date': [], 'Days to 1st': [], '2nd Dose Date': [], 'Days to 2nd': [], 'Boost Vaccine': [], 'Boost Date': [], 'Days to Boost': [], 'Participant ID': [], 'Date': [], 'Post-Baseline': [], 'Sample ID': [], 'Visit Type': [], 'Qualitative': [], 'Quantitative': [], 'Spike endpoint': [], 'AUC': [], 'Log2AUC': [], 'Volume of Serum Collected (mL)': [], 'PBMC concentration per mL (x10^6)': [], '# of PBMC vials': []}
+    data = {'Cohort': [], 'Vaccine': [], '1st Dose Date': [], 'Days to 1st': [], '2nd Dose Date': [], 'Days to 2nd': [], 'Boost Vaccine': [], 'Boost Date': [], 'Days to Boost': [], 'Seronet ID': [], 'Participant ID': [], 'Date': [], 'Post-Baseline': [], 'Sample ID': [], 'Visit Type': [], 'Qualitative': [], 'Quantitative': [], 'Spike endpoint': [], 'AUC': [], 'Log2AUC': [], 'Volume of Serum Collected (mL)': [], 'PBMC concentration per mL (x10^6)': [], '# of PBMC vials': []}
     participant_data = {}
     for participant, samples in participant_samples.items():
         try:
@@ -261,6 +263,7 @@ def pull_from_source():
             except:
                 data['Days to Boost'].append('')
             data['Boost Vaccine'].append(participant_data[participant]['Boost Vaccine'])
+            data['Seronet ID'].append(seronet_id)
             data['Participant ID'].append(participant)
             data['Date'].append(date_)
             data['Post-Baseline'].append((date_ - baseline).days)
