@@ -10,7 +10,6 @@ from bisect import bisect_left
 import pickle
 import sys
 import util
-from util import script_folder, script_output
 import argparse
 from d4_all_data import pull_from_source
 
@@ -22,11 +21,13 @@ def filter_windows(unfiltered):
     header_1 = ['', '']
     for i in range(1,9):
         header_1.extend(['Visit {}'.format(i), '', ''])
-    header_2 = ['Cohort', 'Seronet Participant ID'] + ['Volume of  Serum Collected (mL)', 'PBMCs concentration per ml (x10^6)', '# of 1 vials'] * 8
-    data = {'Cohort': [], 'SERONET ID': [], 'Days from Index': [], 'Vaccine': [], '1st Dose Date': [], 'Days to 1st': [], '2nd Dose Date': [], 'Days to 2nd': [], 'Boost Vaccine': [], 'Boost Date': [], 'Days to Boost': [], 'Participant ID': [], 'Date': [], 'Post-Baseline': [], 'Sample ID': [], 'Visit Type': [], 'Qualitative': [], 'Quantitative': [], 'Spike endpoint': [], 'AUC': [], 'Volume of Serum Collected (mL)': [], 'PBMC concentration per mL (x10^6)': [], '# of PBMC vials': []}
+    header_2 = ['Cohort', 'Seronet Participant ID'] + ['Volume of  Serum Collected (mL)', 'PBMCs concentration per ml (x10^6)', '# of PBMC vials'] * 8
+    
+    columns = ['Cohort', 'Seronet ID', 'Days from Index', 'Vaccine', '1st Dose Date', 'Days to 1st', '2nd Dose Date', 'Days to 2nd', 'Boost Vaccine', 'Boost Date', 'Days to Boost', 'Participant ID', 'Date', 'Post-Baseline', 'Sample ID', 'Visit Type', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_inits', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
+    data = {col: [] for col in columns}
     short_window = 14
     long_window = 21
-    with open(script_output + 'SERONET tmp.csv', 'w+', newline='') as f:
+    with open(util.report_form, 'w+', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(header_1)
         writer.writerow(header_2)
@@ -72,13 +73,9 @@ def filter_windows(unfiltered):
             if pd.isna(index_date):
                 no_index_date.append(participant)
                 continue
-            # try:
             index_date = pd.to_datetime(index_date).date()
-            # except:
-                # print(participant, index_date, "could not convert", type(index_date))
-                # continue
             samples['Clipped Post-Index'] = samples['Date'].apply(lambda val: int((val.date() - index_date).days))
-            samples = samples.drop_duplicates(subset=['Clipped Post-Index'])
+            samples = samples.sort_values(by='Date').drop_duplicates(subset=['Clipped Post-Index'], keep='last').drop('Clipped Post-Index', axis=1)
             samples_to_write = [cohort, seronet_id]
             one_in_window = False
             for _, row in samples.iterrows():
@@ -124,40 +121,12 @@ def filter_windows(unfiltered):
                         break
                 if not include:
                     continue
-                days_from_ind = int((row['Date'].date() - index_date).days)
-                sample_id = str(row['Sample ID']).strip()
                 data['Cohort'].append(cohort)
-                data['SERONET ID'].append(seronet_id)
+                data['Seronet ID'].append(seronet_id)
+                days_from_ind = int((row['Date'].date() - index_date).days)
                 data['Days from Index'].append(days_from_ind)
-                data['Vaccine'].append(row['Vaccine'])
-                data['1st Dose Date'].append(row['1st Dose Date'])
-                try:
-                    data['Days to 1st'].append(int((row['Date'] - data['1st Dose Date'][-1]).days))
-                except:
-                    data['Days to 1st'].append('')
-                data['2nd Dose Date'].append(row['2nd Dose Date'])
-                try:
-                    data['Days to 2nd'].append(int((row['Date'] - data['2nd Dose Date'][-1]).days))
-                except:
-                    data['Days to 2nd'].append('')
-                data['Boost Date'].append(row['Boost Date'])
-                try:
-                    data['Days to Boost'].append(int((row['Date'] - data['Boost Date'][-1]).days))
-                except:
-                    data['Days to Boost'].append('')
-                data['Boost Vaccine'].append(row['Boost Vaccine'])
-                data['Participant ID'].append(participant)
-                data['Date'].append(row['Date'])
-                data['Post-Baseline'].append((row['Date'] - baseline).days)
-                data['Sample ID'].append(sample_id)
-                data['Visit Type'].append(row['Visit Type'])
-                data['Qualitative'].append(row['Qualitative'])
-                data['Quantitative'].append(row['Quantitative'])
-                data['Spike endpoint'].append(row['Spike endpoint'])
-                data['AUC'].append(row['AUC'])
-                data['Volume of Serum Collected (mL)'].append(row['Volume of Serum Collected (mL)'])
-                data['PBMC concentration per mL (x10^6)'].append(row['PBMC concentration per mL (x10^6)'])
-                data['# of PBMC vials'].append(row['# of PBMC vials'])
+                for col in row.index.to_numpy()[2:]:
+                    data[col].append(row[col])
                 samples_to_write.extend([data['Volume of Serum Collected (mL)'], data['PBMC concentration per mL (x10^6)'], data['# of PBMC vials']])
             while len(times) > 0:
                 if cohort == 'PRIORITY':
@@ -172,17 +141,18 @@ def filter_windows(unfiltered):
             if one_in_window:
                 writer.writerow(samples_to_write)
     report = pd.DataFrame(data)
-    report.to_excel(script_output + 'SERONET_In_Window_Data tmp.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
+    report.to_excel(util.filtered, index=False)
     print("Participants with no index date:")
     print(no_index_date)
     print()
+    return report
 
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Make Seronet monthly sample report.')
-    parser.add_argument('-u', '--update', action='store_true')
-    args = parser.parse_args()
+    argParser = argparse.ArgumentParser(description='Make Seronet monthly sample report.')
+    argParser.add_argument('-u', '--update', action='store_true')
+    args = argParser.parse_args()
     if args.update:
         unfiltered = pull_from_source()
     else:

@@ -25,6 +25,9 @@ def pull_from_source():
     mars_data.set_index('Participant ID', inplace=True)
     iris_data.set_index('Participant ID', inplace=True)
     titan_data.set_index('Participant ID', inplace=True)
+    collection_log = pd.read_excel(util.intake, sheet_name='Collection Log')
+    collection_log['idx'] = collection_log['Sample ID'].apply(lambda val: str(val).strip().upper())
+    collection_log.set_index('idx', inplace=True)
     samples = pd.read_excel(util.intake, sheet_name='Sample Intake Log', header=util.header_intake, dtype=str)
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
@@ -54,7 +57,7 @@ def pull_from_source():
             except:
                 print(sample['Sample ID'], "has invalid date", sample['Date Collected'])
                 sample_date = parser.parse('1/1/1900').date()
-            participant_samples[participant].append((sample_date, sample['Sample ID'], sample[visit_type], sample[newCol], result_new))
+            participant_samples[participant].append((sample_date, sample['Sample ID'], sample[visit_type], sample[newCol], result_new, sample['Blood Collector Initials']))
             
     research_samples_1 = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Reports & Data/From Krammer Lab/Master Sheet.xlsx', sheet_name='Inputs')
     research_samples_2 = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Reports & Data/From Krammer Lab/Master Sheet.xlsx', sheet_name='Archive')
@@ -82,80 +85,104 @@ def pull_from_source():
     shared_samples = pd.read_excel(util.shared_samples, sheet_name='Released Samples')
     no_pbmcs = set([str(sid).strip() for sid in shared_samples[shared_samples['Sample Type'] == 'PBMC']['Sample ID'].unique()])
     missing_info = {'Sample ID': [], 'Serum Volume': [], 'PBMC Conc': [], 'PBMC Vial Count': []}
-    if len(sys.argv) == 1 or sys.argv[1] != 'maintain_volumes':
-        sample_volumes = {}
-        for _, sample in bsl2p_samples.iterrows():
-            sample_id = str(sample['Sample ID']).strip()
+    sample_info = {}
+    for _, sample in bsl2p_samples.iterrows():
+        sample_id = str(sample['Sample ID']).strip().upper()
+        try:
+            serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("mlML ").split()[0])
+        except:
             try:
-                serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("mlML ").split()[0])
+                serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("ulUL ").split()[0]) / 1000.
             except:
-                try:
-                    serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("ulUL ").split()[0]) / 1000.
-                except:
-                    print(sample_id, sample['Total volume of serum (ml)'], type(sample['Total volume of serum (ml)']), "is invalid")
-                    if type(sample['Total volume of serum (ml)']) == str:
-                        serum_volume = 0
-                    else:
-                        serum_volume = sample['Total volume of serum (ml)']
-            if type(serum_volume) != str and serum_volume > 4.5:
-                serum_volume = 4.5
-            if sample_id in no_pbmcs:
+                print(sample_id, sample['Total volume of serum (ml)'], type(sample['Total volume of serum (ml)']), "is not valid")
+                if type(sample['Total volume of serum (ml)']) == str:
+                    serum_volume = 0
+                else:
+                    serum_volume = sample['Total volume of serum (ml)']
+        if type(serum_volume) != str and serum_volume > 4.5:
+            serum_volume = 4.5
+        if sample_id in no_pbmcs:
+            pbmc_conc = 0
+            vial_count = 0
+        else:
+            pbmc_conc = sample['# cells per aliquot']
+            vial_count = sample['# of aliquots frozen']
+            if (type(pbmc_conc) != float or pd.isna(pbmc_conc)) and type(pbmc_conc) != int:
                 pbmc_conc = 0
                 vial_count = 0
-            else:
-                pbmc_conc = sample['# cells per aliquot']
-                vial_count = sample['# of aliquots frozen']
-                if (type(pbmc_conc) != float or pd.isna(pbmc_conc)) and type(pbmc_conc) != int:
-                    pbmc_conc = 0
-                    vial_count = 0
-            if type(vial_count) in [int, float] and vial_count > 2:
-                vial_count = 2
-            if not ((pd.isna(serum_volume) or serum_volume == 0) and (type(pbmc_conc) == str or pd.isna(pbmc_conc) or pbmc_conc == 0)):
-                sample_volumes[sample_id] = [serum_volume, pbmc_conc, vial_count]
-            else:
-                missing_info['Sample ID'].append(sample_id)
-                missing_info['Serum Volume'].append(serum_volume)
-                missing_info['PBMC Conc'].append(pbmc_conc)
-                missing_info['PBMC Vial Count'].append(vial_count)
-        for _, sample in bsl2_samples.iterrows():
-            sample_id = str(sample['Sample ID']).strip()
+        if type(vial_count) in [int, float] and vial_count > 2:
+            vial_count = 2
+        if sample_id in collection_log.index:
+            coll_time = collection_log.loc[sample_id, 'Time Collected']
+        else:
+            coll_time = '?'
+
+
+        rec_time = sample['Time Received']
+        proc_time = '???'
+        serum_freeze_time = sample['Time put in -80: SERUM']
+        cell_freeze_time = sample['Time put in -80: PBMC']
+        proc_inits = sample['Processed by (initials)']
+        viability = sample['% Viability']
+        cpt_vol = sample['CPT/EDTA VOL']
+        sst_vol = sample['SST VOL']
+        comment = sample['Comments']
+
+        if not ((pd.isna(serum_volume) or serum_volume == 0) and (type(pbmc_conc) == str or pd.isna(pbmc_conc) or pbmc_conc == 0)):
+            sample_info[sample_id] = [serum_volume, pbmc_conc, vial_count, coll_time, rec_time, proc_time, serum_freeze_time, cell_freeze_time, proc_inits, viability, cpt_vol, sst_vol, comment]
+        else:
+            missing_info['Sample ID'].append(sample_id)
+            missing_info['Serum Volume'].append(serum_volume)
+            missing_info['PBMC Conc'].append(pbmc_conc)
+            missing_info['PBMC Vial Count'].append(vial_count)
+    for _, sample in bsl2_samples.iterrows():
+        sample_id = str(sample['Sample ID']).strip().upper()
+        try:
+            serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("mlML ").split()[0])
+        except:
             try:
-                serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("mlML ").split()[0])
+                serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("ulUL ").split()[0]) / 1000.
             except:
-                try:
-                    serum_volume = float(str(sample['Total volume of serum (ml)']).strip().strip("ulUL ").split()[0]) / 1000.
-                except:
-                    print(sample_id, sample['Total volume of serum (ml)'], type(sample['Total volume of serum (ml)']))
-                    if type(sample['Total volume of serum (ml)']) == str:
-                        serum_volume = 0
-                    else:
-                        serum_volume = sample['Total volume of serum (ml)']
-            if type(serum_volume) != str and serum_volume > 4.5:
-                serum_volume = 4.5
-            if sample_id in no_pbmcs:
+                print(sample_id, sample['Total volume of serum (ml)'], type(sample['Total volume of serum (ml)']), "is invalid")
+                if type(sample['Total volume of serum (ml)']) == str:
+                    serum_volume = 0
+                else:
+                    serum_volume = sample['Total volume of serum (ml)']
+        if type(serum_volume) != str and serum_volume > 4.5:
+            serum_volume = 4.5
+        if sample_id in no_pbmcs:
+            pbmc_conc = 0
+            vial_count = 0
+        else:
+            pbmc_conc = sample['# cell per aliquot']
+            vial_count = sample['# of aliquots frozen']
+            if (type(pbmc_conc) != float or pd.isna(pbmc_conc)) and type(pbmc_conc) != int:
                 pbmc_conc = 0
                 vial_count = 0
-            else:
-                pbmc_conc = sample['# cell per aliquot']
-                vial_count = sample['# of aliquots frozen']
-                if (type(pbmc_conc) != float or pd.isna(pbmc_conc)) and type(pbmc_conc) != int:
-                    pbmc_conc = 0
-                    vial_count = 0
-            if type(vial_count) in [int, float] and vial_count > 2:
-                vial_count = 2
-            if not pd.isna(serum_volume):
-                sample_volumes[sample_id] = [serum_volume, pbmc_conc, vial_count]
-            else:
-                missing_info['Sample ID'].append(sample_id)
-                missing_info['Serum Volume'].append(serum_volume)
-                missing_info['PBMC Conc'].append(pbmc_conc)
-                missing_info['PBMC Vial Count'].append(vial_count)
-        with open(util.script_folder + "data/mit_volumes.pkl", "wb+") as f:
-            pickle.dump(sample_volumes, f)
-    else:
-        with open(util.script_folder + 'data/mit_volumes.pkl', 'rb') as f:
-            sample_volumes = pickle.load(f)
-    data = {'Cohort': [], 'Vaccine': [], '1st Dose Date': [], 'Days to 1st': [], '2nd Dose Date': [], 'Days to 2nd': [], 'Boost Vaccine': [], 'Boost Date': [], 'Days to Boost': [], 'Seronet ID': [], 'Participant ID': [], 'Date': [], 'Post-Baseline': [], 'Sample ID': [], 'Visit Type': [], 'Qualitative': [], 'Quantitative': [], 'Spike endpoint': [], 'AUC': [], 'Log2AUC': [], 'Volume of Serum Collected (mL)': [], 'PBMC concentration per mL (x10^6)': [], '# of PBMC vials': []}
+        if type(vial_count) in [int, float] and vial_count > 2:
+            vial_count = 2
+        if sample_id in collection_log.index:
+            coll_time = collection_log.loc[sample_id, 'Time Collected']
+        else:
+            coll_time = sample['Time collected']
+        rec_time = sample['Time Received']
+        proc_time = sample['Time Started Processing']
+        serum_freeze_time = sample['Time put in -80: SERUM']
+        cell_freeze_time = sample['Time put in -80: PBMC']
+        proc_inits = sample['Processed by (initials)'] # is this our best column?
+        viability = sample['% Viability']
+        cpt_vol = sample['CPT/EDTA VOL']
+        sst_vol = sample['SST VOL']
+        comment = sample['COMMENTS']
+        if not ((pd.isna(serum_volume) or serum_volume == 0) and (type(pbmc_conc) == str or pd.isna(pbmc_conc) or pbmc_conc == 0)):
+            sample_info[sample_id] = [serum_volume, pbmc_conc, vial_count, coll_time, rec_time, proc_time, serum_freeze_time, cell_freeze_time, proc_inits, viability, cpt_vol, sst_vol, comment]
+        else:
+            missing_info['Sample ID'].append(sample_id)
+            missing_info['Serum Volume'].append(serum_volume)
+            missing_info['PBMC Conc'].append(pbmc_conc)
+            missing_info['PBMC Vial Count'].append(vial_count)
+    columns = ['Cohort', 'Seronet ID', 'Vaccine', '1st Dose Date', 'Days to 1st', '2nd Dose Date', 'Days to 2nd', 'Boost Vaccine', 'Boost Date', 'Days to Boost', 'Participant ID', 'Date', 'Post-Baseline', 'Sample ID', 'Visit Type', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_inits', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
+    data = {col: [] for col in columns}
     participant_data = {}
     for participant, samples in participant_samples.items():
         try:
@@ -226,7 +253,7 @@ def pull_from_source():
             participant_data[participant]['2nd Dose Date'] = ''
             participant_data[participant]['Boost Date'] = ''
             participant_data[participant]['Boost Vaccine'] = ''
-        for date_, sample_id, visit_type, result, result_new in samples:
+        for date_, sample_id, visit_type, result, result_new, coll_inits in samples:
             sample_id = str(sample_id).strip()
             data['Cohort'].append(participant_study[participant])
             data['Vaccine'].append(participant_data[participant]['Vaccine'])
@@ -266,13 +293,29 @@ def pull_from_source():
                 data['Log2AUC'].append(np.log2(res[1]))
             data['Spike endpoint'].append(res[0])
             data['AUC'].append(res[1])
-            if sample_id in sample_volumes.keys():
-                vols = sample_volumes[sample_id]
+            # TODO: Change sample_info to a dataframe and iterate through columns instead
+            unknown = ['?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', '?', 'Processing Data Unavailable']
+            if sample_id in sample_info.keys():
+                serum_volume, pbmc_conc, vial_count, coll_time, rec_time, proc_time, serum_freeze_time, cell_freeze_time, proc_inits, viability, cpt_vol, sst_vol, comment = sample_info[sample_id]
             else:
-                vols = ['?', '?', '?']
-            data['Volume of Serum Collected (mL)'].append(vols[0])
-            data['PBMC concentration per mL (x10^6)'].append(vols[1])
-            data['# of PBMC vials'].append(vols[2])
+                serum_volume, pbmc_conc, vial_count, coll_time, rec_time, proc_time, serum_freeze_time, cell_freeze_time, proc_inits, viability, cpt_vol, sst_vol, comment = unknown
+            if participant_study[participant] == 'PRIORITY':
+                pbmc_conc = 0 # May have to change to "N/A"
+                vial_count = 0 # May have to change to "N/A"
+            data['Volume of Serum Collected (mL)'].append(serum_volume)
+            data['PBMC concentration per mL (x10^6)'].append(pbmc_conc)
+            data['# of PBMC vials'].append(vial_count)
+            data['coll_inits'].append(coll_inits)
+            data['coll_time'].append(coll_time)
+            data['rec_time'].append(rec_time)
+            data['proc_time'].append(proc_time)
+            data['serum_freeze_time'].append(serum_freeze_time)
+            data['cell_freeze_time'].append(cell_freeze_time)
+            data['proc_inits'].append(proc_inits)
+            data['viability'].append(viability)
+            data['cpt_vol'].append(cpt_vol)
+            data['sst_vol'].append(sst_vol)
+            data['proc_comment'].append(comment)
     report = pd.DataFrame(data)
     report.to_excel(util.unfiltered, index=False)
     return report

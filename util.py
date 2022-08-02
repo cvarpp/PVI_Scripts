@@ -24,7 +24,12 @@ titan_folder = umbrella + 'TITAN/'
 mars_folder = umbrella + 'MARS/'
 
 script_folder = pvi + 'Scripts/'
+script_input = script_folder + 'input/'
 script_output = script_folder + 'output/'
-unfiltered = script_output + 'all_D4 tmp.xlsx'
+
+d4 = proc + 'D4 Sheets/'
+unfiltered = script_output + 'all_D4.xlsx'
+filtered = script_output + 'SERONET_In_Window_Data.xlsx'
+report_form = script_output + 'SERONET.csv'
 
 header_intake = 6
