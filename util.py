@@ -17,6 +17,8 @@ research = pvi + 'Reports & Data/From Krammer Lab/Master Sheet.xlsx'
 paris = clin_ops + 'PARIS/'
 paris_tracker = paris + 'Patient Tracking - PARIS.xlsx'
 paris_datasets = paris + 'Datasets/'
+reports = pvi + 'Reports & Data/'
+projects = reports + 'Projects/'
 
 
 iris_folder = umbrella + 'IRIS/'
