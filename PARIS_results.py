@@ -18,8 +18,8 @@ if __name__ == '__main__':
     paris_data['Participant ID'] = paris_data['Participant ID'].apply(lambda val: val.strip().upper())
     participants = paris_data['Participant ID'].unique()
     paris_data.set_index('Participant ID', inplace=True)
-    dems = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Reports & Data/Projects/PARIS/Demographics.xlsx').set_index('Subject ID')
-    samples = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - Sample Tracking/Sample Intake Log.xlsx', sheet_name='Sample Intake Log', header=6, dtype=str)
+    dems = pd.read_excel(ut.projects + 'PARIS/Demographics.xlsx').set_index('Subject ID')
+    samples = pd.read_excel(ut.tracking + 'Sample Intake Log.xlsx', sheet_name='Sample Intake Log', header=6, dtype=str)
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     samplesClean = samples.dropna(subset=['Participant ID'])
@@ -94,8 +94,8 @@ if __name__ == '__main__':
             except:
                 print(sample['Date Collected'])
                 participant_samples[participant].append((parser.parse('1/1/1900').date(), str(sample['Sample ID']).strip().upper(), sample[visit_type], sample[newCol], result_new))
-    research_samples_1 = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Reports & Data/From Krammer Lab/Master Sheet.xlsx', sheet_name='Inputs')
-    research_samples_2 = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Reports & Data/From Krammer Lab/Master Sheet.xlsx', sheet_name='Archive')
+    research_samples_1 = pd.read_excel(ut.research , sheet_name='Inputs')
+    research_samples_2 = pd.read_excel(ut.research , sheet_name='Archive')
     research_results = {}
     for _, sample in research_samples_1.iterrows():
         sample_id = str(sample['Sample ID']).strip().upper()
