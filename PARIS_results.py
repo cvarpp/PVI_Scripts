@@ -8,13 +8,13 @@ from datetime import date
 import datetime
 from dateutil import parser
 from openpyxl import load_workbook
+import util as ut
 
 if __name__ == '__main__':
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
-    paris_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/PARIS/'
-    paris_data = pd.read_excel(paris_folder + 'Patient Tracking - PARIS.xlsx', sheet_name='Subgroups', header=4)
+    paris_data = pd.read_excel(ut.paris + 'Patient Tracking - PARIS.xlsx', sheet_name='Subgroups', header=4)
     paris_data['Participant ID'] = paris_data['Participant ID'].apply(lambda val: val.strip().upper())
     participants = paris_data['Participant ID'].unique()
     paris_data.set_index('Participant ID', inplace=True)
@@ -56,7 +56,7 @@ if __name__ == '__main__':
             else:
                 rows['Date_{}'.format(i)].append('')
                 rows['SampleID_{}'.format(i)].append('')
-    pd.DataFrame(rows).to_excel(paris_folder + 'DataDump.xlsx', index=False)
+    pd.DataFrame(rows).to_excel(ut.paris + 'DataDump.xlsx', index=False)
     last_sample = {'Participant ID': [], 'Date': [], 'Sample ID': []}
     for participant, samples in participant_samples.items():
         try:
@@ -71,7 +71,7 @@ if __name__ == '__main__':
         else:
             last_sample['Date'].append('N/A')
             last_sample['Sample ID'].append('No baseline')
-    pd.DataFrame(last_sample).to_excel(paris_folder + 'LastSeen.xlsx', index=False)
+    pd.DataFrame(last_sample).to_excel(ut.paris + 'LastSeen.xlsx', index=False)
 
     participant_samples = {participant: [] for participant in participants}
     for _, sample in samplesClean.iterrows():
@@ -219,5 +219,5 @@ if __name__ == '__main__':
                 print(np.log2(res[1]))
                 exit(1)
     report = pd.DataFrame(data)
-    report.to_excel(paris_folder + 'datasets/all_results_{}.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
+    report.to_excel(ut.paris + 'datasets/all_results_{}.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
 
