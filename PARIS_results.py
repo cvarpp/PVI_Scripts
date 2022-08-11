@@ -9,8 +9,9 @@ import datetime
 from dateutil import parser
 from openpyxl import load_workbook
 import util as ut
+import argparse
 
-if __name__ == '__main__':
+def par_results():
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
@@ -221,3 +222,8 @@ if __name__ == '__main__':
     report = pd.DataFrame(data)
     report.to_excel(ut.paris + 'datasets/all_results_{}.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
 
+    argparser = argparse.ArgumentParser(description='Paris reporting generation')
+    argparser.add_argument('-u','--update', action='store_true')
+    argparser.add_argument('-o', '--output_file', action='store', default='tmp')
+  
+    par_results()
