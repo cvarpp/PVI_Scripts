@@ -222,6 +222,7 @@ def par_results():
     report = pd.DataFrame(data)
     report.to_excel(ut.paris + 'datasets/all_results_{}.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
 
+if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Paris reporting generation')
     argparser.add_argument('-u','--update', action='store_true')
     argparser.add_argument('-o', '--output_file', action='store', default='tmp')
