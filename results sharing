@@ -5,10 +5,24 @@
 
 import pandas as pd
 import numpy as np
+import pickle
+import csv
+import matplotlib.pyplot as plt
+import seaborn as sns
 from datetime import date
 import datetime
 from dateutil import parser
+import util as ut
 import sys
 import argparse
-import util
 
+home = os.path.expanduser('~') + '/'
+onedrive = home + 'The Mount Sinai Hospital/'
+tracking = onedrive + 'Simon Lab - Sample Tracking/'
+pvi = onedrive + 'Simon Lab - PVI - Personalized Virology Initiative/'
+intake = tracking + 'Sample Intake Log.xlsx'
+clin_ops = pvi + 'Clinical Research Study Operations/'
+paris = clin_ops + 'PARIS/'
+paris_tracker = paris + 'Patient Tracking - PARIS.xlsx'
+umbrella = clin_ops + 'Umbrella Viral Sample Collection Protocol/'
+umbrella_tracker = umbrella + 'Patient Tracker - Umbrella Virology Protocol.xlsx'
