@@ -26,3 +26,14 @@ paris = clin_ops + 'PARIS/'
 paris_tracker = paris + 'Patient Tracking - PARIS.xlsx'
 umbrella = clin_ops + 'Umbrella Viral Sample Collection Protocol/'
 umbrella_tracker = umbrella + 'Patient Tracker - Umbrella Virology Protocol.xlsx'
+
+# read excel is what infiles the information we want into a pandas DF
+# ut.paris_tracker leads directly too the filepath we need so it doesn't need an addition.
+ptrack = pd.read_excel( ut.paris_tracker , sheet_name='Main', header=8)
+# mars tracker doesn't have a quick path to the utlimate file path so it needs an addition 
+mtrack = pd.read_excel( ut.mars_folder + "MARS tracker.xlsx", sheet_name='Pt List', header=0 )
+#iris should look like MARS 
+itrack = pd.read_excel( ut.iris_folder + "", )
+#umbrella can look like MARS or you have above added "umbrella_tracker" as a var 
+# (that above addition will be removed at a later date)
+utrack =
