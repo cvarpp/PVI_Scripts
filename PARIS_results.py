@@ -11,7 +11,7 @@ from openpyxl import load_workbook
 import util as ut
 import argparse
 
-def par_results():
+def par_results(output):
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
@@ -220,11 +220,11 @@ def par_results():
                 print(np.log2(res[1]))
                 exit(1)
     report = pd.DataFrame(data)
-    report.to_excel(ut.paris + 'datasets/all_results_{}.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
+    report.to_excel(ut.paris + 'datasets/{}_{}.xlsx'.format(output, date.today().strftime("%m.%d.%y")), index=False)
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Paris reporting generation')
-    argparser.add_argument('-u','--update', action='store_true')
-    argparser.add_argument('-o', '--output_file', action='store', default='tmp')
-  
-    par_results()
+    argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="What would you like the file to be called")
+    arg = argparser.parse_args()
+
+    par_results(arg.output_file)
