@@ -32,7 +32,8 @@ def pull_from_source():
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     samplesClean = samples.dropna(subset=['Participant ID'])
-    participant_samples = {participant: [] for participant in participants}# if str(participant).upper()[:4] != 'CITI'}
+    participant_samples = {participant: [] for participant in participants}
+    submitted_key = pd.read_excel(util.clin_ops + 'Cross-Project/Seronet Task D4/Data/SERONET Key.xlsx', sheet_name='Source').drop_duplicates(subset=['Participant ID']).set_index('Participant ID')
     for _, sample in samplesClean.iterrows():
         if len(str(sample['Sample ID'])) != 5:
             continue
@@ -253,6 +254,11 @@ def pull_from_source():
             participant_data[participant]['2nd Dose Date'] = ''
             participant_data[participant]['Boost Date'] = ''
             participant_data[participant]['Boost Vaccine'] = ''
+        else:
+            print(participant, "is not in the study! They are in", participant_study[participant])
+            exit(1)
+        if participant in submitted_key.index:
+            seronet_id = submitted_key.loc[participant, 'Research_Participant_ID']
         for date_, sample_id, visit_type, result, result_new, coll_inits in samples:
             sample_id = str(sample_id).strip()
             data['Cohort'].append(participant_study[participant])

@@ -56,7 +56,8 @@ def filter_windows(unfiltered):
                 samples = samples[samples['Date'].apply(lambda val: pd.isna(d1) or val <= d1 or pd.isna(d2) or val > d2)]
             except:
                 print(participant, d1, d2, d3, "failed filter")
-                continue
+                if cohort != 'PRIORITY':
+                    continue
             if cohort == 'TITAN':
                 index_date = d3
             elif cohort in ['MARS', 'IRIS']:
