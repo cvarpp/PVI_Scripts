@@ -171,11 +171,16 @@ def paris_results(output):
                 else:
                     data['Log2AUC'].append(np.log2(float(res[1])))
             except:
-                print(res[1])
-                print(np.log2(res[1]))
+                print("Log transformation on {} for {} failed. Fatal error, exiting".format(res[1], sample_id))
                 exit(1)
     report = pd.DataFrame(data)
-    report.to_excel(util.paris + 'datasets/{}_{}.xlsx'.format(output, date.today().strftime("%m.%d.%y")), index=False)
+    output_filename = util.paris + 'datasets/{}_{}.xlsx'.format(output, date.today().strftime("%m.%d.%y"))
+    report.to_excel(output_filename, index=False)
+    print("PARIS report written to {}".format(output_filename))
+    print("{} samples from {} participants".format(
+        report.shape[0],
+        report['Participant ID'].unique().size
+    ))
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Paris reporting generation')

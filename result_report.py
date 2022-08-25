@@ -8,7 +8,10 @@ from dateutil import parser
 import util
 
 if __name__ == '__main__':
-    participants = [str(x).strip().upper() for x in pd.read_excel(util.script_input + 'results_of_interest.xlsx')['Participant ID']]
+    input_filename = util.script_input + 'results_of_interest.xlsx'
+    print("List of participant ids used from {}".format(input_filename))
+    participants = [str(x).strip().upper() for x in pd.read_excel(input_filename)['Participant ID']]
+    print("Pulling data for {} participants".format(len(participants)))
     samples = pd.read_excel(util.intake, sheet_name='Sample Intake Log', header=6, dtype=str)
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
@@ -81,4 +84,11 @@ if __name__ == '__main__':
             data['Spike endpoint'].append(res[0])
             data['AUC'].append(res[1])
     report = pd.DataFrame(data)
-    report.to_excel(util.script_output + 'results_{}.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
+    output_filename = util.script_output + 'results_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
+    report.to_excel(output_filename, index=False)
+    print("Pulled data for {} samples from {} out of {} participants".format(
+        report.shape[0],
+        report['Participant ID'].unique().size,
+        len(participants)
+    ))
+    print("Report written to {}".format(output_filename))
