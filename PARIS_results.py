@@ -5,7 +5,7 @@ from dateutil import parser
 import util
 import argparse
 
-def par_results(output):
+def paris_results(output):
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
@@ -221,4 +221,4 @@ if __name__ == '__main__':
     argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="What would you like the file to be called")
     arg = argparser.parse_args()
 
-    par_results(arg.output_file)
+    paris_results(arg.output_file)
