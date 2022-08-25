@@ -8,19 +8,19 @@ from datetime import date
 import datetime
 from dateutil import parser
 from openpyxl import load_workbook
-import util as ut
+import util
 import argparse
 
 def par_results(output):
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
-    paris_data = pd.read_excel(ut.paris + 'Patient Tracking - PARIS.xlsx', sheet_name='Subgroups', header=4)
+    paris_data = pd.read_excel(util.paris + 'Patient Tracking - PARIS.xlsx', sheet_name='Subgroups', header=4)
     paris_data['Participant ID'] = paris_data['Participant ID'].apply(lambda val: val.strip().upper())
     participants = paris_data['Participant ID'].unique()
     paris_data.set_index('Participant ID', inplace=True)
-    dems = pd.read_excel(ut.projects + 'PARIS/Demographics.xlsx').set_index('Subject ID')
-    samples = pd.read_excel(ut.tracking + 'Sample Intake Log.xlsx', sheet_name='Sample Intake Log', header=6, dtype=str)
+    dems = pd.read_excel(util.projects + 'PARIS/Demographics.xlsx').set_index('Subject ID')
+    samples = pd.read_excel(util.tracking + 'Sample Intake Log.xlsx', sheet_name='Sample Intake Log', header=6, dtype=str)
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     samplesClean = samples.dropna(subset=['Participant ID'])
@@ -57,7 +57,7 @@ def par_results(output):
             else:
                 rows['Date_{}'.format(i)].append('')
                 rows['SampleID_{}'.format(i)].append('')
-    pd.DataFrame(rows).to_excel(ut.paris + 'DataDump.xlsx', index=False)
+    pd.DataFrame(rows).to_excel(util.paris + 'DataDump.xlsx', index=False)
     last_sample = {'Participant ID': [], 'Date': [], 'Sample ID': []}
     for participant, samples in participant_samples.items():
         try:
@@ -72,7 +72,7 @@ def par_results(output):
         else:
             last_sample['Date'].append('N/A')
             last_sample['Sample ID'].append('No baseline')
-    pd.DataFrame(last_sample).to_excel(ut.paris + 'LastSeen.xlsx', index=False)
+    pd.DataFrame(last_sample).to_excel(util.paris + 'LastSeen.xlsx', index=False)
 
     participant_samples = {participant: [] for participant in participants}
     for _, sample in samplesClean.iterrows():
@@ -95,8 +95,8 @@ def par_results(output):
             except:
                 print(sample['Date Collected'])
                 participant_samples[participant].append((parser.parse('1/1/1900').date(), str(sample['Sample ID']).strip().upper(), sample[visit_type], sample[newCol], result_new))
-    research_samples_1 = pd.read_excel(ut.research , sheet_name='Inputs')
-    research_samples_2 = pd.read_excel(ut.research , sheet_name='Archive')
+    research_samples_1 = pd.read_excel(util.research , sheet_name='Inputs')
+    research_samples_2 = pd.read_excel(util.research , sheet_name='Archive')
     research_results = {}
     for _, sample in research_samples_1.iterrows():
         sample_id = str(sample['Sample ID']).strip().upper()
@@ -220,7 +220,7 @@ def par_results(output):
                 print(np.log2(res[1]))
                 exit(1)
     report = pd.DataFrame(data)
-    report.to_excel(ut.paris + 'datasets/{}_{}.xlsx'.format(output, date.today().strftime("%m.%d.%y")), index=False)
+    report.to_excel(util.paris + 'datasets/{}_{}.xlsx'.format(output, date.today().strftime("%m.%d.%y")), index=False)
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Paris reporting generation')
