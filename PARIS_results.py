@@ -5,6 +5,18 @@ from dateutil import parser
 import util
 import argparse
 
+def try_date(potential_date):
+    try:
+        return potential_date.date()
+    except:
+        return potential_date
+
+def try_datediff(start_date, end_date):
+    try:
+        return int((end_date - start_date).days)
+    except:
+        return ''
+
 def paris_results(output):
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
@@ -110,7 +122,12 @@ def paris_results(output):
             auc = sample['AUC']
         if not pd.isna(auc) and sample_id not in research_results.keys():
             research_results[sample_id] = [spike, auc]
-    data = {'Participant ID': [], 'Date': [], 'Sample ID': [], 'Days to 1st Vaccine Dose': [], 'Days to Boost': [], 'Infection Timing': [], 'Qualitative': [], 'Quantitative': [], 'Spike endpoint': [], 'AUC': [], 'Log2AUC': [], 'Vaccine': [], 'Boost Vaccine': [], 'Days to Infection 1': [], 'Days to Infection 2': [], 'Infection Pre-Vaccine?': [], 'Number of SARS-CoV-2 Infections': [], 'Infection on Study': [], '1st Dose Date': [], '2nd Dose Date': [], 'Days to 2nd': [], 'Boost Date': [], 'Boost 2 Date': [], 'Days to Boost 2': [], 'Infection Date 1': [], 'Infection Date 2': [], 'Post-Baseline': [], 'Visit Type': [], 'Sex': [], 'Age': [], 'Race': [], 'Ethnicity: Hispanic or Latino': []}
+    col_order = ['Participant ID', 'Date', 'Sample ID', 'Days to 1st Vaccine Dose', 'Days to Boost', 'Infection Timing', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Vaccine Type', 'Boost Type', 'Days to Infection 1', 'Days to Infection 2', 'Infection Pre-Vaccine?', 'Number of SARS-CoV-2 Infections', 'Infection on Study', 'First Dose Date', 'Second Dose Date', 'Days to 2nd', 'Boost Date', 'Boost 2 Date', 'Days to Boost 2', 'Boost 2 Type', 'Infection 1 Date', 'Infection 2 Date', 'Post-Baseline', 'Visit Type', 'Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
+    data = {col: [] for col in col_order}
+    dem_cols = ['Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
+    shared_cols = ['Infection Pre-Vaccine?', 'Vaccine Type', 'Number of SARS-CoV-2 Infections', 'Infection Timing', 'Boost Type', 'Boost 2 Type']
+    date_cols = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Infection 1 Date', 'Infection 2 Date']
+    day_cols = ['Days to 1st Vaccine Dose', 'Days to 2nd', 'Days to Boost', 'Days to Boost 2', 'Days to Infection 1', 'Days to Infection 2']
     for participant, samples in participant_samples.items():
         try:
             samples.sort(key=lambda x: x[0])
@@ -125,70 +142,14 @@ def paris_results(output):
             if result == '-' or str(result).strip() == '' or (type(result) == float and pd.isna(result)):
                 continue
             sample_id = str(sample_id).strip()
-            data['Infection Pre-Vaccine?'].append(paris_data.loc[participant, 'Infection Pre-Vaccine?'])
-            data['Sex'].append(dems.loc[participant, 'Gender'])
-            data['Age'].append(dems.loc[participant, 'Age'])
-            data['Race'].append(dems.loc[participant, 'Race'])
-            data['Ethnicity: Hispanic or Latino'].append(dems.loc[participant, 'Ethnicity: Hispanic or Latino'])
-            data['Vaccine'].append(paris_data.loc[participant, 'Which Vaccine?'])
-            data['Number of SARS-CoV-2 Infections'].append(paris_data.loc[participant, 'Number of SARS-CoV-2 Infections'])
-            data['Infection Timing'].append(paris_data.loc[participant, 'Timing'])
-            data['Infection on Study'].append(str(paris_data.loc[participant, 'Infection 1 On Study?']).lower() == 'yes' or str(paris_data.loc[participant, 'Infection 2 On Study?']).lower() == 'yes')
-            try:
-                data['1st Dose Date'].append(paris_data.loc[participant, 'First Dose Date'].date())
-            except:
-                data['1st Dose Date'].append(paris_data.loc[participant, 'First Dose Date'])
-            try:
-                data['Days to 1st Vaccine Dose'].append(int((date_ - data['1st Dose Date'][-1]).days))
-            except:
-                data['Days to 1st Vaccine Dose'].append('')
-            try:
-                data['2nd Dose Date'].append(paris_data.loc[participant, 'Second Dose Date'].date())
-            except:
-                data['2nd Dose Date'].append(paris_data.loc[participant, 'Second Dose Date'])
-            try:
-                data['Days to 2nd'].append(int((date_ - data['2nd Dose Date'][-1]).days))
-            except:
-                data['Days to 2nd'].append('')
-            try:
-                if str(paris_data.loc[participant, 'Boosted?']).lower() == 'yes':
-                    data['Boost Date'].append(paris_data.loc[participant, 'Booster Date?'].date())
-                else:
-                    data['Boost Date'].append('')
-            except:
-                data['Boost Date'].append(paris_data.loc[participant, 'Booster Date?'])
-            try:
-                data['Days to Boost'].append(int((date_ - data['Boost Date'][-1]).days))
-            except:
-                data['Days to Boost'].append('')
-            try:
-                if str(paris_data.loc[participant, 'Yes?']).strip().lower() == 'yes':
-                    data['Boost 2 Date'].append(paris_data.loc[participant, '4th Dose Date'].date())
-                else:
-                    data['Boost 2 Date'].append('')
-            except:
-                data['Boost 2 Date'].append(paris_data.loc[participant, '4th Dose Date'])
-            try:
-                data['Days to Boost 2'].append(int((date_ - data['Boost 2 Date'][-1]).days))
-            except:
-                data['Days to Boost 2'].append('')
-            try:
-                data['Infection Date 1'].append(paris_data.loc[participant, 'Infection Date 1'].date())
-            except:
-                data['Infection Date 1'].append(paris_data.loc[participant, 'Infection Date 1'])
-            try:
-                data['Days to Infection 1'].append(int((date_ - data['Infection Date 1'][-1]).days))
-            except:
-                data['Days to Infection 1'].append('')
-            try:
-                data['Infection Date 2'].append(paris_data.loc[participant, 'Infection Date 2'].date())
-            except:
-                data['Infection Date 2'].append(paris_data.loc[participant, 'Infection Date 2'])
-            try:
-                data['Days to Infection 2'].append(int((date_ - data['Infection Date 2'][-1]).days))
-            except:
-                data['Days to Infection 2'].append('')
-            data['Boost Vaccine'].append(paris_data.loc[participant, 'Which Vaccine for Boost?'])
+            for dem_col in dem_cols:
+                data[dem_col].append(dems.loc[participant, dem_col])
+            for shared_col in shared_cols:
+                data[shared_col].append(paris_data.loc[participant, shared_col])
+            data['Infection on Study'].append(str(paris_data.loc[participant, 'Infection 1 On Study?']).strip().lower() == 'yes' or str(paris_data.loc[participant, 'Infection 2 On Study?']).strip().lower() == 'yes')
+            for date_col, day_col in zip(date_cols, day_cols):
+                data[date_col].append(try_date(paris_data.loc[participant, date_col]))
+                data[day_col].append(try_datediff(data[date_col][-1], date_))
             data['Participant ID'].append(participant)
             data['Date'].append(date_)
             data['Post-Baseline'].append((date_ - baseline).days)
