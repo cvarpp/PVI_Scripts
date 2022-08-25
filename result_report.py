@@ -2,21 +2,20 @@ import pandas as pd
 import numpy as np
 import pickle
 import csv
-import matplotlib.pyplot as plt
-import seaborn as sns
 from datetime import date
 import datetime
 from dateutil import parser
+import util as ut
 
 if __name__ == '__main__':
-    participants = [str(x).strip().upper() for x in pd.read_excel('input/results_of_interest.xlsx')['Participant ID']]
-    samples = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - Sample Tracking/Sample Intake Log.xlsx', sheet_name='Sample Intake Log', header=6, dtype=str)
+    participants = [str(x).strip().upper() for x in pd.read_excel(ut.script_input + 'results_of_interest.xlsx')['Participant ID']]
+    samples = pd.read_excel(ut.intake, sheet_name='Sample Intake Log', header=6, dtype=str)
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
     samplesClean = samples.dropna(subset=['Participant ID'])
-    research_samples_1 = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Reports & Data/From Krammer Lab/Master Sheet.xlsx', sheet_name='Inputs')
-    research_samples_2 = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Reports & Data/From Krammer Lab/Master Sheet.xlsx', sheet_name='Archive')
+    research_samples_1 = pd.read_excel(ut.research, sheet_name='Inputs')
+    research_samples_2 = pd.read_excel(ut.research, sheet_name='Archive')
     research_results = {}
     for _, sample in research_samples_1.iterrows():
         sample_id = str(sample['Sample ID']).strip()
@@ -82,4 +81,4 @@ if __name__ == '__main__':
             data['Spike endpoint'].append(res[0])
             data['AUC'].append(res[1])
     report = pd.DataFrame(data)
-    report.to_excel('output/results_{}.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
+    report.to_excel(ut.script_output + 'results_{}.xlsx'.format(date.today().strftime("%m.%d.%y")), index=False)
