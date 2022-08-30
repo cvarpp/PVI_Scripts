@@ -1,9 +1,7 @@
 import pandas as pd
-import numpy as np
 from datetime import date
 import datetime
 from dateutil import parser
-import sys
 import argparse
 import util
 from seronet_data import filter_windows

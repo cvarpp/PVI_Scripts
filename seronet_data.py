@@ -1,14 +1,7 @@
 import pandas as pd
-import numpy as np
-import pickle
 import csv
-from datetime import date
 import datetime
-from dateutil import parser
 from dateutil.relativedelta import relativedelta
-from bisect import bisect_left
-import pickle
-import sys
 import util
 import argparse
 from d4_all_data import pull_from_source
