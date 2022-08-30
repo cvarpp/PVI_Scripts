@@ -25,6 +25,8 @@ iris_folder = umbrella + 'IRIS/'
 titan_folder = umbrella + 'TITAN/'
 mars_folder = umbrella + 'MARS/'
 
+umbrella_tracker = umbrella + "Patient Tracker - Umbrella Virology Protocol.xlsx"
+
 script_folder = pvi + 'Scripts/'
 script_input = script_folder + 'input/'
 script_output = script_folder + 'output/'
