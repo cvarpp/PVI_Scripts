@@ -5,13 +5,12 @@ Created on Thu May 26 11:11:43 2022
 @author: bmona
 """
 import pandas as pd
-import util as ut
+import util as util
 import datetime as date
-datf = pd.DataFrame
 
 if __name__ == '__main__':
             
-    cam_archive = pd.read_excel(ut.clin_ops + 'CAM Clinic Schedule.xlsx', sheet_name=None)
+    cam_archive = pd.read_excel(util.clin_ops + 'CAM Clinic Schedule.xlsx', sheet_name=None)
        
     shared_header = ['Date', 'Time', 'Coordinator Initials', 'Patient Name', 'Study',
         'Visit Type / Samples Needed', 'New or Follow-up?', 'Participant ID',
@@ -24,8 +23,6 @@ if __name__ == '__main__':
     
     for sname, df_week in cam_archive.items():
         
-        y =+ 1
-        x = df_week
         # Returns a tuple of the dataset and compares position 0 of the tuple list to the #
         
         if df_week.shape[0] < 20:
@@ -40,7 +37,7 @@ if __name__ == '__main__':
         # check the numbered index location of the column adds 11 to it to form the range of the table (how wide the table of interest)
         # for the col_num and col (in parallel) assign numbers to columns in the data frame. then selecting based on if the col is a string and Date is in the column name.
         # only confusing part is the fact that you can do this all in one line
-        date_dfs = [x.iloc[:, col_num:col_num + 11] for col_num, col in enumerate(x.columns) if type(col) == str and 'Date' in col]
+        date_dfs = [df_week.iloc[:, col_num:col_num + 11] for col_num, col in enumerate(df_week.columns) if type(col) == str and 'Date' in col]
         
         #for the df that is data dfs
         
@@ -54,20 +51,16 @@ if __name__ == '__main__':
             
             sheet_dfs.append(df.dropna(subset=[sample_id_col]))
                          
-    cam_arch = pd.concat(sheet_dfs) 
-     
-    cam_arch.drop_duplicates(inplace=True)
+    cam_arch = pd.concat(sheet_dfs).drop_duplicates()
   
-    cam_arch.to_excel('c:/Users/bmona/Downloads/Rough Long-Form CAM Archive.xlsx', index=False)
+    cam_arch.to_excel(util.clin_ops + 'Long-Form CAM Archive.xlsx', index=False)
 
     print("Cam Archive Complete")
 
     #where the script lives:    
     
-    cam_active = pd.read_excel(ut.clin_ops + 'CAM Clinic Schedule.xlsx', sheet_name=None)
-
-    # cam_active = pd.read_excel("C:/Users/bmona/Downloads/CAM Clinic Schedule.xlsx", sheet_name=None, header=None)
-                   
+    cam_active = pd.read_excel(util.clin_ops + 'CAM Clinic Schedule.xlsx', sheet_name=None)
+                  
     shared_header = ['Date', 'Time', 'Coordinator Initials', 'Patient Name', 'Study',
         'Visit Type / Samples Needed', 'New or Follow-up?', 'Participant ID',
         'Sample ID', 'Processing location', 'Internal Notes']
@@ -113,31 +106,15 @@ if __name__ == '__main__':
             
             sheet_dfs.append(df.dropna(subset=[sample_id_col]))
 
-    cam_act = pd.concat(sheet_dfs)
-      
-    cam_act.drop_duplicates(inplace=True)
+    cam_act = pd.concat(sheet_dfs).drop_duplicates()
   
-    cam_act.to_excel('c:/Users/bmona/Downloads/Rough Long-Form CAM active.xlsx', index=False)
+    cam_act.to_excel(util.clin_ops + 'Long-Form CAM active.xlsx', index=False)
 
     print("Cam Active complete")
 
-    cam_both = pd.concat([cam_arch,cam_act])
+    cam_both = pd.concat([cam_arch,cam_act]).drop_duplicates()
 
-    cam_both.drop_duplicates(inplace=True)
-
-    cam_both.to_excel(ut.clin_ops + 'Long-Form CAM_both {}.xlsx'.format(date.today().strftime("%m.%d.%y"), index=False))
+    cam_both.to_excel(util.clin_ops + 'Long-Form CAM_both {}.xlsx'.format(date.today().strftime("%m.%d.%y"), index=False))
 
     print("Cam Calenders Compiled")
-
-# #%%
-# print(cam_active)
-# print(sheet_dfs)
-# print(date_dfs)
-# print(cam_archive)
-# print(cam_archive[sname])
-# print(cam_archive.items)
-# print(sname)
-# print(df_week)
-# print(type(cam_archive))
-# print(dict.keys(cam_archive))
-# print(dict.items(cam_archive))
+    print('filepath:Clinical Research Study Operations/Long-Form CAM_both {}'.format(date.today().strftime("%m.%d.%y")))
