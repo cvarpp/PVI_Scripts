@@ -5,8 +5,8 @@ Created on Thu May 26 11:11:43 2022
 @author: bmona
 """
 import pandas as pd
-import util as util
-import datetime as date
+import util
+from datetime import date
 
 if __name__ == '__main__':
             
