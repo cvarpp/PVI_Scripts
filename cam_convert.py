@@ -10,7 +10,7 @@ from datetime import date
 
 if __name__ == '__main__':
             
-    cam_archive = pd.read_excel(util.clin_ops + 'CAM Clinic Schedule.xlsx', sheet_name=None)
+    cam_archive = pd.read_excel(util.clin_ops + 'CAM Archive/CAM Archive.xlsx', sheet_name=None)
        
     shared_header = ['Date', 'Time', 'Coordinator Initials', 'Patient Name', 'Study',
         'Visit Type / Samples Needed', 'New or Follow-up?', 'Participant ID',
