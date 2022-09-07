@@ -1,7 +1,5 @@
 import pandas as pd
-from datetime import date
 import datetime
-from dateutil import parser
 import argparse
 import util
 from seronet_data import filter_windows
@@ -22,8 +20,6 @@ def process_lots():
             lot_log[mat].append((open_date, lot, exp, cat))
     return lot_log
 
-
-
 def get_catalog_lot_exp(coll_date, material, lot_log):
     unknown = ("Please enter into Lot Sheet", "-", "-", "-")
     if material not in lot_log.keys():
@@ -35,10 +31,24 @@ def get_catalog_lot_exp(coll_date, material, lot_log):
         else:
             return unknown
 
+def time_diff_wrapper(t_start, t_end, annot):
+    try:
+        time_diff = (pd.to_datetime(str(t_end)) - pd.to_datetime(str(t_start))) / datetime.timedelta(hours=1)
+        if pd.isna(time_diff):
+            time_diff = 'Missing'
+    except Exception as e:
+        if not (pd.isna(t_end) or pd.isna(t_start)):
+            print(annot, e)
+            print(t_start, type(t_start))
+            print(t_end, type(t_end))
+            print()
+        time_diff = 'Missing'
+    return time_diff
+
 def make_ecrabs(source, first_date='1/1/2021', last_date='12/31/2025', output_fname='tmp'):
     issues = set()
-    first_date = parser.parse(first_date).date()
-    last_date = parser.parse(last_date).date()
+    first_date = pd.to_datetime(first_date).date()
+    last_date = pd.to_datetime(last_date).date()
     equip_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Equipment_ID', 'Equipment_Type', 'Equipment_Calibration_Due_Date', 'Comments']
     consum_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Consumable_Name', 'Consumable_Catalog_Number', 'Consumable_Lot_Number', 'Consumable_Expiration_Date', 'Comments']
     reag_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Reagent_Name', 'Reagent_Catalog_Number', 'Reagent_Lot_Number', 'Reagent_Expiration_Date', 'Comments']
@@ -107,9 +117,9 @@ def make_ecrabs(source, first_date='1/1/2021', last_date='12/31/2025', output_fn
                     issues.add(sample_id)
         except Exception as e:
             print(e)
-            aliq_cells = '???'
+            aliq_cells = 'Missing'
             live_cells = cell_count
-            all_cells = '???'
+            all_cells = 'Missing'
             proc_comment = str(proc_comment) + '; cell count is not number, please fix'
             issues.add(sample_id)
             print(sample_id, "has invalid cell count:", cell_count)
@@ -250,7 +260,7 @@ def make_ecrabs(source, first_date='1/1/2021', last_date='12/31/2025', output_fn
             add_to['Biospecimen_ID'].append(serum_id)
             add_to['Biospecimen_Type'].append('Serum')
             add_to['Biospecimen_Collection_Date_Duration_From_Index'].append(row['Days from Index'])
-            add_to['Biospecimen_Processing_Batch_ID'].append('???') # decide how to handle
+            add_to['Biospecimen_Processing_Batch_ID'].append('Missing') # decide how to handle
             add_to['Initial_Volume_of_Biospecimen'].append(sst_vol)
             add_to['Biospecimen_Collection_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
             add_to['Biospecimen_Collector_Initials'].append(coll_inits)
@@ -266,50 +276,17 @@ def make_ecrabs(source, first_date='1/1/2021', last_date='12/31/2025', output_fn
             add_to['Storage_End_Time_at_2-8_Initials'].append('N/A')
             add_to['Biospecimen_Processing_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
             add_to['Biospecimen_Processor_Initials'].append(proc_inits)
-            try:
-                add_to['Biospecimen_Collection_to_Receipt_Duration'].append(
-                    (datetime.datetime.combine(date.min, parser.parse(rec_time).time()) -
-                    datetime.datetime.combine(date.min, parser.parse(coll_time).time())) / datetime.timedelta(hours=1))
-            except Exception as e:
-                if not (pd.isna(rec_time) or pd.isna(coll_time)):
-                    print("col to rec", e)
-                    print(coll_time, type(coll_time))
-                    print(rec_time, type(rec_time))
-                    print()
-                issues.add(sample_id)
-                add_to['Biospecimen_Collection_to_Receipt_Duration'].append('???')
-            try:
-                add_to['Biospecimen_Receipt_to_Storage_Duration'].append(
-                    (datetime.datetime.combine(date.min, parser.parse(serum_freeze_time).time()) -
-                    datetime.datetime.combine(date.min, parser.parse(rec_time).time())) / datetime.timedelta(hours=1))
-            except Exception as e:
-                if not (pd.isna(rec_time) or pd.isna(serum_freeze_time)):
-                    print("rec to store", e)
-                    print(serum_freeze_time, type(serum_freeze_time))
-                    print(rec_time, type(rec_time))
-                    print()
-                issues.add(sample_id)
-                add_to['Biospecimen_Receipt_to_Storage_Duration'].append('???')
+            time_diff = time_diff_wrapper(coll_time, rec_time, "coll to rec {}".format(sample_id))
+            add_to['Biospecimen_Collection_to_Receipt_Duration'].append(time_diff)
+            time_diff = time_diff_wrapper(rec_time, serum_freeze_time, "rec to serum store {}".format(sample_id))
+            add_to['Biospecimen_Receipt_to_Storage_Duration'].append(time_diff)
+            time_diff = time_diff_wrapper(coll_time, proc_time, "clot time {}".format(sample_id))
+            if time_diff != 'Missing':
+                time_diff = round(time_diff * 60., 2)
+            add_to['RT_Serum_Clotting_Time'].append(time_diff)
             add_to['Centrifugation_Time'].append(20)
-            try:
-                add_to['RT_Serum_Clotting_Time'].append(
-                    (datetime.datetime.combine(date.min, parser.parse(proc_time).time()) -
-                    datetime.datetime.combine(date.min, parser.parse(coll_time).time())) / datetime.timedelta(hours=1))
-            except Exception as e:
-                if not (pd.isna(proc_time) or pd.isna(coll_time)):
-                    print("clot", e)
-                    print(proc_time, type(proc_time))
-                    print(coll_time, type(coll_time))
-                    print()
-                issues.add(sample_id)
-                add_to['RT_Serum_Clotting_Time'].append('???')
-            add_to['Live_Cells_Hemocytometer_Count'].append('N/A')
-            add_to['Total_Cells_Hemocytometer_Count'].append('N/A')
-            add_to['Viability_Hemocytometer_Count'].append('N/A')
-            add_to['Live_Cells_Automated_Count'].append('N/A')
-            add_to['Total_Cells_Automated_Count'].append('N/A')
-            add_to['Viability_Automated_Count'].append('N/A')
-            add_to['Storage_Time_in_Mr_Frosty'].append('N/A')
+            for col in ['Live_Cells_Hemocytometer_Count', 'Total_Cells_Hemocytometer_Count', 'Viability_Hemocytometer_Count', 'Live_Cells_Automated_Count', 'Total_Cells_Automated_Count', 'Viability_Automated_Count', 'Storage_Time_in_Mr_Frosty']:
+                add_to[col].append('N/A')
             add_to['Comments'].append('')
         if not (type(vial_count) == str or (type(vial_count) == float and pd.isna(vial_count))) and row['# of PBMC vials'] > 0:
             add_to['Participant ID'].append(participant)
@@ -327,7 +304,7 @@ def make_ecrabs(source, first_date='1/1/2021', last_date='12/31/2025', output_fn
             add_to['Biospecimen_ID'].append(cells_id)
             add_to['Biospecimen_Type'].append('PBMC')
             add_to['Biospecimen_Collection_Date_Duration_From_Index'].append(row['Days from Index'])
-            add_to['Biospecimen_Processing_Batch_ID'].append('???') # decide how to handle
+            add_to['Biospecimen_Processing_Batch_ID'].append('Missing') # decide how to handle
             add_to['Initial_Volume_of_Biospecimen'].append(cpt_vol)
             add_to['Biospecimen_Collection_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
             add_to['Biospecimen_Collector_Initials'].append(coll_inits)
@@ -343,30 +320,10 @@ def make_ecrabs(source, first_date='1/1/2021', last_date='12/31/2025', output_fn
             add_to['Storage_End_Time_at_2-8_Initials'].append('N/A')
             add_to['Biospecimen_Processing_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
             add_to['Biospecimen_Processor_Initials'].append(proc_inits)
-            try:
-                add_to['Biospecimen_Collection_to_Receipt_Duration'].append(
-                    (datetime.datetime.combine(date.min, parser.parse(rec_time).time()) -
-                    datetime.datetime.combine(date.min, parser.parse(coll_time).time())) / datetime.timedelta(hours=1))
-            except Exception as e:
-                if not (pd.isna(rec_time) or pd.isna(coll_time)):
-                    print("col to rec", e)
-                    print(coll_time, type(coll_time))
-                    print(rec_time, type(rec_time))
-                    print()
-                issues.add(sample_id)
-                add_to['Biospecimen_Collection_to_Receipt_Duration'].append('???')
-            try:
-                add_to['Biospecimen_Receipt_to_Storage_Duration'].append(
-                    (datetime.datetime.combine(date.min, parser.parse(cell_freeze_time).time()) -
-                    datetime.datetime.combine(date.min, parser.parse(rec_time).time())) / datetime.timedelta(hours=1))
-            except Exception as e:
-                if not (pd.isna(rec_time) or pd.isna(cell_freeze_time)):
-                    print("rec to store", e)
-                    print(cell_freeze_time, type(cell_freeze_time))
-                    print(rec_time, type(rec_time))
-                    print()
-                issues.add(sample_id)
-                add_to['Biospecimen_Receipt_to_Storage_Duration'].append('???')
+            time_diff = time_diff_wrapper(coll_time, rec_time, "coll to rec {}".format(sample_id))
+            add_to['Biospecimen_Collection_to_Receipt_Duration'].append(time_diff)
+            time_diff = time_diff_wrapper(rec_time, cell_freeze_time, "rec to serum store {}".format(sample_id))
+            add_to['Biospecimen_Receipt_to_Storage_Duration'].append(time_diff)
             add_to['Centrifugation_Time'].append(40)
             add_to['RT_Serum_Clotting_Time'].append('N/A')
             add_to['Live_Cells_Hemocytometer_Count'].append('N/A')
@@ -379,7 +336,7 @@ def make_ecrabs(source, first_date='1/1/2021', last_date='12/31/2025', output_fn
                 add_to['Storage_Time_in_Mr_Frosty'].append('N/A')
             else:
                 try:
-                    add_to['Storage_Time_in_Mr_Frosty'].append((datetime.datetime.combine(date.min + datetime.timedelta(days=1), datetime.time(10,30,0)) - datetime.datetime.combine(date.min, cell_freeze_time)) / datetime.timedelta(hours=1))
+                    add_to['Storage_Time_in_Mr_Frosty'].append(((datetime.timedelta(days=1) + pd.to_datetime('10:30AM')) - pd.to_datetime(cell_freeze_time)) / datetime.timedelta(hours=1))
                 except:
                     issues.add(sample_id)
                     add_to['Storage_Time_in_Mr_Frosty'].append('PLEASE FILL')
