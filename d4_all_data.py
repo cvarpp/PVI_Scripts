@@ -4,7 +4,7 @@ import util
 
 def clean_auc(df):
     df = df.copy()
-    neg_spike = df['Spike endpoint'].astype(str).str.strip().str.upper().str[:1] == "N"
+    neg_spike = df['Spike endpoint'].astype(str).str.strip().str.upper().str[:2] == "NE"
     neg_auc = df['AUC'] == 0.
     df.loc[neg_spike | neg_auc, 'AUC'] = 1.
     return df['AUC']
