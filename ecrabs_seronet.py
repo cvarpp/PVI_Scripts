@@ -366,7 +366,7 @@ def make_ecrabs(source, first_date='1/1/2021', last_date='12/31/2025', output_fn
     writer = pd.ExcelWriter(util.proc_d4 + '{}.xlsx'.format(output_fname))
     for sname, df2b in future_output.items():
         df = pd.DataFrame(df2b)
-        df[df['Date'].apply(lambda val: first_date <= val <= last_date)].to_excel(writer, sheet_name=sname, index=False)
+        df[df['Date'].apply(lambda val: first_date <= val.date() <= last_date)].to_excel(writer, sheet_name=sname, index=False)
     writer.save()
     source.to_excel(util.script_output + 'SERONET_In_Window_Data_biospecimen_companion.xlsx', index=False)
     with open(util.script_output + 'trouble.csv', 'w+') as f:
