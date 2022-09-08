@@ -16,7 +16,8 @@ def filter_windows(unfiltered):
         header_1.extend(['Visit {}'.format(i), '', ''])
     header_2 = ['Cohort', 'Seronet Participant ID'] + ['Volume of  Serum Collected (mL)', 'PBMCs concentration per ml (x10^6)', '# of PBMC vials'] * 8
     
-    columns = ['Cohort', 'Seronet ID', 'Days from Index', 'Vaccine', '1st Dose Date', 'Days to 1st', '2nd Dose Date', 'Days to 2nd', 'Boost Vaccine', 'Boost Date', 'Days to Boost', 'Participant ID', 'Date', 'Post-Baseline', 'Sample ID', 'Visit Type', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_inits', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
+    columns = [col for col in unfiltered.columns]
+    columns.insert(2, 'Days from Index')
     data = {col: [] for col in columns}
     short_window = 14
     long_window = 21

@@ -85,21 +85,27 @@ def pull_from_source():
         '1st Dose Date': 'Vaccine #1 Date',
         '2nd Dose Date': 'Vaccine #2 Date',
         'Boost Date': '3rd Dose Vaccine Date',
-        'Boost Vaccine': '3rd Dose Vaccine Type'
+        'Boost Vaccine': '3rd Dose Vaccine Type',
+        'Boost 2 Date': 'Vaccine Type.1',
+        'Boost 2 Vaccine': 'Booster Dose Date'
     }
     mars_convert = {
         'Vaccine': 'Vaccine Name',
         '1st Dose Date': 'Vaccine #1 Date',
         '2nd Dose Date': 'Vaccine #2 Date',
         'Boost Date': '3rd Vaccine',
-        'Boost Vaccine': '3rd Vaccine Type '
+        'Boost Vaccine': '3rd Vaccine Type ',
+        'Boost 2 Date': '4th vaccine',
+        'Boost 2 Vaccine': '4th Vaccine Type'
     }
     iris_convert = {
         'Vaccine': 'Which Vaccine?',
         '1st Dose Date': 'First Dose Date',
         '2nd Dose Date': 'Second Dose Date',
         'Boost Date': 'Third Dose Date',
-        'Boost Vaccine': 'Third Dose Type'
+        'Boost Vaccine': 'Third Dose Type',
+        'Boost 2 Date': 'Fourth Dose Date',
+        'Boost 2 Vaccine': 'Fourth Dose Type'
     }
     source_dfs = {'TITAN': titan_data, 'MARS': mars_data, 'IRIS': iris_data}
     conversions = {'TITAN': titan_convert, 'MARS': mars_convert, 'IRIS': iris_convert}
@@ -174,7 +180,7 @@ def pull_from_source():
 
     proc_cols = ['Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
 
-    columns = ['Cohort', 'Seronet ID', 'Vaccine', '1st Dose Date', 'Days to 1st', '2nd Dose Date', 'Days to 2nd', 'Boost Vaccine', 'Boost Date', 'Days to Boost', 'Participant ID', 'Date', 'Post-Baseline', 'Sample ID', 'Visit Type', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_inits', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
+    columns = ['Cohort', 'Seronet ID', 'Vaccine', '1st Dose Date', 'Days to 1st', '2nd Dose Date', 'Days to 2nd', 'Boost Vaccine', 'Boost Date', 'Days to Boost', 'Boost 2 Vaccine', 'Boost 2 Date', 'Days to Boost 2', 'Participant ID', 'Date', 'Post-Baseline', 'Sample ID', 'Visit Type', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_inits', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
     print("Samples not in DSCF:")
     data = {col: [] for col in columns}
     participant_data = {}
@@ -194,7 +200,7 @@ def pull_from_source():
         participant_data[participant] = {}
         cohort = participant_study[participant].strip().upper()
         seronet_id = "14_{}{}".format(cohort[:1], samples[0][1])
-        key_cols =['Vaccine', '1st Dose Date', '2nd Dose Date', 'Boost Date', 'Boost Vaccine']
+        key_cols =['Vaccine', '1st Dose Date', '2nd Dose Date', 'Boost Date', 'Boost Vaccine', 'Boost 2 Date', 'Boost 2 Vaccine']
         if cohort in conversions.keys():
             source_df = source_dfs[cohort]
             converter = conversions[cohort]
@@ -239,6 +245,12 @@ def pull_from_source():
             except:
                 data['Days to Boost'].append('')
             data['Boost Vaccine'].append(participant_data[participant]['Boost Vaccine'])
+            data['Boost 2 Date'].append(participant_data[participant]['Boost 2 Date'])
+            try:
+                data['Days to Boost 2'].append(int((date_ - data['Boost 2 Date'][-1]).days))
+            except:
+                data['Days to Boost 2'].append('')
+            data['Boost 2 Vaccine'].append(participant_data[participant]['Boost 2 Vaccine'])
             data['Seronet ID'].append(seronet_id)
             data['Participant ID'].append(participant)
             data['Date'].append(date_)
