@@ -45,10 +45,10 @@ def time_diff_wrapper(t_start, t_end, annot):
         time_diff = 'Missing'
     return time_diff
 
-def make_ecrabs(source, first_date='1/1/2021', last_date='12/31/2025', output_fname='tmp'):
+def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_datetime('1/1/2021'), output_fname='tmp'):
     issues = set()
-    first_date = pd.to_datetime(first_date).date()
-    last_date = pd.to_datetime(last_date).date()
+    first_date = first_date.date()
+    last_date = last_date.date()
     equip_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Equipment_ID', 'Equipment_Type', 'Equipment_Calibration_Due_Date', 'Comments']
     consum_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Consumable_Name', 'Consumable_Catalog_Number', 'Consumable_Lot_Number', 'Consumable_Expiration_Date', 'Comments']
     reag_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Reagent_Name', 'Reagent_Catalog_Number', 'Reagent_Lot_Number', 'Reagent_Expiration_Date', 'Comments']
@@ -381,9 +381,13 @@ if __name__ == '__main__':
     argParser.add_argument('-u', '--update', action='store_true')
     argParser.add_argument('-f', '--filter', action='store_true')
     argParser.add_argument('-o', '--output_file', action='store', default='tmp')
-    argParser.add_argument('-s', '--start', action='store', default='1/1/2021')
-    argParser.add_argument('-e', '--end', action='store', default='12/31/2025')
+    argParser.add_argument('-s', '--start', action='store', type=pd.to_datetime, default=pd.to_datetime('1/1/2021'))
+    argParser.add_argument('-e', '--end', action='store', type=pd.to_datetime, default=pd.to_datetime('12/31/2025'))
+    argParser.add_argument('-x', '--override', action='store', type=pd.read_excel)
     args = argParser.parse_args()
+    if args.override is not None:
+        make_ecrabs(args.override, args.start, args.end, args.output_file)
+        exit(0)
     if args.update:
         source = filter_windows(pull_from_source())
     else:
