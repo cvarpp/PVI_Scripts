@@ -1,6 +1,5 @@
 import pandas as pd
 import datetime
-from dateutil import parser
 
 
 # Priority does not use CRF or CPT
@@ -39,8 +38,8 @@ if __name__ == '__main__':
     participant_study = {}
     for participant in include_ppl:
         participant_study[participant] = 'PRIORITY' # once again, hacky
-    first_date = parser.parse('1/1/2021').date()
-    last_date = parser.parse('12/31/2021').date()
+    first_date = pd.to_datetime('1/1/2021').date()
+    last_date = pd.to_datetime('12/31/2021').date()
 
     # long_form = iris_folder + 'IRIS for D4 Long.xlsx'
     # long_form = mars_folder + 'MARS for D4 Long.xlsx'
@@ -186,10 +185,14 @@ if __name__ == '__main__':
                     for col in vax_cols[3:-1]:
                         if 'Date' in col:
                             cropped_col = col[:-20] # drop "_From_Index"
-                            if type(row[cropped_col]) in [pd.Timestamp, datetime.datetime]:
+                            try:
                                 add_to[col].append(int((row[cropped_col].date() - index_date).days))
-                            else:
-                                add_to[col].append(row[cropped_col])
+                            except:
+                                if row[cropped_col] in ["N/A", "Unknown", "Not Reported"]:
+                                    add_to[col].append(row[cropped_col])
+                                else:
+                                    print(row[cropped_col], "invalid for", sample_id, ". Fatal error, exiting")
+                                    exit(1)
                         else:
                             add_to[col].append(row[col])
                     add_to['Comments'].append(row['Comments'])
