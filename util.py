@@ -40,4 +40,13 @@ cross_d4 = cross_project + 'Seronet Task D4/'
 seronet_data = cross_d4 + 'Data/'
 seronet_qc = cross_d4 + 'QC/'
 
+# Header Heights
+
 header_intake = 6
+
+# Column Names
+
+
+qual = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
+quant = 'Ab Concentration (Units - AU/mL)'
+visit_type = "Visit Type / Samples Needed"
