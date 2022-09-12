@@ -84,6 +84,17 @@ def map_dates(df, date_cols):
         df[col] = df[col].apply(try_convert_date)
     return df
 
+def transform_id(df):
+    df = df.copy()
+    transplant_types = ["Kidney", "Liver", "Other", "Multi"]
+    transplant_str = "KLOM"
+    df['HIV'] = df['Bloodborne Pathogen'].apply(lambda val: "H" if val == "HIV" else "_")
+    df['COVID'] = df['COVID Pre-Enrollment'].apply(lambda val: "C+" if val == "Yes" else "__")
+    df['Transplant'] = df['Transplant Group'].apply(lambda val: transplant_str[transplant_types.index(val)])
+    df['Full ID'] = df['TITAN ID'] +'_' + df['Transplant'] + df['COVID'] + df['HIV']
+    df['Full Transplant'] = (df['Transplant Group'] + ':' + df['Transplant Other'].fillna("")).str.strip(': ')
+    return df
+
 def query_titan():
     titan_data = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Tracker', header=4).dropna(subset=['Umbrella Corresponding Participant ID'])
     titan_data['Participant ID'] = titan_data['Umbrella Corresponding Participant ID'].apply(lambda val: val.strip())
@@ -95,14 +106,31 @@ def query_titan():
         'Boost Date': '3rd Dose Vaccine Date',
         'Boost Vaccine': '3rd Dose Vaccine Type',
         'Boost 2 Date': 'Booster Dose Date',
-        'Boost 2 Vaccine': 'Vaccine Type.1'
+        'Boost 2 Vaccine': 'Vaccine Type.1',
+        'COVID Pre-Enrollment': 'Had Prior COVID (3rd dose)?',
+        'COVID Pre-Enrollment Date': 'Date of PCR positive',
+        'Transplant Group': 'Transplant Group',
+        'Bloodborne Pathogen': 'Blood Borne Path',
+        'Age at Enrollment': 'Age at Enrollment',
+        'Gender': 'Gender',
+        'Study Participation Status': 'Study Participation Status',
+        'TITAN ID': 'TITAN ID',
+        'Transplant Other': 'Multi/ Other'
     }
+    titan_data = titan_data[titan_data['Study Participation Status'].apply(lambda s: "Withdrawn" not in s)]
     cols = [k for k in titan_convert]
     date_cols = [col for col in cols if 'Date' in col]
     reverse_convert = {v: k for k, v in titan_convert.items()}
     participant_data = (titan_data.rename(columns=reverse_convert)
                             .loc[:, cols]
-                            .pipe(map_dates, date_cols))
+                            .pipe(map_dates, date_cols)
+                            .pipe(transform_id))
+    titan_third = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Third Dose', header=1).dropna(subset=['Umbrella Participant ID']).set_index('TITAN ID')
+    titan_third['Full Meds'] = titan_third.loc[:, 'Maintenance immunosuppresion at time of third dose '] + ":" + titan_third.loc[:, 'Other, Specify'].fillna("")
+    participant_data['Meds at third dose'] = participant_data['TITAN ID'].apply(lambda val: titan_third.loc[val, 'Full Meds'])
+    participant_data['AM'] = participant_data['Meds at third dose'].apply(lambda val: "Yes" if "AM" in str(val) else "No")
+    participant_data['Prednisone'] = participant_data['Meds at third dose'].apply(lambda val: "Yes" if "Pred" in str(val) else "No")
+    participant_data['CNI'] = participant_data['Meds at third dose'].apply(lambda val: "Yes" if "CNI" in str(val) else "No")
     return participant_data
 
 def query_dscf(samples_of_interest):
@@ -179,29 +207,73 @@ def pull_data():
             .join(research_results)
             .join(participant_data, on='participant_id')
             .rename(columns={'Date Collected': 'Date'}))
-    date_cols = ['1st Dose Date', '2nd Dose Date', 'Boost Date', 'Boost 2 Date']
+    date_cols = ['1st Dose Date', '2nd Dose Date', 'Boost Date', 'Boost 2 Date', 'COVID Pre-Enrollment Date']
     for date_col in date_cols:
-        day_col = 'Days to ' + date_col[:-5]
+        day_col = 'Days from ' + date_col[:-5]
         df[day_col] = df.apply(lambda row: date_subtract(row['Date'], row[date_col]), axis=1)
+    df.dropna(subset=['AUC'], inplace=True)
     df.to_excel(util.script_folder + 'data/titan_intermediate.xlsx')
     return df
 
 def titanify(df):
     df['AUC'] = df['AUC'].astype(float)
+    df['Log2AUC'] = np.log2(df['AUC'])
     writer = pd.ExcelWriter(util.script_output + 'new_format/titan_consolidated.xlsx')
-    df.to_excel(writer, sheet_name='Long-Form')
-    df['Timepoint'] = df['Days to Boost'].apply(make_timepoint)
+    df.to_excel(writer, sheet_name='Source')
+    df['Timepoint'] = df['Days from Boost'].apply(make_timepoint)
+    df['Boost Timepoint'] = df['Days from Boost'].apply(make_timepoint).apply(lambda val: "Pre-Dose 4" if val == "Pre-Dose 3" else val)
+    longform_columns = ['Full ID', 'Transplant', 'COVID', 'HIV', 'Days from Boost', 'AUC', 'Spike endpoint', 'Log2AUC', 'Full Transplant', 'participant_id', 'AM', 'Prednisone', 'CNI', 'Gender', 'Age at Enrollment', 'Vaccine', 'Boost Vaccine', 'Timepoint', 'Boost Timepoint', 'Days from Boost 2', 'Days from 1st Dose', 'Days from 2nd Dose', 'Days from COVID Pre-Enrollment']
+    df_long = df.loc[:, longform_columns].sort_values(by=['Full ID', 'Days from Boost'])
+    df_long.to_excel(writer, sheet_name='Long-Form')
     tp_order = ['Pre-Dose 3', 'Day 30', 'Day 90', 'Day 180', 'Day 300']
-    tp_df = (df[df['Timepoint'] != 'None']
-                .drop_duplicates(subset=['participant_id', 'Timepoint'], keep='last')
-                .pivot_table(values='AUC', index='participant_id', columns='Timepoint')
+    tp_order_boost = ['Pre-Dose 4', 'Day 30', 'Day 90', 'Day 180', 'Day 300']
+    df_wide = (df[df['Timepoint'] != 'None']
+                .drop_duplicates(subset=['Full ID', 'Timepoint'], keep='last')
+                .pivot_table(values='AUC', index='Full ID', columns='Timepoint')
                 .reindex(tp_order, axis=1))
-    tp_df.to_excel(writer, sheet_name='Wide-Form')
+    df_wide.to_excel(writer, sheet_name='Wide-Form')
+    ppl_key = df_long.drop_duplicates(subset=['Full ID']).set_index('Full ID')
+    df_wide_annot = df_wide.copy()
+    for col in ['Transplant', 'COVID', 'HIV', 'AM', 'Prednisone']:
+        df_wide_annot[col] = df_wide_annot.apply(lambda row: ppl_key.loc[row.name, col], axis=1)
+    df_wide_annot.to_excel(writer, sheet_name='Wide-Form Annotated')
     tp_sample_ids = (df[df['Timepoint'] != 'None'].reset_index()
-                .drop_duplicates(subset=['participant_id', 'Timepoint'], keep='last')
-                .pivot_table(values='sample_id', index='participant_id', columns='Timepoint', aggfunc=np.sum)
+                .drop_duplicates(subset=['Full ID', 'Timepoint'], keep='last')
+                .pivot_table(values='sample_id', index='Full ID', columns='Timepoint', aggfunc=np.sum)
                 .reindex(tp_order, axis=1))
     tp_sample_ids.to_excel(writer, sheet_name='Wide-Form Sample ID Key')
+    df_pre = df[df['Boost Timepoint'] == "Pre-Dose 4"]
+    df_post = df[df['Boost Timepoint'] != "Pre-Dose 4"]
+
+    df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'Transplant'] == 'K', axis=1)].to_excel(writer, sheet_name='Wide Kidney')
+    df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'Transplant'] == 'L', axis=1)].to_excel(writer, sheet_name='Wide Liver')
+    df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'Transplant'] in "OM", axis=1)].to_excel(writer, sheet_name='Wide Other+Multi')
+    df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'HIV'] == 'H', axis=1)].to_excel(writer, sheet_name='Wide HIV pos')
+    df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'HIV'] != 'H', axis=1)].to_excel(writer, sheet_name='Wide HIV neg')
+    (df_pre[(df_pre['Timepoint'] != 'None')]
+        .drop_duplicates(subset=['Full ID', 'Timepoint'], keep='last')
+        .pivot_table(values='AUC', index='Full ID', columns='Timepoint')
+        .reindex(tp_order, axis=1).to_excel(writer, sheet_name='Wide 3rd Dose'))
+    (df[(df['Boost Timepoint'] != 'None')]
+        .drop_duplicates(subset=['Full ID', 'Boost Timepoint'], keep='last')
+        .pivot_table(values='AUC', index='Full ID', columns='Boost Timepoint')
+        .reindex(tp_order_boost, axis=1).to_excel(writer, sheet_name='Wide 4th Dose'))
+    df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'AM'] == 'Yes', axis=1)].to_excel(writer, sheet_name='Wide AM')
+    df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'AM'] == 'No', axis=1)].to_excel(writer, sheet_name='Wide No AM')
+    df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'Prednisone'] == 'Yes', axis=1)].to_excel(writer, sheet_name='Wide Prednisone')
+    df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'Prednisone'] == 'No', axis=1)].to_excel(writer, sheet_name='Wide No Prednisone')
+
+    df_long[df_long['Transplant'] == 'K'].to_excel(writer, sheet_name='Kidney')
+    df_long[df_long['Transplant'] == 'L'].to_excel(writer, sheet_name='Liver')
+    df_long[df_long['Transplant'].apply(lambda val: val in "OM")].to_excel(writer, sheet_name='Other+Multi')
+    df_long[df_long['HIV'] == 'H'].to_excel(writer, sheet_name='HIV pos')
+    df_long[df_long['HIV'] != 'H'].to_excel(writer, sheet_name='HIV neg')
+    df_pre.to_excel(writer, sheet_name='3rd Dose')
+    df_post.to_excel(writer, sheet_name='4th Dose')
+    df_long[df_long['AM'] == 'Yes'].to_excel(writer, sheet_name='AM')
+    df_long[df_long['AM'] == 'No'].to_excel(writer, sheet_name='No AM')
+    df_long[df_long['Prednisone'] == 'Yes'].to_excel(writer, sheet_name='Prednisone')
+    df_long[df_long['Prednisone'] == 'No'].to_excel(writer, sheet_name='No Prednisone')
     writer.save()
     writer.close()
 
