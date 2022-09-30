@@ -7,16 +7,19 @@ Created on Thu May 26 11:11:43 2022
 #%%
 import pandas as pd
 import util
-from datetime import date
+import datetime
+
+def clean_date(s):
+    return pd.to_datetime(s.apply(lambda val: val if isinstance(val, datetime.datetime) else '1/1/1900')).dt.date
 
 if __name__ == '__main__':
     cam_archive = pd.read_excel(util.clin_ops + 'CAM Archive/CAM Archive.xlsx', sheet_name=None, header=None)
 
     sheet_df_arch = []
 
-    shared_header = ['Date', 'Time', 'Coordinator Initials', 'Patient Name', 'Study',
+    shared_header = ['Date', 'Time', 'Time collected', 'Patient Name', 'Study',
         'Visit Type / Samples Needed', 'New or Follow-up?', 'Participant ID',
-        'Sample ID', 'Processing location', 'Internal Notes']
+        'Sample ID', 'Visit Coordinator', 'Internal Notes']
     for sname, df_week in cam_archive.items():
         if df_week.shape[0] < 20:
             continue
@@ -30,38 +33,32 @@ if __name__ == '__main__':
 
     cam_active = pd.read_excel(util.clin_ops + 'CAM Clinic Schedule.xlsx', sheet_name=None, header=None)
 
-    shared_header_1 = ['Date', 'Time', 'Coordinator Initials', 'Patient Name', 'Study',
+    shared_header_1 = ['Date', 'Time', 'Time collected', 'Patient Name', 'Study',
         'Visit Type / Samples Needed', 'New or Follow-up?', 'Participant ID',
-        'Sample ID', 'Processing location', 'Internal Notes']
+        'Sample ID', 'Visit Coordinator', 'Internal Notes']
     shared_header_2 = ['Date', 'Time', 'Patient Name', 'Study',
         'Visit Type / Samples Needed', 'New or Follow-up?', 'Participant ID',
-        'Sample ID', 'Time collected', 'Phlebotomist', 'Coordinator Initials', 'Internal Notes']
+        'Sample ID', 'Time Collected', 'Phlebotomist', 'Visit Coordinator', 'Internal Notes']
 
-    sheet_df1 = []
-    sheet_df2 =[]
+    sheet_dfs = []
 
     for sname, df_week in cam_active.items():
         if df_week.shape[0] < 20:
             continue
         elif df_week.shape[0] < 200:
             df_week.columns = df_week.iloc[6, :]
-            date_df1 = [df_week.iloc[:, col_num:col_num + 11] for col_num, col in enumerate(df_week.columns) if type(col) == str and 'date' in col.lower()]
-            for df in date_df1:
+            date_dfs = [df_week.iloc[:, col_num:col_num + 11] for col_num, col in enumerate(df_week.columns) if type(col) == str and 'date' in col.lower()]
+            for df in date_dfs:
                 df.columns = shared_header_1
-                df = df[df['Date'] != 'Date']
-                sheet_df1.append(df.dropna(subset=['Sample ID']))
+            sheet_dfs.extend(date_dfs)
         else:
             df_week.columns = df_week.iloc[14, :]
-            date_df2 = [df_week.iloc[:, col_num:col_num + 12] for col_num, col in enumerate(df_week.columns) if type(col) == str and 'date' in col.lower()]
-            for df in date_df2:
-                df.columns = shared_header_2
-                df = df[df['Date'] != 'Date']
-                sheet_df2.append(df.dropna(subset=['Sample ID']))
-   
-    ca1 = pd.concat(sheet_df1)
-    ca2 = pd.concat(sheet_df2)
-    cam_act = pd.concat([ca1, ca2]).drop_duplicates()
-    cam_both = pd.concat([cam_act, cam_arch]).drop_duplicates()
+            date_df = df_week.loc[:, shared_header_2].copy()
+            sheet_dfs.append(date_df)
+
+    exclude = set(['Participant ID', 'Lunch Break', 'BLOCK'])
+    cam_act = pd.concat(sheet_dfs).dropna(subset=['Participant ID']).drop_duplicates()
+    cam_both = pd.concat([cam_act, cam_arch]).drop_duplicates().query('`Participant ID` not in @exclude').assign(Date = lambda df: clean_date(df['Date'])).sort_values(by='Date', ascending=False)
 
     output_fname = util.clin_ops + "Long-Form CAM Schedule.xlsx"
     cam_both.to_excel(output_fname, index=False)
