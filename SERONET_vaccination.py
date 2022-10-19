@@ -31,12 +31,16 @@ if __name__ == '__main__':
     samplesClean = samples.dropna(subset=['Participant ID'])
     vaccine_stuff = {}
     columns = ['Participant ID', 'Timepoint', 'Vaccine Type', 'Vaccine Date']
+    exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
+    exclude_ppl = set(exclusions['Participant ID'].unique())
     """
     IRIS Stuff
     """
     for col in columns:
         vaccine_stuff[col] = []
     for participant in iris_data.index.to_numpy():
+        if participant in exclude_ppl:
+            continue
         try:
             index_date = iris_data.loc[participant, 'Second Dose Date'].date()
         except:
@@ -72,6 +76,8 @@ if __name__ == '__main__':
     for col in columns:
         vaccine_stuff[col] = []
     for participant in titan_data.index.to_numpy():
+        if participant in exclude_ppl:
+            continue
         try:
             index_date = titan_data.loc[participant, '3rd Dose Vaccine Date'].date()
         except:
@@ -107,6 +113,8 @@ if __name__ == '__main__':
     for col in columns:
         vaccine_stuff[col] = []
     for participant in mars_data.index.to_numpy():
+        if participant in exclude_ppl:
+            continue
         try:
             index_date = mars_data.loc[participant, 'Vaccine #2 Date'].date()
         except:
@@ -146,6 +154,8 @@ if __name__ == '__main__':
     for col in columns:
         vaccine_stuff[col] = []
     for participant in prio_data.index.to_numpy():
+        if participant in exclude_ppl:
+            continue
         try:
             index_date = prio_data.loc[participant, 'Baseline date'].date()
         except:

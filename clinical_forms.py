@@ -37,8 +37,12 @@ def write_clinical(input_df, output_fname):
     priority_data = priority_folder + 'PRIORITY for D4 Long.xlsx'
     participant_study = input_df.drop_duplicates(subset='Participant ID').set_index('Participant ID')['Cohort']
 
-    # all_samples = pd.read_excel(long_form, sheet_name='Biospecimen Ref') # streamline this
-    all_samples = input_df
+    exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
+    exclude_ppl = set(exclusions['Participant ID'].unique())
+    exclude_ids = set(exclusions['Research_Participant_ID'].unique())
+    exclude_filter = (input_df['Participant ID'].apply(lambda val: val not in exclude_ppl) & 
+                        input_df['Research_Participant_ID'].apply(lambda val: val not in exclude_ids))
+    all_samples = input_df[exclude_filter].copy()
     specimen_ids = all_samples['Biospecimen_ID'].unique() # samples to include 
     one_per = all_samples.drop_duplicates(subset=['Research_Participant_ID', 'Visit_Number'])
     one_per['Serum'] = one_per.apply(lambda row: '{}_10{}'.format(row['Research_Participant_ID'], int(str(row['Visit_Number']).strip("bBaseline()"))) in specimen_ids, axis=1)
@@ -335,8 +339,8 @@ def write_clinical(input_df, output_fname):
 
 if __name__ == '__main__':
     
-    argParser = argparse.ArgumentParser(description='Make Seronet monthly sample report.')
-    argParser.add_argument('-i', '--input_df', action='store', required=True, type=lambda wb: pd.read_excel(wb, sheet_name='Biospecimen'))
+    argParser = argparse.ArgumentParser(description='Make clinical forms. Input files are assumed to be in the ecrabs output folder.')
+    argParser.add_argument('-i', '--input_df', action='store', required=True, type=lambda wb: pd.read_excel(util.proc_d4 + wb, sheet_name='Biospecimen'))
     argParser.add_argument('-o', '--output_file', action='store', required=True)
     args = argParser.parse_args()
 

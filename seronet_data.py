@@ -43,16 +43,16 @@ def filter_windows(unfiltered):
             cohort = samples['Cohort'].to_numpy()[0]
             d1 = samples['1st Dose Date'].to_numpy()[0]
             d2 = samples['2nd Dose Date'].to_numpy()[0]
-            d3 = samples['Boost Date'].to_numpy()[0]
             vax_type = samples['Vaccine'].to_numpy()[0]
             seronet_id = samples['Seronet ID'].to_numpy()[0]
             try:
                 samples = samples[samples['Date'].apply(lambda val: pd.isna(d1) or val <= d1 or pd.isna(d2) or val > d2)]
             except:
                 if cohort != 'PRIORITY':
-                    print(participant, d1, d2, d3, "failed filter")
+                    print(participant, d1, d2, "failed filter")
                     continue
             if cohort == 'TITAN':
+                d3 = samples['3rd Dose Date'].to_numpy()[0]
                 index_date = d3
             elif cohort in ['MARS', 'IRIS']:
                 if str(vax_type)[:1] == 'J':

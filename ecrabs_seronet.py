@@ -56,6 +56,9 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
     biospec_cols = ['Participant ID', 'Sample ID', 'Date', 'Proc Comments', 'Time Collected', 'Time Received', 'Time Processed', 'Time Serum Frozen', 'Time Cells Frozen', 'Research_Participant_ID', 'Cohort', 'Visit_Number', 'Biospecimen_ID', 'Biospecimen_Type', 'Biospecimen_Collection_Date_Duration_From_Index', 'Biospecimen_Processing_Batch_ID', 'Initial_Volume_of_Biospecimen', 'Biospecimen_Collection_Company_Clinic', 'Biospecimen_Collector_Initials', 'Biospecimen_Collection_Year', 'Collection_Tube_Type', 'Collection_Tube_Type_Catalog_Number', 'Collection_Tube_Type_Lot_Number', 'Collection_Tube_Type_Expiration_Date', 'Storage_Time_at_2_8_Degrees_Celsius', 'Storage_Start_Time_at_2-8_Initials', 'Storage_End_Time_at_2-8_Initials', 'Biospecimen_Processing_Company_Clinic', 'Biospecimen_Processor_Initials', 'Biospecimen_Collection_to_Receipt_Duration', 'Biospecimen_Receipt_to_Storage_Duration', 'Centrifugation_Time', 'RT_Serum_Clotting_Time', 'Live_Cells_Hemocytometer_Count', 'Total_Cells_Hemocytometer_Count', 'Viability_Hemocytometer_Count', 'Live_Cells_Automated_Count', 'Total_Cells_Automated_Count', 'Viability_Automated_Count', 'Storage_Time_in_Mr_Frosty', 'Comments']
     ship_cols = ['Participant ID', 'Sample ID', 'Date', 'Study ID', 'Current Label', 'Material Type', 'Volume', 'Volume Unit', 'Volume Estimate', 'Vial Type', 'Vial Warnings', 'Vial Modifiers']
 
+    exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
+    exclude_ppl = set(exclusions['Participant ID'].unique())
+    exclude_ids = set(exclusions['Research_Participant_ID'].unique())
     # ecrabs_sheets = ['Equipment', 'Consumables', 'Reagent', 'Aliquot', 'Biospecimen', 'Shipping Manifest']
     necessities_df = pd.read_excel(util.script_input + 'ECRAB_SERONET.xlsx', sheet_name=None)
 
@@ -74,6 +77,8 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
         sample_id = row['Sample ID']
         seronet_id = row['Seronet ID']
         cohort = row['Cohort']
+        if participant in exclude_ppl or seronet_id in exclude_ids:
+            continue
         if participant not in participant_visits.keys():
             participant_visits[participant] = 1
         else:
@@ -383,16 +388,23 @@ if __name__ == '__main__':
     argParser.add_argument('-o', '--output_file', action='store', default='tmp')
     argParser.add_argument('-s', '--start', action='store', type=pd.to_datetime, default=pd.to_datetime('1/1/2021'))
     argParser.add_argument('-e', '--end', action='store', type=pd.to_datetime, default=pd.to_datetime('12/31/2025'))
+    argParser.add_argument('-a', '--all', action='store_true')
     argParser.add_argument('-x', '--override', action='store', type=pd.read_excel)
     args = argParser.parse_args()
     if args.override is not None:
         make_ecrabs(args.override, args.start, args.end, args.output_file)
         exit(0)
     if args.update:
-        source = filter_windows(pull_from_source())
+        if args.all:
+            source = pull_from_source()
+        else:
+            source = filter_windows(pull_from_source())
     else:
         if args.filter:
             source = filter_windows(pd.read_excel(util.unfiltered))
         else:
-            source = pd.read_excel(util.filtered)
+            if args.all:
+                source = pd.read_excel(util.unfiltered)
+            else:
+                source = pd.read_excel(util.filtered)
     make_ecrabs(source, args.start, args.end, args.output_file)
