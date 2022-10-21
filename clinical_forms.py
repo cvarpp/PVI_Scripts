@@ -333,7 +333,7 @@ def write_clinical(input_df, output_fname):
         for k, vs in df.items():
             print(k, len(vs))
         print()
-        pd.DataFrame(df).to_excel(writer, sheet_name=sname, index=False)
+        pd.DataFrame(df).to_excel(writer, sheet_name=sname, index=False, na_rep='N/A')
     writer.save()
 
 
@@ -344,4 +344,4 @@ if __name__ == '__main__':
     argParser.add_argument('-o', '--output_file', action='store', required=True)
     args = argParser.parse_args()
 
-    write_clinical(args.input_df ,args.output_file)
+    write_clinical(args.input_df, args.output_file)
