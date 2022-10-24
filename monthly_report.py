@@ -37,4 +37,18 @@ if __name__ == '__main__':
     vax_data.loc[(vax_data[orig_date] == 'N/A'), vax_cols[-1]] = 'N/A'
     vax_data.drop(orig_date, axis=1).to_excel(output_inner + 'Accrual_Vaccination_Status.xlsx', index=False, na_rep='N/A')
     sample_cols = ['Site_Cohort_Name', 'Primary_Cohort', 'Research_Participant_ID', 'Visit_Number', 'Visit_Date_Duration_From_Visit_1', 'SARS_CoV_2_Infection_Status', 'Serum_Volume_For_FNL', 'Serum_Shipped_To_FNL', 'PBMC_Concentration', 'Num_PBMC_Vials_For_FNL', 'PBMC_Shipped_To_FNL', 'Unscheduled_Visit', 'Unscheduled_Visit_Purpose', 'Lost_To_FollowUp', 'Final_Visit', 'Collected_In_This_Reporting_Period']
-    print(all_data.loc[:, ['Seronet ID', 'Cohort', 'Days from Index', 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials']].head())
+    keep_cols = ['Seronet ID', 'Cohort', 'Days from Index', 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials']
+    col_map = {
+        'Seronet ID': 'Research_Participant_ID',
+        'Cohort': 'Primary_Cohort',
+        'Volume of Serum Collected (mL)': 'Serum_Volume_For_FNL',
+        'PBMC concentration per mL (x10^6)': 'PBMC_Concentration',
+        '# of PBMC vials': 'Num_PBMC_Vials_For_FNL'
+    }
+    df_start = all_data.loc[:, keep_cols].rename(columns=col_map).copy()
+    df_start['Site_Cohort_Name'] = df_start['Primary_Cohort']
+    df_start['Visit_Date_Duration_From_Visit_1'] = df_start['Days from Index'] - df_start['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
+    df_start['Visit_Number'] = df_start.groupby('Research_Participant_ID').cumcount() + 1
+    check_cols = [col for col in sample_cols if col in df_start.columns]
+    print(df_start.loc[:, check_cols].head())
+    print("Missing:", [col for col in sample_cols if col not in check_cols])
