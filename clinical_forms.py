@@ -48,7 +48,7 @@ def write_clinical(input_df, output_fname):
     one_per['Serum'] = one_per.apply(lambda row: '{}_10{}'.format(row['Research_Participant_ID'], int(str(row['Visit_Number']).strip("bBaseline()"))) in specimen_ids, axis=1)
     one_per['PBMC'] = one_per.apply(lambda row: '{}_20{}'.format(row['Research_Participant_ID'], int(str(row['Visit_Number']).strip("bBaseline()"))) in specimen_ids, axis=1)
     one_per['Biospecimens_Collected'] = one_per.apply(specimenize, axis=1)
-    one_per.set_index(['Research_Participant_ID', 'Visit_Number'], inplace=True)
+    one_per.set_index('Sample ID', inplace=True)
 
     future_output = {}
     future_output['Baseline'] = {col: [] for col in base_cols}
@@ -59,6 +59,8 @@ def write_clinical(input_df, output_fname):
     future_output['Auto'] = {col: [] for col in auto_cols}
     future_output['Transplant'] = {col: [] for col in trans_cols}
     future_output['Cancer'] = {col: [] for col in cancer_cols}
+    for df2b in future_output.values():
+        df2b['Sample ID'] = []
 
     current_input = {}
     cohort_df_names = [iris_data, mars_data, titan_data, priority_data]
@@ -72,11 +74,12 @@ def write_clinical(input_df, output_fname):
     current_input['Vax']['Reported'] = 'No'
     current_input['COVID']['Reported'] = 'No'
 
-    for (seronet_id, visit), row_outer in one_per.sort_values('Date').iterrows():
+    for sample_id, row_outer in one_per.sort_values('Date').iterrows():
+        seronet_id = row_outer['Research_Participant_ID']
+        visit = row_outer['Visit_Number']
         visit_date = row_outer['Date'].date()
         participant = row_outer['Participant ID']
         study = participant_study[participant]
-        sample_id = row_outer['Sample ID']
         # index_date = row_outer['Index Date'].date()
         # days_from_index = int((visit_date - index_date).days)
         days_from_index = row_outer['Biospecimen_Collection_Date_Duration_From_Index']
@@ -103,6 +106,7 @@ def write_clinical(input_df, output_fname):
             add_to['Baseline_Visit'].append('No')
             add_to['Number_of_Missed_Scheduled_Visits'].append('N/A')
             add_to['Unscheduled_Visit'].append('No')
+        add_to['Sample ID'].append(sample_id)
         add_to['Research_Participant_ID'].append(seronet_id)
         add_to['Cohort'].append(study)
         add_to['Visit_Date_Duration_From_Index'].append(days_from_index)
@@ -160,6 +164,8 @@ def write_clinical(input_df, output_fname):
             for col in covid_cols[4:-1]:
                 add_to[col].append('N/A')
             add_to['Comments'].append('')
+        while len(add_to['Research_Participant_ID']) > len(add_to['Sample ID']):
+            add_to['Sample ID'].append(sample_id)
         '''
         Vaccines
         '''
@@ -206,6 +212,8 @@ def write_clinical(input_df, output_fname):
             for col in vax_cols[4:-1]:
                 add_to[col].append('N/A')
             add_to['Comments'].append('')
+        while len(add_to['Research_Participant_ID']) > len(add_to['Sample ID']):
+            add_to['Sample ID'].append(sample_id)
         '''
         Medications
         '''
@@ -261,6 +269,8 @@ def write_clinical(input_df, output_fname):
             add_to['Research_Participant_ID'].append(seronet_id)
             add_to['Cohort'].append(study)
             add_to['Visit_Number'].append(visit)
+        while len(add_to['Research_Participant_ID']) > len(add_to['Sample ID']):
+            add_to['Sample ID'].append(sample_id)
         '''
         Autoimmune (IRIS)
         '''
@@ -282,6 +292,7 @@ def write_clinical(input_df, output_fname):
             else:
                 add_to['Update'].append('No Update Reported')
             add_to['Comments'].append('')
+            add_to['Sample ID'].append(sample_id)
         '''
         Transplant (TITAN)
         '''
@@ -307,6 +318,7 @@ def write_clinical(input_df, output_fname):
             else:
                 add_to['Update'].append('No Update Reported')
             add_to['Comments'].append('')
+            add_to['Sample ID'].append(sample_id)
     # cancer_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Cancer', 'ICD_10_Code', 'Year_Of_Diagnosis_Duration_From_Index', 'Cured', 'In_Remission', 'In_Unspecified_Therapy', 'Chemotherapy', 'Radiation Therapy', 'Surgery', 'Update', 'Comments']
         if study == 'MARS':
             sec = 'Cancer'
@@ -329,6 +341,7 @@ def write_clinical(input_df, output_fname):
             else:
                 add_to['Update'].append('No Update Reported')
             add_to['Comments'].append(source_df.loc[seronet_id, 'Comments'])
+            add_to['Sample ID'].append(sample_id)
 
     output_folder = util.cross_d4
     output = {}
