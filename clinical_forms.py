@@ -198,7 +198,11 @@ def write_clinical(input_df, output_fname):
             add_to['Cohort'].append(study)
             add_to['Visit_Number'].append(visit)
         if len(add_to['Visit_Number']) > len(add_to['Vaccination_Status']):
-            add_to['Vaccination_Status'].append('Unvaccinated')
+            if (len(add_to['Vaccination_Status']) == 0 or
+                (add_to['Research_Participant_ID'][len(add_to['Vaccination_Status']) - 1] == seronet_id and add_to['Vaccination_Status'][-1] == 'Unvaccinated')):
+                add_to['Vaccination_Status'].append('Unvaccinated')
+            else:
+                add_to['Vaccination_Status'].append('No vaccination event reported')
             for col in vax_cols[4:-1]:
                 add_to[col].append('N/A')
             add_to['Comments'].append('')
@@ -327,14 +331,19 @@ def write_clinical(input_df, output_fname):
             add_to['Comments'].append(source_df.loc[seronet_id, 'Comments'])
 
     output_folder = util.cross_d4
+    output = {}
     writer = pd.ExcelWriter(output_folder + '{}.xlsx'.format(output_fname)) # Output sheet
-    for sname, df in future_output.items():
+    for sname, df2b in future_output.items():
         print(sname)
-        for k, vs in df.items():
+        for k, vs in df2b.items():
             print(k, len(vs))
         print()
-        pd.DataFrame(df).to_excel(writer, sheet_name=sname, index=False, na_rep='N/A')
+        df = pd.DataFrame(df2b)
+        output[sname] = df
+        df.to_excel(writer, sheet_name=sname, index=False, na_rep='N/A')
     writer.save()
+    writer.close()
+    return output
 
 
 if __name__ == '__main__':

@@ -368,16 +368,20 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             add_to['Vial Warnings'].append('')
             add_to['Vial Modifiers'].append('')
 
+    output = {}
     writer = pd.ExcelWriter(util.proc_d4 + '{}.xlsx'.format(output_fname))
     for sname, df2b in future_output.items():
         df = pd.DataFrame(df2b)
+        output[sname] = df
         df[df['Date'].apply(lambda val: first_date <= val.date() <= last_date)].to_excel(writer, sheet_name=sname, index=False)
     writer.save()
+    writer.close()
     source.to_excel(util.script_output + 'SERONET_In_Window_Data_biospecimen_companion.xlsx', index=False)
     with open(util.script_output + 'trouble.csv', 'w+') as f:
         print("Sample ID", file=f)
         for sample in issues:
             print(sample, file=f)
+    return output
 
 
 
