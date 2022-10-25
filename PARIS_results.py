@@ -122,12 +122,12 @@ def paris_results(output):
             auc = sample['AUC']
         if not pd.isna(auc) and sample_id not in research_results.keys():
             research_results[sample_id] = [spike, auc]
-    col_order = ['Participant ID', 'Date', 'Sample ID', 'Days to 1st Vaccine Dose', 'Days to Boost', 'Infection Timing', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Vaccine Type', 'Boost Type', 'Days to Infection 1', 'Days to Infection 2', 'Infection Pre-Vaccine?', 'Number of SARS-CoV-2 Infections', 'Infection on Study', 'First Dose Date', 'Second Dose Date', 'Days to 2nd', 'Boost Date', 'Boost 2 Date', 'Days to Boost 2', 'Boost 2 Type', 'Infection 1 Date', 'Infection 2 Date', 'Post-Baseline', 'Visit Type', 'Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
+    col_order = ['Participant ID', 'Date', 'Sample ID', 'Days to 1st Vaccine Dose', 'Days to Boost', 'Infection Timing', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Vaccine Type', 'Boost Type', 'Days to Infection 1', 'Days to Infection 2', 'Infection Pre-Vaccine?', 'Number of SARS-CoV-2 Infections', 'Infection on Study', 'First Dose Date', 'Second Dose Date', 'Days to 2nd', 'Boost Date', 'Boost 2 Date', 'Days to Boost 2', 'Boost 2 Type', 'Boost 3 Date', 'Days to Boost 3', 'Boost 3 Type', 'Infection 1 Date', 'Infection 2 Date', 'Post-Baseline', 'Visit Type', 'Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
     data = {col: [] for col in col_order}
     dem_cols = ['Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
-    shared_cols = ['Infection Pre-Vaccine?', 'Vaccine Type', 'Number of SARS-CoV-2 Infections', 'Infection Timing', 'Boost Type', 'Boost 2 Type']
-    date_cols = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Infection 1 Date', 'Infection 2 Date']
-    day_cols = ['Days to 1st Vaccine Dose', 'Days to 2nd', 'Days to Boost', 'Days to Boost 2', 'Days to Infection 1', 'Days to Infection 2']
+    shared_cols = ['Infection Pre-Vaccine?', 'Vaccine Type', 'Number of SARS-CoV-2 Infections', 'Infection Timing', 'Boost Type', 'Boost 2 Type', 'Boost 3 Type']
+    date_cols = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Boost 3 Date', 'Infection 1 Date', 'Infection 2 Date']
+    day_cols = ['Days to 1st Vaccine Dose', 'Days to 2nd', 'Days to Boost', 'Days to Boost 2', 'Days to Boost 3', 'Days to Infection 1', 'Days to Infection 2']
     for participant, samples in participant_samples.items():
         try:
             samples.sort(key=lambda x: x[0])
