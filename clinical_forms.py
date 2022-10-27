@@ -143,7 +143,7 @@ def write_clinical(input_df, output_fname):
             add_to['Comments'].append('')
         else:
             for idx, row in source_df[source_df['Participant ID'] == participant].sort_values('Report_Time').iterrows():
-                if row['Reported'] == 'No' and row['Report_Time'] < visit_date:
+                if row['Reported'] == 'No' and row['Report_Time'].date() < visit_date:
                     source_df.loc[idx, 'Reported'] = 'Yes'
                     for col in covid_cols[3:-1]:
                         if 'Date' in col:
