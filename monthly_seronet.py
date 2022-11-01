@@ -42,14 +42,15 @@ if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Make files for monthly data submission.')
     argParser.add_argument('-u', '--update', action='store_true')
     argParser.add_argument('-s', '--report_start', action='store', required=True, type=pd.to_datetime)
+    argParser.add_argument('-e', '--report_end', action='store', required=True, type=pd.to_datetime)
     args = argParser.parse_args()
     intermediate = 'monthly_report'
     if args.update:
-        all_data = pull_from_source()
+        all_data = pull_from_source().query('Date <= @args.report_end').copy()
         ecrabs = make_ecrabs(all_data, output_fname=intermediate)
         dfs_clin = write_clinical(pd.DataFrame(ecrabs['Biospecimen']), 'monthly_tmp')
     else:
-        all_data = pd.read_excel(util.unfiltered, keep_default_na=False)
+        all_data = pd.read_excel(util.unfiltered, keep_default_na=False).query('Date <= @args.report_end').copy()
         dfs_clin = pd.read_excel(util.cross_d4 + 'monthly_tmp.xlsx', sheet_name = None, keep_default_na=False)
     seronet_key = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name=None)
     exclusions = seronet_key['Exclusions']
@@ -58,10 +59,11 @@ if __name__ == '__main__':
     ppl_filter = ~all_data['Participant ID'].isin(exclude_ppl)
     id_filter = ~all_data['Seronet ID'].isin(exclude_ids)
     all_data = all_data[ppl_filter & id_filter].copy()
+    data_ppl = set(all_data['Seronet ID'].unique())
     ppl_cols = ['Research_Participant_ID', 'Age', 'Race', 'Ethnicity', 'Sex_At_Birth', 'Sunday_Prior_To_Visit_1']
     baseline_dates = all_data.drop_duplicates(subset='Seronet ID').set_index('Seronet ID').loc[:, 'Date']
     baseline_sundays = baseline_dates - np.mod(baseline_dates.dt.weekday + 1, 7) * datetime.timedelta(days=1)
-    ppl_data = dfs_clin['Baseline'].loc[:, ppl_cols[:-1]].join(baseline_sundays, on='Research_Participant_ID').rename(columns={'Date': ppl_cols[-1]})
+    ppl_data = dfs_clin['Baseline'].loc[:, ppl_cols[:-1]].query('Research_Participant_ID in @data_ppl').join(baseline_sundays, on='Research_Participant_ID').rename(columns={'Date': ppl_cols[-1]})
     output_outer = util.cross_d4 + 'Accrual/'
     output_inner = output_outer + '{}/'.format(datetime.date.today())
     if not os.path.exists(output_inner):
@@ -69,7 +71,7 @@ if __name__ == '__main__':
     ppl_data.to_excel(output_inner + 'Accrual_Participant_Info.xlsx', index=False, na_rep='N/A')
     vax_cols = ['Research_Participant_ID', 'Visit_Number', 'Vaccination_Status', 'SARS-CoV-2_Vaccine_Type', 'SARS-CoV-2_Vaccination_Date_Duration_From_Visit1']
     orig_date = 'SARS-CoV-2_Vaccination_Date_Duration_From_Index'
-    vax_data = dfs_clin['Vax'].loc[:, vax_cols[:-1] + [orig_date]]
+    vax_data = dfs_clin['Vax'].loc[:, vax_cols[:-1] + [orig_date]].query('Research_Participant_ID in @data_ppl').copy()
     vax_data['Visit_Number'] = vax_data['Visit_Number'].str.strip('bBaseline()')
     index_to_baseline = all_data.drop_duplicates(subset='Seronet ID').set_index('Seronet ID').loc[:, 'Days from Index']
     vax_data[vax_cols[-1]] = vax_data[orig_date].apply(lambda val: 0 if val == 'N/A' else val) - vax_data['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
@@ -84,7 +86,7 @@ if __name__ == '__main__':
         'PBMC concentration per mL (x10^6)': 'PBMC_Concentration',
         '# of PBMC vials': 'Num_PBMC_Vials_For_FNL'
     }
-    df_start = all_data.loc[:, keep_cols].rename(columns=col_map).copy()
+    df_start = all_data.loc[:, keep_cols].rename(columns=col_map).query('Date <= @args.report_end').copy()
     cohort_key = {'MARS': 'Cancer', 'IRIS': 'IBD', 'TITAN': 'Transplant', 'PRIORITY': 'PRIORITY'}
     df_start['Primary_Cohort'] = df_start['Site_Cohort_Name'].apply(lambda val: cohort_key[val])
     df_start['Visit_Date_Duration_From_Visit_1'] = df_start['Days from Index'] - df_start['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
@@ -98,7 +100,6 @@ if __name__ == '__main__':
     df_start['PBMC_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: pbmcs.loc[val, 'Volume (mL)'] if val in pbmcs.index else 0)
     df_start['Collected_In_This_Reporting_Period'] = (df_start['Date'] >= args.report_start).apply(lambda val: "Yes" if val else "No")
     cov_info = dfs_clin['COVID'].assign(sample_id=lambda df: df['Sample ID'].astype(str).str.upper()).set_index('sample_id')
-    print(cov_info['COVID_Status'].unique())
     cov_map = {'Positive, Test Not Specified': 'Has Reported Infection', 'Negative, Test Not Specified': 'Has Not Reported Infection', 'Positive by PCR': 'Has Reported Infection', 'Negative by PCR': 'Has Not Reported Infection', 'Positive by Rapid Antigen Test': 'Has Reported Infection', 'Negative by Rapid Antigen Test': 'Has Not Reported Infection', 'Positive by Antibody Test': 'Has Reported Infection', 'Negative by Antibody Test': 'Has Not Reported Infection', 'Likely COVID Positive': 'Has Reported Infection', 'No COVID event reported': 'Has Not Reported Infection', 'No COVID data collected': 'Not Reported', '': 'Has Not Reported Infection'}
     # this needs fixing, should be precise
     cov_map = {k.upper(): v for k, v in cov_map.items()}
