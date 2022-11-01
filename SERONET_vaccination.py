@@ -47,10 +47,12 @@ if __name__ == '__main__':
             print("Participant {} ({}) is missing vaccine dose 2 date (dose 1 on {})".format(participant, 'IRIS', iris_data.loc[participant, 'First Dose Date']))
             index_date = 'N/A'
         vaccine = iris_data.loc[participant, 'Which Vaccine?']
+        if str(vaccine).upper()[:1] == 'J' and str(vaccine).upper()[:2] != 'JA':
+            vaccine = 'Johnson & Johnson'
         date_1 = iris_data.loc[participant, 'First Dose Date']
         if type(date_1) in [datetime.datetime, pd.Timestamp]:
             vaccine_stuff['Participant ID'].append(participant)
-            if type(vaccine) == str and vaccine[:1].upper() == 'J':
+            if type(vaccine) == str and vaccine[:2].upper() == 'JO':
                 vaccine_stuff['Timepoint'].append('Dose 1 of 1')
             else:
                 vaccine_stuff['Timepoint'].append('Dose 1 of 2')
@@ -69,6 +71,22 @@ if __name__ == '__main__':
             vaccine_stuff['Timepoint'].append('Dose 3')
             vaccine_stuff['Vaccine Type'].append(boost)
             vaccine_stuff['Vaccine Date'].append(date_3)
+        boost_cols = [['Fourth Dose Date', 'Fourth Dose Type'], ['Fifth Dose Date', 'Fifth Dose Type']]
+        timepoint_cols = ['Booster 1', 'Booster 2']
+        for i, vals in enumerate(boost_cols):
+            dt, tp = vals
+            date_boost = iris_data.loc[participant, dt]
+            boost_type = iris_data.loc[participant, tp]
+            if 'bivalent' in str(boost_type).lower():
+                boost_type = boost_type.split()[0]
+                addendum = ':Bivalent'
+            else:
+                addendum = ''
+            if type(date_boost) in [datetime.datetime, pd.Timestamp]:
+                vaccine_stuff['Participant ID'].append(participant)
+                vaccine_stuff['Timepoint'].append(timepoint_cols[i] + addendum)
+                vaccine_stuff['Vaccine Type'].append(boost_type)
+                vaccine_stuff['Vaccine Date'].append(date_boost)
     pd.DataFrame(vaccine_stuff).to_excel(util.script_output + 'iris_vaccines.xlsx', index=False)
     """
     TITAN Stuff
@@ -84,10 +102,12 @@ if __name__ == '__main__':
             print("Participant {}  ({}) is missing vaccine dose 3 date (dose 1 on {}, dose 2 on {})".format(participant, 'TITAN', titan_data.loc[participant, 'Vaccine #1 Date'], titan_data.loc[participant, 'Vaccine #2 Date']))
             index_date = 'N/A'
         vaccine = titan_data.loc[participant, 'Vaccine Type']
+        if str(vaccine).upper()[:1] == 'J' and str(vaccine).upper()[:2] != 'JA':
+            vaccine = 'Johnson & Johnson'
         date_1 = titan_data.loc[participant, 'Vaccine #1 Date']
         if type(date_1) in [datetime.datetime, pd.Timestamp]:
             vaccine_stuff['Participant ID'].append(participant)
-            if type(vaccine) == str and vaccine[:1].upper() == 'J':
+            if type(vaccine) == str and vaccine[:2].upper() == 'JO':
                 vaccine_stuff['Timepoint'].append('Dose 1 of 1')
             else:
                 vaccine_stuff['Timepoint'].append('Dose 1 of 2')
@@ -106,6 +126,22 @@ if __name__ == '__main__':
             vaccine_stuff['Timepoint'].append('Dose 3')
             vaccine_stuff['Vaccine Type'].append(boost)
             vaccine_stuff['Vaccine Date'].append(date_3)
+        boost_cols = [['First Booster Dose Date', 'First Booster Vaccine Type'], ['Second Booster Dose Date', 'Second Booster Vaccine Type']]
+        timepoint_cols = ['Booster 1', 'Booster 2']
+        for i, vals in enumerate(boost_cols):
+            dt, tp = vals
+            date_boost = titan_data.loc[participant, dt]
+            boost_type = titan_data.loc[participant, tp]
+            if 'bivalent' in str(boost_type).lower():
+                boost_type = boost_type.split()[0]
+                addendum = ':Bivalent'
+            else:
+                addendum = ''
+            if type(date_boost) in [datetime.datetime, pd.Timestamp]:
+                vaccine_stuff['Participant ID'].append(participant)
+                vaccine_stuff['Timepoint'].append(timepoint_cols[i] + addendum)
+                vaccine_stuff['Vaccine Type'].append(boost_type)
+                vaccine_stuff['Vaccine Date'].append(date_boost)
     pd.DataFrame(vaccine_stuff).to_excel(util.script_output + 'titan_vaccines.xlsx', index=False)
     """
     MARS Stuff
@@ -121,10 +157,12 @@ if __name__ == '__main__':
             print("Participant {} ({}) is missing vaccine dose 2 date (dose 1 on {})".format(participant, 'MARS', mars_data.loc[participant, 'Vaccine #1 Date']))
             index_date = 'N/A'
         vaccine = mars_data.loc[participant, 'Vaccine Name']
+        if str(vaccine).upper()[:1] == 'J' and str(vaccine).upper()[:2] != 'JA':
+            vaccine = 'Johnson & Johnson'
         date_1 = mars_data.loc[participant, 'Vaccine #1 Date']
         if type(date_1) in [datetime.datetime, pd.Timestamp]:
             vaccine_stuff['Participant ID'].append(participant)
-            if type(vaccine) == str and vaccine[:1].upper() == 'J':
+            if type(vaccine) == str and vaccine[:2].upper() == 'JO':
                 vaccine_stuff['Timepoint'].append('Dose 1 of 1')
             else:
                 vaccine_stuff['Timepoint'].append('Dose 1 of 2')
@@ -142,9 +180,14 @@ if __name__ == '__main__':
             dt, tp = vals
             date_boost = mars_data.loc[participant, dt]
             boost_type = mars_data.loc[participant, tp]
+            if 'bivalent' in str(boost_type).lower():
+                boost_type = boost_type.split()[0]
+                addendum = ':Bivalent'
+            else:
+                addendum = ''
             if type(date_boost) in [datetime.datetime, pd.Timestamp]:
                 vaccine_stuff['Participant ID'].append(participant)
-                vaccine_stuff['Timepoint'].append(timepoint_cols[i])
+                vaccine_stuff['Timepoint'].append(timepoint_cols[i] + addendum)
                 vaccine_stuff['Vaccine Type'].append(boost_type)
                 vaccine_stuff['Vaccine Date'].append(date_boost)
     pd.DataFrame(vaccine_stuff).to_excel(util.script_output + 'mars_vaccines.xlsx', index=False)
@@ -162,10 +205,12 @@ if __name__ == '__main__':
             print("Participant {} ({}) is missing baseline date".format(participant, 'PRIORITY'))
             index_date = 'N/A'
         vaccine = prio_data.loc[participant, 'Vaccine Type']
+        if str(vaccine).upper()[:1] == 'J' and str(vaccine).upper()[:2] != 'JA':
+            vaccine = 'Johnson & Johnson'
         date_1 = prio_data.loc[participant, 'Vaccine Dose 1']
         if type(date_1) in [datetime.datetime, pd.Timestamp]:
             vaccine_stuff['Participant ID'].append(participant)
-            if type(vaccine) == str and vaccine[:1].upper() == 'J':
+            if type(vaccine) == str and vaccine[:2].upper() == 'JO':
                 vaccine_stuff['Timepoint'].append('Dose 1 of 1')
             else:
                 vaccine_stuff['Timepoint'].append('Dose 1 of 2')
@@ -177,14 +222,20 @@ if __name__ == '__main__':
             vaccine_stuff['Timepoint'].append('Dose 2 of 2')
             vaccine_stuff['Vaccine Type'].append(vaccine)
             vaccine_stuff['Vaccine Date'].append(date_2)
-        date_3 = prio_data.loc[participant, 'Boost Date']
-        boost = prio_data.loc[participant, 'Boost Type']
-        if type(date_3) in [datetime.datetime, pd.Timestamp]:
-            vaccine_stuff['Participant ID'].append(participant)
-            if vaccine_stuff['Timepoint'][-1] == 'Dose 1 of 1':
-                vaccine_stuff['Timepoint'].append('Dose 2')
+        boost_cols = [['Boost Date', 'Boost Type'], ['Vaccine Dose 4', 'Vaccine Type Dose 4'], ['Vaccine Dose 5', 'Vaccine Type Dose 5']]
+        timepoint_cols = ['Booster 1', 'Booster 2', 'Booster 3']
+        for i, vals in enumerate(boost_cols):
+            dt, tp = vals
+            date_boost = prio_data.loc[participant, dt]
+            boost_type = prio_data.loc[participant, tp]
+            if 'bivalent' in str(boost_type).lower():
+                boost_type = boost_type.split()[0]
+                addendum = ':Bivalent'
             else:
-                vaccine_stuff['Timepoint'].append('Dose 3')
-            vaccine_stuff['Vaccine Type'].append(boost)
-            vaccine_stuff['Vaccine Date'].append(date_3)
+                addendum = ''
+            if type(date_boost) in [datetime.datetime, pd.Timestamp]:
+                vaccine_stuff['Participant ID'].append(participant)
+                vaccine_stuff['Timepoint'].append(timepoint_cols[i] + addendum)
+                vaccine_stuff['Vaccine Type'].append(boost_type)
+                vaccine_stuff['Vaccine Date'].append(date_boost)
     pd.DataFrame(vaccine_stuff).to_excel(util.script_output + 'prio_vaccines.xlsx', index=False)
