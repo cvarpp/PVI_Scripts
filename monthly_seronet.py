@@ -72,7 +72,7 @@ if __name__ == '__main__':
     vax_cols = ['Research_Participant_ID', 'Visit_Number', 'Vaccination_Status', 'SARS-CoV-2_Vaccine_Type', 'SARS-CoV-2_Vaccination_Date_Duration_From_Visit1']
     orig_date = 'SARS-CoV-2_Vaccination_Date_Duration_From_Index'
     vax_data = dfs_clin['Vax'].loc[:, vax_cols[:-1] + [orig_date]].query('Research_Participant_ID in @data_ppl').copy()
-    vax_data['Visit_Number'] = vax_data['Visit_Number'].str.strip('bBaseline()')
+    vax_data['Visit_Number'] = vax_data['Visit_Number'].astype(str).str.strip('bBaseline()')
     index_to_baseline = all_data.drop_duplicates(subset='Seronet ID').set_index('Seronet ID').loc[:, 'Days from Index']
     vax_data[vax_cols[-1]] = vax_data[orig_date].apply(lambda val: 0 if val == 'N/A' else val) - vax_data['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
     vax_data.loc[(vax_data[orig_date] == 'N/A'), vax_cols[-1]] = 'N/A'
