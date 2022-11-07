@@ -45,7 +45,7 @@ def time_diff_wrapper(t_start, t_end, annot):
         time_diff = 'Missing'
     return time_diff
 
-def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_datetime('1/1/2021'), output_fname='tmp'):
+def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_datetime('1/1/2040'), output_fname='tmp'):
     issues = set()
     first_date = first_date.date()
     last_date = last_date.date()
