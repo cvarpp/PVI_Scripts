@@ -227,7 +227,7 @@ def pull_from_source():
                 else:
                     participant_data[participant][k] = source_df.loc[participant, converter[k]]
             if cohort == 'TITAN':
-                participant_data[participant]['Index Date'] = participant_data[participant]['2nd Dose Date']
+                participant_data[participant]['Index Date'] = participant_data[participant]['3rd Dose Date']
             elif str(participant_data[participant]['Vaccine'])[:1].upper() == 'J':
                 participant_data[participant]['Index Date'] = participant_data[participant]['1st Dose Date']
             else:
