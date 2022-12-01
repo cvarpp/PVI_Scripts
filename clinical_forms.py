@@ -361,8 +361,8 @@ def write_clinical(input_df, output_fname):
 
 if __name__ == '__main__':
     
-    argParser = argparse.ArgumentParser(description='Make clinical forms. Input files are assumed to be in the ecrabs output folder.')
-    argParser.add_argument('-i', '--input_df', action='store', required=True, type=lambda wb: pd.read_excel(util.proc_d4 + wb, sheet_name='Biospecimen'))
+    argParser = argparse.ArgumentParser(description='Make clinical forms. input_df should be a fully specified filepath to a workbook containing a "Biospecimen" tab corresponding to this data submission.')
+    argParser.add_argument('-i', '--input_df', action='store', required=True, type=lambda wb_path: pd.read_excel(wb_path, sheet_name='Biospecimen'))
     argParser.add_argument('-o', '--output_file', action='store', required=True)
     args = argParser.parse_args()
 
