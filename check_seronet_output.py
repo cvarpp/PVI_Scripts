@@ -35,7 +35,7 @@ def validate_files(input_folder, output_path, use_xlsx):
                 print(base_name)
         print("Files marked in submission but missing:")
         for fname in sorted(to_check):
-            if fname + '.csv' not in os.listdir():
+            if fname + '.csv' not in os.listdir() and fname + '.xlsx' not in os.listdir() and fname + '.xlsm' not in os.listdir():
                 print(fname)
     id_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Biospecimen_ID', 'Biospecimen_Type', 'Aliquot_ID']
     visit_found = {}
@@ -46,7 +46,10 @@ def validate_files(input_folder, output_path, use_xlsx):
     cohort_counts = {}
     for fname in to_check:
         fpath = input_folder + fname + ending
-        df = reader(fpath).rename(columns={'Current Label': 'Aliquot_ID'})
+        try:
+            df = reader(fpath).rename(columns={'Current Label': 'Aliquot_ID'})
+        except:
+            df = reader(input_folder + fname + '.xlsm').rename(columns={'Current Label': 'Aliquot_ID'})
         coi = [col for col in df.columns if col in id_cols]
         df_counts = df.loc[:, coi]
         for _, row in df_counts.iterrows():
@@ -143,11 +146,12 @@ def validate_files(input_folder, output_path, use_xlsx):
 
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Check a folder of SERONET excel files or csv')
-    argParser.add_argument('-b', '--batch', action='store', help='Name of Batch (outer folder in Data)', required=True)
-    argParser.add_argument('-f', '--folder', action='store', help='Name of folder containing files', required=True)
-    argParser.add_argument('-x', '--xlsx', action='store_true', help='Files in folder')
+    argParser.add_argument('-b', '--batch', action='store', help='Name of Batch', required=True)
+    argParser.add_argument('-f', '--folder', action='store', help='Fully specified filepath to folder containing files', required=True)
+    argParser.add_argument('-x', '--xlsx', action='store_true', help='Files in folder are in xls(x) format')
     args = argParser.parse_args()
-    input_folder = util.seronet_data + "Batch " + args.batch + os.sep + args.folder + os.sep
+    # input_folder = util.seronet_data + "Batch " + args.batch + os.sep + args.folder + os.sep
+    input_folder = args.folder + os.sep
     output_folder = util.seronet_qc
-    output_path = output_folder + '{}_{}.xlsx'.format(args.batch, args.folder)
+    output_path = output_folder + '{}.xlsx'.format(args.batch)
     validate_files(input_folder, output_path, args.xlsx)
