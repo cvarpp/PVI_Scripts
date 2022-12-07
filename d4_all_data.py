@@ -128,10 +128,12 @@ def pull_from_source():
     samplesClean = samples.dropna(subset=['Participant ID'])
     participant_samples = {participant: [] for participant in participants}
     submitted_key = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Source').drop_duplicates(subset=['Participant ID']).set_index('Participant ID')
+    sample_exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Sample Exclusions')
+    exclude_samples = set(sample_exclusions['Sample ID'].astype(str).str.upper().str.strip().unique())
     samples_of_interest = set()
     for _, sample in samplesClean.iterrows():
         sample_id = str(sample['Sample ID']).strip().upper()
-        if len(sample_id) != 5:
+        if len(sample_id) != 5 or sample_id in exclude_samples:
             continue
         participant = str(sample['Participant ID']).strip().upper()
         if str(sample['Study']).strip().upper() == 'PRIORITY':
