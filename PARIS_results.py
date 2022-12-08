@@ -21,7 +21,7 @@ def paris_results(output):
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
-    paris_data = pd.read_excel(util.paris + 'Patient Tracking - PARIS.xlsx', sheet_name='Subgroups', header=4)
+    paris_data = pd.read_excel(util.paris + 'Patient Tracking - PARIS.xlsx', sheet_name='Subgroups', header=4).dropna(subset=['Participant ID'])
     paris_data['Participant ID'] = paris_data['Participant ID'].apply(lambda val: val.strip().upper())
     participants = paris_data['Participant ID'].unique()
     paris_data.set_index('Participant ID', inplace=True)
