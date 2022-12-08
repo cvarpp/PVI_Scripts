@@ -5,6 +5,23 @@ from dateutil import parser
 import util
 import argparse
 
+def clean_auc(df):
+    df = df.copy()
+    neg_spike = df['Spike endpoint'].astype(str).str.strip().str.upper().str[:2] == "NE"
+    neg_auc = df['AUC'] == 0.
+    df.loc[neg_spike | neg_auc, 'AUC'] = 1.
+    return df['AUC']
+
+def clean_sample_id(df):
+    return df['Sample ID'].astype(str).str.strip().str.upper()
+
+def clean_research(df):
+    return (df.assign(sample_id=clean_sample_id,
+                      AUC=clean_auc)
+              .dropna(subset=['AUC'])
+              .query("AUC not in ['-']")
+              .loc[:, ['sample_id', 'Spike endpoint', 'AUC']])
+
 def try_date(potential_date):
     try:
         return potential_date.date()
@@ -34,55 +51,6 @@ def paris_results():
     for _, sample in samplesClean.iterrows():
         if len(str(sample['Sample ID'])) != 5:
             continue
-        participant_id = sample['Participant ID'].strip().upper()
-        if participant_id in participant_samples.keys():
-            if sample['Sample ID'] in [x[1] for x in participant_samples[participant_id]]:
-                continue
-            try:
-                participant_samples[participant_id].append([parser.parse(str(sample['Date Collected'])).date(), sample['Sample ID']])
-            except:
-                print(sample['Sample ID'], "has invalid date", sample['Date Collected'])
-                participant_samples[participant_id].append([parser.parse('1/1/1900').date(), sample['Sample ID']])
-    num_samples = max((len(samples) for samples in participant_samples.values()))
-    rows = {'Participant ID': []}
-    for i in range(num_samples):
-        rows['Date_{}'.format(i)] = []
-        rows['SampleID_{}'.format(i)] = []
-    for participant, samples in participant_samples.items():
-        try:
-            samples.sort(key=lambda val: val[0])
-        except:
-            print(participant, "has", samples, "samples that do not sort. Skipping for DataDump...")
-            continue
-        rows['Participant ID'].append(participant)
-        for i in range(num_samples):
-            if i < len(samples):
-                rows['Date_{}'.format(i)].append(samples[i][0])
-                rows['SampleID_{}'.format(i)].append(str(samples[i][1]).strip())
-            else:
-                rows['Date_{}'.format(i)].append('')
-                rows['SampleID_{}'.format(i)].append('')
-    pd.DataFrame(rows).to_excel(util.paris + 'DataDump.xlsx', index=False)
-    last_sample = {'Participant ID': [], 'Date': [], 'Sample ID': []}
-    for participant, samples in participant_samples.items():
-        try:
-            samples.sort(key=lambda val: val[0])
-        except:
-            print(participant, "has", samples, "samples that do not sort. Skipping for LastSeen...")
-            continue
-        last_sample['Participant ID'].append(participant)
-        if len(samples) > 0:
-            last_sample['Date'].append(samples[-1][0])
-            last_sample['Sample ID'].append(samples[-1][1])
-        else:
-            last_sample['Date'].append('N/A')
-            last_sample['Sample ID'].append('No baseline')
-    pd.DataFrame(last_sample).to_excel(util.paris + 'LastSeen.xlsx', index=False)
-
-    participant_samples = {participant: [] for participant in participants}
-    for _, sample in samplesClean.iterrows():
-        if len(str(sample['Sample ID'])) != 5:
-            continue
         participant = str(sample['Participant ID']).strip().upper()
         if participant in participant_samples.keys():
             if str(sample[newCol]).strip().upper() == "NEGATIVE":
@@ -100,27 +68,41 @@ def paris_results():
             except:
                 print(sample['Sample ID'], "has invalid date", sample['Date Collected'])
                 participant_samples[participant].append((parser.parse('1/1/1900').date(), str(sample['Sample ID']).strip().upper(), sample[visit_type], sample[newCol], result_new))
-    research_samples_1 = pd.read_excel(util.research, sheet_name='Inputs')
-    research_samples_2 = pd.read_excel(util.research, sheet_name='Archive')
-    research_results = {}
-    for _, sample in research_samples_1.iterrows():
-        sample_id = str(sample['Sample ID']).strip().upper()
-        spike = sample['Spike endpoint']
-        if str(spike).strip().upper() == "NEG":
-            auc = 1.
+    last_sample = {'Participant ID': [], 'Date': [], 'Sample ID': []}
+    num_samples = max((len(samples) for samples in participant_samples.values()))
+    rows = {'Participant ID': []}
+    for i in range(num_samples):
+        rows['Date_{}'.format(i)] = []
+        rows['SampleID_{}'.format(i)] = []
+    for participant, samples in participant_samples.items():
+        try:
+            samples.sort(key=lambda val: val[0])
+        except:
+            print(participant, "has", samples, "samples that do not sort. Skipping for DataDump and LastSeen...")
+            continue
+        rows['Participant ID'].append(participant)
+        for i in range(num_samples):
+            if i < len(samples):
+                rows['Date_{}'.format(i)].append(samples[i][0])
+                rows['SampleID_{}'.format(i)].append(str(samples[i][1]).strip())
+            else:
+                rows['Date_{}'.format(i)].append('')
+                rows['SampleID_{}'.format(i)].append('')
+        last_sample['Participant ID'].append(participant)
+        if len(samples) > 0:
+            last_sample['Date'].append(samples[-1][0])
+            last_sample['Sample ID'].append(samples[-1][1])
         else:
-            auc = sample['AUC']
-        if not pd.isna(auc):
-            research_results[sample_id] = [spike, auc]
-    for _, sample in research_samples_2.iterrows():
-        sample_id = str(sample['Sample ID']).strip().upper()
-        spike = sample['Spike endpoint']
-        if str(spike).strip().upper() == "NEG":
-            auc = 1.
-        else:
-            auc = sample['AUC']
-        if not pd.isna(auc) and sample_id not in research_results.keys():
-            research_results[sample_id] = [spike, auc]
+            last_sample['Date'].append('N/A')
+            last_sample['Sample ID'].append('No baseline')
+    pd.DataFrame(rows).to_excel(util.paris + 'DataDump.xlsx', index=False)
+    pd.DataFrame(last_sample).to_excel(util.paris + 'LastSeen.xlsx', index=False)
+
+    research_source = pd.ExcelFile(util.research)
+    research_samples_1 = research_source.parse(sheet_name='Inputs').pipe(clean_research)
+    research_samples_2 = research_source.parse(sheet_name='Archive').pipe(clean_research)
+    research_results = pd.concat([research_samples_2, research_samples_1]).drop_duplicates(subset=['sample_id'], keep='last').set_index('sample_id')
+
     col_order = ['Participant ID', 'Date', 'Sample ID', 'Days to 1st Vaccine Dose', 'Days to Boost', 'Infection Timing', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Vaccine Type', 'Boost Type', 'Days to Infection 1', 'Days to Infection 2', 'Days to Infection 3', 'Infection Pre-Vaccine?', 'Number of SARS-CoV-2 Infections', 'Infection on Study', 'First Dose Date', 'Second Dose Date', 'Days to 2nd', 'Boost Date', 'Boost 2 Date', 'Days to Boost 2', 'Boost 2 Type', 'Boost 3 Date', 'Days to Boost 3', 'Boost 3 Type', 'Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date', 'Post-Baseline', 'Visit Type', 'Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
     data = {col: [] for col in col_order}
     dem_cols = ['Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
@@ -145,7 +127,7 @@ def paris_results():
                 data[dem_col].append(dems.loc[participant, dem_col])
             for shared_col in shared_cols:
                 data[shared_col].append(paris_data.loc[participant, shared_col])
-            data['Infection on Study'].append(str(paris_data.loc[participant, 'Infection 1 On Study?']).strip().lower() == 'yes' or str(paris_data.loc[participant, 'Infection 2 On Study?']).strip().lower() == 'yes')
+            data['Infection on Study'].append(str(paris_data.loc[participant, 'Infection 1 On Study?']).strip().lower() == 'yes' or str(paris_data.loc[participant, 'Infection 2 On Study?']).strip().lower() == 'yes' or str(paris_data.loc[participant, 'Infection 3 On Study?']).strip().lower() == 'yes')
             for date_col, day_col in zip(date_cols, day_cols):
                 data[date_col].append(try_date(paris_data.loc[participant, date_col]))
                 data[day_col].append(try_datediff(data[date_col][-1], date_))
@@ -156,8 +138,8 @@ def paris_results():
             data['Visit Type'].append(visit_type)
             data['Qualitative'].append(result)
             data['Quantitative'].append(result_new)
-            if sample_id in research_results.keys():
-                res = research_results[sample_id]
+            if sample_id in research_results.index:
+                res = [research_results.loc[sample_id, 'Spike endpoint'], research_results.loc[sample_id, 'AUC']]
             else:
                 res = ['-', '-']
             data['Spike endpoint'].append(res[0])
@@ -178,7 +160,7 @@ def paris_results():
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='Paris reporting generation')
     argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="Prefix for the output file (current date appended")
-    argparser.add_argument('-d', '--debug', action='store_true', default='tmp', help="Print to the command line but do not write to file")
+    argparser.add_argument('-d', '--debug', action='store_true', help="Print to the command line but do not write to file")
     args = argparser.parse_args()
 
     report = paris_results()
