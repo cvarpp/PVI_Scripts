@@ -17,7 +17,7 @@ def try_datediff(start_date, end_date):
     except:
         return ''
 
-def paris_results(output):
+def paris_results():
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
@@ -41,7 +41,7 @@ def paris_results(output):
             try:
                 participant_samples[participant_id].append([parser.parse(str(sample['Date Collected'])).date(), sample['Sample ID']])
             except:
-                print(sample['Date Collected'])
+                print(sample['Sample ID'], "has invalid date", sample['Date Collected'])
                 participant_samples[participant_id].append([parser.parse('1/1/1900').date(), sample['Sample ID']])
     num_samples = max((len(samples) for samples in participant_samples.values()))
     rows = {'Participant ID': []}
@@ -52,8 +52,7 @@ def paris_results(output):
         try:
             samples.sort(key=lambda val: val[0])
         except:
-            print(participant)
-            print(samples)
+            print(participant, "has", samples, "samples that do not sort. Skipping for DataDump...")
             continue
         rows['Participant ID'].append(participant)
         for i in range(num_samples):
@@ -69,7 +68,7 @@ def paris_results(output):
         try:
             samples.sort(key=lambda val: val[0])
         except:
-            print(participant)
+            print(participant, "has", samples, "samples that do not sort. Skipping for LastSeen...")
             continue
         last_sample['Participant ID'].append(participant)
         if len(samples) > 0:
@@ -99,10 +98,10 @@ def paris_results(output):
             try:
                 participant_samples[participant].append((parser.parse(str(sample['Date Collected'])).date(), str(sample['Sample ID']).strip().upper(), sample[visit_type], sample[newCol], result_new))
             except:
-                print(sample['Date Collected'])
+                print(sample['Sample ID'], "has invalid date", sample['Date Collected'])
                 participant_samples[participant].append((parser.parse('1/1/1900').date(), str(sample['Sample ID']).strip().upper(), sample[visit_type], sample[newCol], result_new))
-    research_samples_1 = pd.read_excel(util.research , sheet_name='Inputs')
-    research_samples_2 = pd.read_excel(util.research , sheet_name='Archive')
+    research_samples_1 = pd.read_excel(util.research, sheet_name='Inputs')
+    research_samples_2 = pd.read_excel(util.research, sheet_name='Archive')
     research_results = {}
     for _, sample in research_samples_1.iterrows():
         sample_id = str(sample['Sample ID']).strip().upper()
@@ -132,10 +131,10 @@ def paris_results(output):
         try:
             samples.sort(key=lambda x: x[0])
         except:
-            print(participant)
-            print(samples)
+            print(participant, "has", samples, "samples that do not sort. Skipping for report...")
             continue
         if len(samples) < 1:
+            print(participant, "has no samples. Skipping for report...")
             continue
         baseline = samples[0][0]
         for date_, sample_id, visit_type, result, result_new in samples:
@@ -174,17 +173,20 @@ def paris_results(output):
                 print("Log transformation on {} for {} failed. Fatal error, exiting".format(res[1], sample_id))
                 exit(1)
     report = pd.DataFrame(data)
-    output_filename = util.paris + 'datasets/{}_{}.xlsx'.format(output, date.today().strftime("%m.%d.%y"))
-    report.to_excel(output_filename, index=False)
-    print("PARIS report written to {}".format(output_filename))
+    return report
+
+if __name__ == '__main__':
+    argparser = argparse.ArgumentParser(description='Paris reporting generation')
+    argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="Prefix for the output file (current date appended")
+    argparser.add_argument('-d', '--debug', action='store_true', default='tmp', help="Print to the command line but do not write to file")
+    args = argparser.parse_args()
+
+    report = paris_results()
+    if not args.debug:
+        output_filename = util.paris + 'datasets/{}_{}.xlsx'.format(args.output_file, date.today().strftime("%m.%d.%y"))
+        report.to_excel(output_filename, index=False)
+        print("PARIS report written to {}".format(output_filename))
     print("{} samples from {} participants".format(
         report.shape[0],
         report['Participant ID'].unique().size
     ))
-
-if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(description='Paris reporting generation')
-    argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="What would you like the file to be called")
-    arg = argparser.parse_args()
-
-    paris_results(arg.output_file)
