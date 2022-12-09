@@ -26,13 +26,29 @@ def try_date(potential_date):
     try:
         return potential_date.date()
     except:
-        return potential_date
+        if str(potential_date).strip() == '':
+            return 'N/A'
+        else:
+            return potential_date
 
 def try_datediff(start_date, end_date):
     try:
         return int((end_date - start_date).days)
     except:
-        return ''
+        return 'N/A'
+
+def permissive_datemax(date_list, comp_date):
+    placeholder = pd.to_datetime('1.1.1950').date()
+    max_date = placeholder
+    for date_ in date_list:
+        try:
+            date_ = pd.to_datetime(date_).date()
+            if date_ > max_date and date_ < comp_date:
+                max_date = date_
+        except:
+            pass
+    if max_date > placeholder:
+        return max_date
 
 def paris_results():
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
@@ -103,12 +119,14 @@ def paris_results():
     research_samples_2 = research_source.parse(sheet_name='Archive').pipe(clean_research)
     research_results = pd.concat([research_samples_2, research_samples_1]).drop_duplicates(subset=['sample_id'], keep='last').set_index('sample_id')
 
-    col_order = ['Participant ID', 'Date', 'Sample ID', 'Days to 1st Vaccine Dose', 'Days to Boost', 'Infection Timing', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Vaccine Type', 'Boost Type', 'Days to Infection 1', 'Days to Infection 2', 'Days to Infection 3', 'Infection Pre-Vaccine?', 'Number of SARS-CoV-2 Infections', 'Infection on Study', 'First Dose Date', 'Second Dose Date', 'Days to 2nd', 'Boost Date', 'Boost 2 Date', 'Days to Boost 2', 'Boost 2 Type', 'Boost 3 Date', 'Days to Boost 3', 'Boost 3 Type', 'Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date', 'Post-Baseline', 'Visit Type', 'Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
+    col_order = ['Participant ID', 'Date', 'Sample ID', 'Days to 1st Vaccine Dose', 'Days to Boost', 'Days to Last Infection', 'Days to Last Vax', 'Infection Timing', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Vaccine Type', 'Boost Type', 'Days to Infection 1', 'Days to Infection 2', 'Days to Infection 3', 'Infection Pre-Vaccine?', 'Number of SARS-CoV-2 Infections', 'Infection on Study', 'First Dose Date', 'Second Dose Date', 'Days to 2nd', 'Boost Date', 'Boost 2 Date', 'Days to Boost 2', 'Boost 2 Type', 'Boost 3 Date', 'Days to Boost 3', 'Boost 3 Type', 'Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date', 'Most Recent Infection', 'Most Recent Vax', 'Post-Baseline', 'Visit Type', 'Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
     data = {col: [] for col in col_order}
     dem_cols = ['Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
     shared_cols = ['Infection Pre-Vaccine?', 'Vaccine Type', 'Number of SARS-CoV-2 Infections', 'Infection Timing', 'Boost Type', 'Boost 2 Type', 'Boost 3 Type']
     date_cols = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Boost 3 Date', 'Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date']
     day_cols = ['Days to 1st Vaccine Dose', 'Days to 2nd', 'Days to Boost', 'Days to Boost 2', 'Days to Boost 3', 'Days to Infection 1', 'Days to Infection 2', 'Days to Infection 3']
+    dose_dates = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Boost 3 Date']
+    inf_dates = ['Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date']
     for participant, samples in participant_samples.items():
         try:
             samples.sort(key=lambda x: x[0])
@@ -131,6 +149,10 @@ def paris_results():
             for date_col, day_col in zip(date_cols, day_cols):
                 data[date_col].append(try_date(paris_data.loc[participant, date_col]))
                 data[day_col].append(try_datediff(data[date_col][-1], date_))
+            data['Most Recent Infection'].append(permissive_datemax([data[inf_date][-1] for inf_date in inf_dates], date_))
+            data['Most Recent Vax'].append(permissive_datemax([data[dose_date][-1] for dose_date in dose_dates], date_))
+            data['Days to Last Infection'].append(try_datediff(data['Most Recent Infection'][-1], date_))
+            data['Days to Last Vax'].append(try_datediff(data['Most Recent Vax'][-1], date_))
             data['Participant ID'].append(participant)
             data['Date'].append(date_)
             data['Post-Baseline'].append((date_ - baseline).days)
