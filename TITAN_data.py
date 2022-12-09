@@ -109,7 +109,7 @@ def query_titan():
         'Boost Vaccine': 'First Booster Vaccine Type',
         'Boost 2 Date': 'Second Booster Dose Date',
         'Boost 2 Vaccine': 'Second Booster Vaccine Type',
-        'COVID Pre-Enrollment': 'Had Prior COVID (3rd dose)?',
+        'COVID Pre-Enrollment': 'Had Prior COVID (qualiying dose)?',
         'COVID Pre-Enrollment Date': 'Date of PCR positive',
         'Transplant Group': 'Transplant Group',
         'Bloodborne Pathogen': 'Blood Borne Path',
@@ -253,7 +253,8 @@ def pull_data():
 def titanify(df):
     df['AUC'] = df['AUC'].astype(float)
     df['Log2AUC'] = np.log2(df['AUC'])
-    writer = pd.ExcelWriter(util.script_output + 'new_format/titan_consolidated.xlsx')
+    output_fname = util.script_output + 'new_format/titan_consolidated.xlsx'
+    writer = pd.ExcelWriter(output_fname)
     df.to_excel(writer, sheet_name='Source')
     df['Timepoint'] = df['Days from 3rd Dose'].apply(make_timepoint)
     df['Boost Timepoint'] = df['Days from Boost'].apply(make_timepoint).apply(lambda val: "Pre-Dose 4" if val == "Pre-Dose 3" else val)
@@ -311,6 +312,7 @@ def titanify(df):
     df_long[df_long['Prednisone'] == 'No'].to_excel(writer, sheet_name='No Prednisone')
     writer.save()
     writer.close()
+    print("Data written to {}".format(output_fname))
 
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Annotate and split TITAN samples')
