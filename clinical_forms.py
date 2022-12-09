@@ -334,7 +334,7 @@ def write_clinical(input_df, output_fname):
             for col in cancer_cols[3:-2]:
                 if 'Year' in col:
                     cropped_col = col[:-20] # drop "Duration_From_Index"
-                    if source_df.loc[seronet_id, cropped_col].lower() == "not reported":
+                    if str(source_df.loc[seronet_id, cropped_col]).lower() == "not reported":
                         add_to[col].append("Not Reported")
                     else:
                         add_to[col].append(int(source_df.loc[seronet_id, cropped_col]) - index_date.year)
