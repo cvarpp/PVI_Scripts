@@ -38,6 +38,14 @@ def unscheduled_calculate(row):
         print('Fatal Error. Exiting...')
         exit(1)
 
+def yes_no(val):
+    if val == 'N/A':
+        return 'N/A'
+    elif val > 0:
+        return 'Yes'
+    else:
+        return 'No'
+
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Make files for monthly data submission.')
     argParser.add_argument('-u', '--update', action='store_true')
@@ -126,5 +134,7 @@ if __name__ == '__main__':
     df_start.loc[blanks_filter, 'Serum_Volume_For_FNL'] = 0
     vol_filter = (df_start['Serum_Volume_For_FNL'] != df_start['Serum_Shipped_To_FNL']) & (df_start['Serum_Shipped_To_FNL'] != 0)
     df_start['Serum_Volume_For_FNL'] = df_start['Serum_Volume_For_FNL'] * ~vol_filter + df_start['Serum_Shipped_To_FNL'] * vol_filter
+    df_start['Serum_Shipped_To_FNL'] = df_start['Serum_Shipped_To_FNL'].apply(yes_no)
+    df_start['PBMC_Shipped_To_FNL'] = df_start['PBMC_Shipped_To_FNL'].apply(yes_no)
 
     df_start.loc[:, sample_cols].to_excel(output_inner + 'Accrual_Visit_Info.xlsx', index=False, na_rep='N/A')
