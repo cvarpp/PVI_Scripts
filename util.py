@@ -39,5 +39,6 @@ cross_project = clin_ops + 'Cross-Project/'
 cross_d4 = cross_project + 'Seronet Task D4/'
 seronet_data = cross_d4 + 'Data/'
 seronet_qc = cross_d4 + 'QC/'
+seronet_vax = cross_d4 + 'Vax/'
 
 header_intake = 6

@@ -87,7 +87,7 @@ if __name__ == '__main__':
                 vaccine_stuff['Timepoint'].append(timepoint_cols[i] + addendum)
                 vaccine_stuff['Vaccine Type'].append(boost_type)
                 vaccine_stuff['Vaccine Date'].append(date_boost)
-    pd.DataFrame(vaccine_stuff).to_excel(util.script_output + 'iris_vaccines.xlsx', index=False)
+    pd.DataFrame(vaccine_stuff).to_excel(util.seronet_vax + 'iris_vaccines.xlsx', index=False)
     """
     TITAN Stuff
     """
@@ -142,7 +142,7 @@ if __name__ == '__main__':
                 vaccine_stuff['Timepoint'].append(timepoint_cols[i] + addendum)
                 vaccine_stuff['Vaccine Type'].append(boost_type)
                 vaccine_stuff['Vaccine Date'].append(date_boost)
-    pd.DataFrame(vaccine_stuff).to_excel(util.script_output + 'titan_vaccines.xlsx', index=False)
+    pd.DataFrame(vaccine_stuff).to_excel(util.seronet_vax + 'titan_vaccines.xlsx', index=False)
     """
     MARS Stuff
     """
@@ -190,7 +190,7 @@ if __name__ == '__main__':
                 vaccine_stuff['Timepoint'].append(timepoint_cols[i] + addendum)
                 vaccine_stuff['Vaccine Type'].append(boost_type)
                 vaccine_stuff['Vaccine Date'].append(date_boost)
-    pd.DataFrame(vaccine_stuff).to_excel(util.script_output + 'mars_vaccines.xlsx', index=False)
+    pd.DataFrame(vaccine_stuff).to_excel(util.seronet_vax + 'mars_vaccines.xlsx', index=False)
     """
     PRIORITY Stuff
     """
@@ -238,4 +238,4 @@ if __name__ == '__main__':
                 vaccine_stuff['Timepoint'].append(timepoint_cols[i] + addendum)
                 vaccine_stuff['Vaccine Type'].append(boost_type)
                 vaccine_stuff['Vaccine Date'].append(date_boost)
-    pd.DataFrame(vaccine_stuff).to_excel(util.script_output + 'prio_vaccines.xlsx', index=False)
+    pd.DataFrame(vaccine_stuff).to_excel(util.seronet_vax + 'prio_vaccines.xlsx', index=False)
