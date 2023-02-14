@@ -107,8 +107,19 @@ if __name__ == '__main__':
     df_start['Serum_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: min(sera.loc[val, 'Volume (mL)'], 4.5) if val in sera.index else 0)
     df_start['PBMC_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: pbmcs.loc[val, 'Volume (mL)'] if val in pbmcs.index else 0)
     df_start['Collected_In_This_Reporting_Period'] = (df_start['Date'] >= args.report_start).apply(lambda val: "Yes" if val else "No")
-    cov_info = dfs_clin['COVID'].assign(sample_id=lambda df: df['Sample ID'].astype(str).str.upper()).set_index('sample_id')
-    cov_map = {'Positive, Test Not Specified': 'Has Reported Infection', 'Negative, Test Not Specified': 'Has Not Reported Infection', 'Positive by PCR': 'Has Reported Infection', 'Negative by PCR': 'Has Not Reported Infection', 'Positive by Rapid Antigen Test': 'Has Reported Infection', 'Negative by Rapid Antigen Test': 'Has Not Reported Infection', 'Positive by Antibody Test': 'Has Reported Infection', 'Negative by Antibody Test': 'Has Not Reported Infection', 'Likely COVID Positive': 'Has Reported Infection', 'No COVID event reported': 'Has Not Reported Infection', 'No COVID data collected': 'Not Reported', '': 'Has Not Reported Infection'}
+    cov_info = dfs_clin['COVID'].assign(sample_id=lambda df: df['Sample ID'].astype(str).str.strip().str.upper()).drop_duplicates(subset='sample_id', keep='last').set_index('sample_id')
+    cov_map = {'Positive, Test Not Specified': 'Has Reported Infection',
+               'Negative, Test Not Specified': 'Has Not Reported Infection',
+               'Positive by PCR': 'Has Reported Infection',
+               'Negative by PCR': 'Has Not Reported Infection',
+               'Positive by Rapid Antigen Test': 'Has Reported Infection',
+               'Negative by Rapid Antigen Test': 'Has Not Reported Infection',
+               'Positive by Antibody Test': 'Has Reported Infection',
+               'Negative by Antibody Test': 'Has Not Reported Infection',
+               'Likely COVID Positive': 'Has Reported Infection',
+               'No COVID event reported': 'Has Not Reported Infection',
+               'No COVID data collected': 'Not Reported',
+               '': 'Has Not Reported Infection'}
     # this needs fixing, should be precise
     cov_map = {k.upper(): v for k, v in cov_map.items()}
     # seen = set()
@@ -120,7 +131,7 @@ if __name__ == '__main__':
     #         else:
     #             seen.add(ret)
     # print(seen)
-    df_start['SARS_CoV_2_Infection_Status'] = df_start['Sample ID'].astype(str).apply(lambda val: cov_map[cov_info.loc[val.upper(), 'COVID_Status'].upper()] if val.upper() in cov_info.index else 'Not Reported')
+    df_start['SARS_CoV_2_Infection_Status'] = df_start['Sample ID'].astype(str).apply(lambda val: cov_map[cov_info.loc[val.strip().upper(), 'COVID_Status'].strip().upper()] if val.strip().upper() in cov_info.index else 'Not Reported')
     last_date = df_start.loc[:, ['Research_Participant_ID', 'Date']].groupby('Research_Participant_ID').max()
     baseline_date = df_start.loc[:, ['Research_Participant_ID', 'Date']].groupby('Research_Participant_ID').min()
     df_start['Last_Date'] = df_start['Research_Participant_ID'].apply(lambda val: last_date.loc[val, 'Date'])
