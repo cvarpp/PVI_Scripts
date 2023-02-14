@@ -337,7 +337,10 @@ def write_clinical(input_df, output_fname):
                     if str(source_df.loc[seronet_id, cropped_col]).lower() == "not reported":
                         add_to[col].append("Not Reported")
                     else:
-                        add_to[col].append(int(source_df.loc[seronet_id, cropped_col]) - index_date.year)
+                        try:
+                            add_to[col].append(int(source_df.loc[seronet_id, cropped_col]) - index_date.year)
+                        except:
+                            add_to[col].append('Not Reported')
                 else:
                     add_to[col].append(source_df.loc[seronet_id, col])
             if visit == 'Baseline(1)':
