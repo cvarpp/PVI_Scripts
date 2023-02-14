@@ -297,7 +297,10 @@ def pull_from_source():
             if sample_id in research_results.index:
                 for col in ['Spike endpoint', 'AUC']:
                     data[col].append(research_results.loc[sample_id, col])
-                data['Log2AUC'].append(np.log2(data['AUC'][-1]))
+                if type(data['AUC'][-1]) in [int, float]:
+                    data['Log2AUC'].append(np.log2(data['AUC'][-1]))
+                else:
+                    data['Log2AUC'].append('-')
             else:
                 for col in ['Spike endpoint', 'AUC']:
                     data[col].append('-')
