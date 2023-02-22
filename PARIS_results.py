@@ -7,17 +7,12 @@ import argparse
 from helpers import clean_research, try_datediff, permissive_datemax
 
 def paris_results():
-    newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
-    newCol2 = 'Ab Concentration (Units - AU/mL)'
-    visit_type = "Visit Type / Samples Needed"
     paris_data = pd.read_excel(util.paris + 'Patient Tracking - PARIS.xlsx', sheet_name='Subgroups', header=4).dropna(subset=['Participant ID'])
     paris_data['Participant ID'] = paris_data['Participant ID'].apply(lambda val: val.strip().upper())
     participants = paris_data['Participant ID'].unique()
     paris_data.set_index('Participant ID', inplace=True)
     dems = pd.read_excel(util.projects + 'PARIS/Demographics.xlsx').set_index('Subject ID')
-    samples = pd.read_excel(util.tracking + 'Sample Intake Log.xlsx', sheet_name='Sample Intake Log', header=6, dtype=str)
-    newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
-    newCol2 = 'Ab Concentration (Units - AU/mL)'
+    samples = pd.read_excel(util.intake, sheet_name='Sample Intake Log', header=util.header_intake, dtype=str)
     samplesClean = samples.dropna(subset=['Participant ID'])
     participant_samples = {participant: [] for participant in participants}
     for _, sample in samplesClean.iterrows():
@@ -25,21 +20,21 @@ def paris_results():
             continue
         participant = str(sample['Participant ID']).strip().upper()
         if participant in participant_samples.keys():
-            if str(sample[newCol]).strip().upper() == "NEGATIVE":
-                sample[newCol2] = "Negative"
-            if pd.isna(sample[newCol2]):
+            if str(sample[util.qual]).strip().upper() == "NEGATIVE":
+                sample[util.quant] = "Negative"
+            if pd.isna(sample[util.quant]):
                 result_new = '-'
-            elif type(sample[newCol2]) == int:
-                result_new = sample[newCol2]
-            elif str(sample[newCol2]).strip().upper() == "NEGATIVE":
+            elif type(sample[util.quant]) == int:
+                result_new = sample[util.quant]
+            elif str(sample[util.quant]).strip().upper() == "NEGATIVE":
                 result_new = 1.
             else:
-                result_new = sample[newCol2]
+                result_new = sample[util.quant]
             try:
-                participant_samples[participant].append((parser.parse(str(sample['Date Collected'])).date(), str(sample['Sample ID']).strip().upper(), sample[visit_type], sample[newCol], result_new))
+                participant_samples[participant].append((parser.parse(str(sample['Date Collected'])).date(), str(sample['Sample ID']).strip().upper(), sample[util.visit_type], sample[util.qual], result_new))
             except:
                 print(sample['Sample ID'], "has invalid date", sample['Date Collected'])
-                participant_samples[participant].append((parser.parse('1/1/1900').date(), str(sample['Sample ID']).strip().upper(), sample[visit_type], sample[newCol], result_new))
+                participant_samples[participant].append((parser.parse('1/1/1900').date(), str(sample['Sample ID']).strip().upper(), sample[util.visit_type], sample[util.qual], result_new))
     last_sample = {'Participant ID': [], 'Date': [], 'Sample ID': []}
     num_samples = max((len(samples) for samples in participant_samples.values()))
     rows = {'Participant ID': []}
@@ -93,7 +88,7 @@ def paris_results():
             print(participant, "has no samples. Skipping for report...")
             continue
         baseline = samples[0][0]
-        for date_, sample_id, visit_type, result, result_new in samples:
+        for date_, sample_id, util.visit_type, result, result_new in samples:
             if result == '-' or str(result).strip() == '' or (type(result) == float and pd.isna(result)):
                 continue
             sample_id = str(sample_id).strip()
@@ -113,7 +108,7 @@ def paris_results():
             data['Date'].append(date_)
             data['Post-Baseline'].append((date_ - baseline).days)
             data['Sample ID'].append(sample_id)
-            data['Visit Type'].append(visit_type)
+            data['Visit Type'].append(util.visit_type)
             data['Qualitative'].append(result)
             data['Quantitative'].append(result_new)
             if sample_id in research_results.index:
