@@ -41,12 +41,9 @@ def permissive_datemax(date_list, comp_date):
     placeholder = pd.to_datetime('1.1.1950').date()
     max_date = placeholder
     for date_ in date_list:
-        try:
-            date_ = pd.to_datetime(date_).date()
-            if date_ > max_date and date_ < comp_date:
-                max_date = date_
-        except:
-            pass
+        date_ = pd.to_datetime(date_, errors='coerce').date()
+        if not pd.isna(date_) and date_ > max_date and date_ < comp_date:
+            max_date = date_
     if max_date > placeholder:
         return max_date
 
