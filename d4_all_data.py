@@ -84,15 +84,19 @@ def pull_from_source():
         'Vaccine': 'Vaccine Type',
         '1st Dose Date': 'Vaccine #1 Date',
         '2nd Dose Date': 'Vaccine #2 Date',
-        'Boost Date': '3rd Dose Vaccine Date',
-        'Boost Vaccine': '3rd Dose Vaccine Type',
-        'Boost 2 Date': 'Vaccine Type.1',
-        'Boost 2 Vaccine': 'Booster Dose Date'
+        '3rd Dose Date': '3rd Dose Vaccine Date',
+        '3rd Dose Vaccine': '3rd Dose Vaccine Type',
+        'Boost Date': 'First Booster Vaccine Type',
+        'Boost Vaccine': 'First Booster Dose Date',
+        'Boost 2 Date': 'Second Booster Vaccine Type',
+        'Boost 2 Vaccine': 'Second Booster Dose Date'
     }
     mars_convert = {
         'Vaccine': 'Vaccine Name',
         '1st Dose Date': 'Vaccine #1 Date',
         '2nd Dose Date': 'Vaccine #2 Date',
+        '3rd Dose Date': '3rd Dose Date', # This is super confusing
+        '3rd Dose Vaccine': '3rd Dose Vaccine', # This is super confusing
         'Boost Date': '3rd Vaccine',
         'Boost Vaccine': '3rd Vaccine Type ',
         'Boost 2 Date': '4th vaccine',
@@ -102,11 +106,17 @@ def pull_from_source():
         'Vaccine': 'Which Vaccine?',
         '1st Dose Date': 'First Dose Date',
         '2nd Dose Date': 'Second Dose Date',
+        '3rd Dose Date': '3rd Dose Date', # This is super confusing
+        '3rd Dose Vaccine': '3rd Dose Vaccine', # This is super confusing
         'Boost Date': 'Third Dose Date',
         'Boost Vaccine': 'Third Dose Type',
         'Boost 2 Date': 'Fourth Dose Date',
         'Boost 2 Vaccine': 'Fourth Dose Type'
     }
+    mars_data['3rd Dose Date'] = ''
+    mars_data['3rd Dose Vaccine'] = ''
+    iris_data['3rd Dose Date'] = ''
+    iris_data['3rd Dose Vaccine'] = ''
     source_dfs = {'TITAN': titan_data, 'MARS': mars_data, 'IRIS': iris_data}
     conversions = {'TITAN': titan_convert, 'MARS': mars_convert, 'IRIS': iris_convert}
     intake_source = pd.ExcelFile(util.intake)
@@ -117,11 +127,13 @@ def pull_from_source():
     visit_type = "Visit Type / Samples Needed"
     samplesClean = samples.dropna(subset=['Participant ID'])
     participant_samples = {participant: [] for participant in participants}
-    submitted_key = pd.read_excel(util.clin_ops + 'Cross-Project/Seronet Task D4/Data/SERONET Key.xlsx', sheet_name='Source').drop_duplicates(subset=['Participant ID']).set_index('Participant ID')
+    submitted_key = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Source').drop_duplicates(subset=['Participant ID']).set_index('Participant ID')
+    sample_exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Sample Exclusions')
+    exclude_samples = set(sample_exclusions['Sample ID'].astype(str).str.upper().str.strip().unique())
     samples_of_interest = set()
     for _, sample in samplesClean.iterrows():
         sample_id = str(sample['Sample ID']).strip().upper()
-        if len(sample_id) != 5:
+        if len(sample_id) != 5 or sample_id in exclude_samples:
             continue
         participant = str(sample['Participant ID']).strip().upper()
         if str(sample['Study']).strip().upper() == 'PRIORITY':
@@ -180,11 +192,15 @@ def pull_from_source():
 
     proc_cols = ['Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
 
-    columns = ['Cohort', 'Seronet ID', 'Vaccine', '1st Dose Date', 'Days to 1st', '2nd Dose Date', 'Days to 2nd', 'Boost Vaccine', 'Boost Date', 'Days to Boost', 'Boost 2 Vaccine', 'Boost 2 Date', 'Days to Boost 2', 'Participant ID', 'Date', 'Post-Baseline', 'Sample ID', 'Visit Type', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_inits', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
+    columns = ['Cohort', 'Seronet ID', 'Index Date', 'Days from Index', 'Vaccine', '1st Dose Date', 'Days to 1st', '2nd Dose Date', 'Days to 2nd', '3rd Dose Date', 'Days to 3rd', 'Boost Vaccine', 'Boost Date', 'Days to Boost', 'Boost 2 Vaccine', 'Boost 2 Date', 'Days to Boost 2', 'Participant ID', 'Date', 'Post-Baseline', 'Sample ID', 'Visit Type', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_inits', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
     print("Samples not in DSCF:")
     data = {col: [] for col in columns}
     participant_data = {}
+    exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
+    exclude_ppl = set(exclusions['Participant ID'].unique())
     for participant, samples in participant_samples.items():
+        if participant in exclude_ppl:
+            continue
         try:
             samples.sort(key=lambda x: x[0])
         except:
@@ -200,7 +216,7 @@ def pull_from_source():
         participant_data[participant] = {}
         cohort = participant_study[participant].strip().upper()
         seronet_id = "14_{}{}".format(cohort[:1], samples[0][1])
-        key_cols =['Vaccine', '1st Dose Date', '2nd Dose Date', 'Boost Date', 'Boost Vaccine', 'Boost 2 Date', 'Boost 2 Vaccine']
+        key_cols = ['Vaccine', '1st Dose Date', '2nd Dose Date', '3rd Dose Date', '3rd Dose Vaccine', 'Boost Date', 'Boost Vaccine', 'Boost 2 Date', 'Boost 2 Vaccine']
         if cohort in conversions.keys():
             source_df = source_dfs[cohort]
             converter = conversions[cohort]
@@ -212,9 +228,18 @@ def pull_from_source():
                         participant_data[participant][k] = source_df.loc[participant, converter[k]]
                 else:
                     participant_data[participant][k] = source_df.loc[participant, converter[k]]
+            if cohort == 'TITAN':
+                participant_data[participant]['Index Date'] = participant_data[participant]['3rd Dose Date']
+            elif str(participant_data[participant]['Vaccine'])[:1].upper() == 'J':
+                participant_data[participant]['Index Date'] = participant_data[participant]['1st Dose Date']
+            else:
+                participant_data[participant]['Index Date'] = participant_data[participant]['2nd Dose Date']
+            if type(participant_data[participant]['Index Date']) != pd.Timestamp or pd.isna(participant_data[participant]['Index Date']):
+                participant_data[participant]['Index Date'] = baseline
         elif participant_study[participant] == 'PRIORITY':
             for k in key_cols:
                 participant_data[participant][k] = ''
+            participant_data[participant]['Index Date'] = baseline
         else:
             print(participant, "is not in the study! They are in", participant_study[participant])
             exit(1)
@@ -228,6 +253,11 @@ def pull_from_source():
             for col in proc_cols:
                 data[col].append(sample_info.loc[sample_id, col])
             data['Cohort'].append(participant_study[participant])
+            data['Index Date'].append(participant_data[participant]['Index Date'])
+            try:
+                data['Days from Index'].append(int((date_ - data['Index Date'][-1]).days))
+            except:
+                data['Days from Index'].append('')
             data['Vaccine'].append(participant_data[participant]['Vaccine'])
             data['1st Dose Date'].append(participant_data[participant]['1st Dose Date'])
             try:
@@ -239,6 +269,11 @@ def pull_from_source():
                 data['Days to 2nd'].append(int((date_ - data['2nd Dose Date'][-1]).days))
             except:
                 data['Days to 2nd'].append('')
+            data['3rd Dose Date'].append(participant_data[participant]['3rd Dose Date'])
+            try:
+                data['Days to 3rd'].append(int((date_ - data['3rd Dose Date'][-1]).days))
+            except:
+                data['Days to 3rd'].append('')
             data['Boost Date'].append(participant_data[participant]['Boost Date'])
             try:
                 data['Days to Boost'].append(int((date_ - data['Boost Date'][-1]).days))
@@ -262,7 +297,10 @@ def pull_from_source():
             if sample_id in research_results.index:
                 for col in ['Spike endpoint', 'AUC']:
                     data[col].append(research_results.loc[sample_id, col])
-                data['Log2AUC'].append(np.log2(data['AUC'][-1]))
+                if type(data['AUC'][-1]) in [int, float]:
+                    data['Log2AUC'].append(np.log2(data['AUC'][-1]))
+                else:
+                    data['Log2AUC'].append('-')
             else:
                 for col in ['Spike endpoint', 'AUC']:
                     data[col].append('-')
