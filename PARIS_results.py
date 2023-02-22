@@ -35,35 +35,6 @@ def paris_results():
             except:
                 print(sample['Sample ID'], "has invalid date", sample['Date Collected'])
                 participant_samples[participant].append((parser.parse('1/1/1900').date(), str(sample['Sample ID']).strip().upper(), sample[util.visit_type], sample[util.qual], result_new))
-    last_sample = {'Participant ID': [], 'Date': [], 'Sample ID': []}
-    num_samples = max((len(samples) for samples in participant_samples.values()))
-    rows = {'Participant ID': []}
-    for i in range(num_samples):
-        rows['Date_{}'.format(i)] = []
-        rows['SampleID_{}'.format(i)] = []
-    for participant, samples in participant_samples.items():
-        try:
-            samples.sort(key=lambda val: val[0])
-        except:
-            print(participant, "has", samples, "samples that do not sort. Skipping for DataDump and LastSeen...")
-            continue
-        rows['Participant ID'].append(participant)
-        for i in range(num_samples):
-            if i < len(samples):
-                rows['Date_{}'.format(i)].append(samples[i][0])
-                rows['SampleID_{}'.format(i)].append(str(samples[i][1]).strip())
-            else:
-                rows['Date_{}'.format(i)].append('')
-                rows['SampleID_{}'.format(i)].append('')
-        last_sample['Participant ID'].append(participant)
-        if len(samples) > 0:
-            last_sample['Date'].append(samples[-1][0])
-            last_sample['Sample ID'].append(samples[-1][1])
-        else:
-            last_sample['Date'].append('N/A')
-            last_sample['Sample ID'].append('No baseline')
-    pd.DataFrame(rows).to_excel(util.paris + 'DataDump.xlsx', index=False)
-    pd.DataFrame(last_sample).to_excel(util.paris + 'LastSeen.xlsx', index=False)
 
     research_source = pd.ExcelFile(util.research)
     research_samples_1 = research_source.parse(sheet_name='Inputs').pipe(clean_research)
@@ -128,6 +99,9 @@ def paris_results():
                 print("Log transformation on {} for {} failed. Fatal error, exiting".format(res[1], sample_id))
                 exit(1)
     report = pd.DataFrame(data)
+    (report.loc[:, ['Participant ID', 'Date', 'Sample ID']]
+           .drop_duplicates(subset=['Participant ID'], keep='last')
+           .to_excel(util.paris + 'LastSeen.xlsx', index=False))
     return report
 
 if __name__ == '__main__':
