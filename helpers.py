@@ -17,9 +17,6 @@ def clean_research(df):
               .query("AUC not in ['-']")
               .loc[:, ['sample_id', 'Spike endpoint', 'AUC']])
 
-def try_date(potential_date):
-    return pd.to_datetime(potential_date, errors='coerce').date()
-
 def try_datediff(start_date, end_date):
     try:
         return int((end_date - start_date).days)

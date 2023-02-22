@@ -4,7 +4,7 @@ from datetime import date
 from dateutil import parser
 import util
 import argparse
-from helpers import clean_research, try_date, try_datediff, permissive_datemax
+from helpers import clean_research, try_datediff, permissive_datemax
 
 def paris_results():
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
@@ -103,7 +103,7 @@ def paris_results():
                 data[shared_col].append(paris_data.loc[participant, shared_col])
             data['Infection on Study'].append(str(paris_data.loc[participant, 'Infection 1 On Study?']).strip().lower() == 'yes' or str(paris_data.loc[participant, 'Infection 2 On Study?']).strip().lower() == 'yes' or str(paris_data.loc[participant, 'Infection 3 On Study?']).strip().lower() == 'yes')
             for date_col, day_col in zip(date_cols, day_cols):
-                data[date_col].append(try_date(paris_data.loc[participant, date_col]))
+                data[date_col].append(pd.to_datetime(paris_data.loc[participant, date_col], errors='coerce').date())
                 data[day_col].append(try_datediff(data[date_col][-1], date_))
             data['Most Recent Infection'].append(permissive_datemax([data[inf_date][-1] for inf_date in inf_dates], date_))
             data['Most Recent Vax'].append(permissive_datemax([data[dose_date][-1] for dose_date in dose_dates], date_))
