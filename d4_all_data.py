@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import util
+from helpers import query_dscf, query_research
 
 def clean_auc(df):
     df = df.copy()
@@ -156,44 +157,22 @@ def pull_from_source():
             except:
                 print(sample_id, "has invalid date", sample['Date Collected'])
                 sample_date = pd.to_datetime('1/1/1900')
-            participant_samples[participant].append((sample_date, sample_id, sample[visit_type], sample[newCol], result_new, sample['Blood Collector Initials']))
-            samples_of_interest.add(sample_id)
+            participant_samples[participant].append((sample_date, str(sample_id).strip().upper(), sample[visit_type], sample[newCol], result_new, sample['Blood Collector Initials']))
+            samples_of_interest.add(str(sample_id).strip().upper())
 
-    research_source = pd.ExcelFile(util.research)
-    research_samples_1 = research_source.parse(sheet_name='Inputs').pipe(clean_research)
-    research_samples_2 = research_source.parse(sheet_name='Archive').pipe(clean_research)
-    research_results = pd.concat([research_samples_2, research_samples_1]).drop_duplicates(subset=['sample_id'], keep='last').query('sample_id in @samples_of_interest').set_index('sample_id')
+    research_results = query_research(samples_of_interest)
 
-    correct_2p = {'Comments': 'COMMENTS'}
     shared_samples = pd.read_excel(util.shared_samples, sheet_name='Released Samples')
     no_pbmcs = set([str(sid).strip().upper() for sid in shared_samples[shared_samples['Sample Type'] == 'PBMC']['Sample ID'].unique()])
-    dscf_info = pd.ExcelFile(util.dscf)
-    bsl2p_samples = dscf_info.parse(sheet_name='BSL2+ Samples', header=1).assign(sample_id=clean_sample_id).query('sample_id in @samples_of_interest').rename(columns=correct_2p)
-    bsl2_samples = dscf_info.parse(sheet_name='BSL2 Samples')
-    all_samples = pd.concat([bsl2p_samples, bsl2_samples]).assign(sample_id=clean_sample_id).query('sample_id in @samples_of_interest').drop_duplicates(subset=['sample_id'], keep='last').assign(serum_vol=clean_serum).pipe(clean_cells, no_pbmcs)
+    all_samples = query_dscf(sid_list=samples_of_interest, no_pbmcs=no_pbmcs).reset_index()
     all_samples['coll_time'] = all_samples.apply(lambda row: collection_log.loc[row['sample_id'], 'Time Collected'] if row['sample_id'] in collection_log.index else row['Time Collected'], axis=1)
-    serum_or_cells = all_samples['serum_vol'].apply(sufficient) | all_samples['pbmc_conc'].apply(sufficient)
+    serum_or_cells = all_samples['Volume of Serum Collected (mL)'].apply(sufficient) | all_samples['PBMC concentration per mL (x10^6)'].apply(sufficient)
     all_samples[~serum_or_cells].to_excel(util.script_output + 'missing_info.xlsx', index=False)
-    col_mapper = {
-        'serum_vol': 'Volume of Serum Collected (mL)',
-        'pbmc_conc': 'PBMC concentration per mL (x10^6)',
-        'vial_count': '# of PBMC vials',
-        'Time Received': 'rec_time',
-        'Time Started Processing': 'proc_time',
-        'Time put in -80: SERUM': 'serum_freeze_time',
-        'Time put in -80: PBMC': 'cell_freeze_time',
-        'Processed by (initials)': 'proc_inits',
-        '% Viability': 'viability',
-        'CPT/EDTA VOL': 'cpt_vol',
-        'SST VOL': 'sst_vol',
-        'COMMENTS': 'proc_comment'
-    }
-    sample_info = all_samples[serum_or_cells].rename(columns=col_mapper).set_index('sample_id')
+    sample_info = all_samples[serum_or_cells].set_index('sample_id')
 
     proc_cols = ['Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
 
     columns = ['Cohort', 'Seronet ID', 'Index Date', 'Days from Index', 'Vaccine', '1st Dose Date', 'Days to 1st', '2nd Dose Date', 'Days to 2nd', '3rd Dose Date', 'Days to 3rd', 'Boost Vaccine', 'Boost Date', 'Days to Boost', 'Boost 2 Vaccine', 'Boost 2 Date', 'Days to Boost 2', 'Participant ID', 'Date', 'Post-Baseline', 'Sample ID', 'Visit Type', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_inits', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
-    print("Samples not in DSCF:")
     data = {col: [] for col in columns}
     participant_data = {}
     exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
@@ -248,7 +227,6 @@ def pull_from_source():
         for date_, sample_id, visit_type, result, result_new, coll_inits in samples:
             sample_id = str(sample_id).strip().upper()
             if sample_id not in sample_info.index:
-                print(sample_id)
                 continue
             for col in proc_cols:
                 data[col].append(sample_info.loc[sample_id, col])
@@ -308,7 +286,7 @@ def pull_from_source():
             data['coll_inits'].append(coll_inits)
     report = pd.DataFrame(data)
     report.to_excel(util.unfiltered, index=False)
-    print("Hopefully not too many sample IDs above!")
+    print("{} samples characterized.".format(report.shape[0]))
     return report
 
 if __name__ == '__main__':
