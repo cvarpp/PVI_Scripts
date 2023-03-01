@@ -71,7 +71,11 @@ if __name__ == '__main__':
     ppl_cols = ['Research_Participant_ID', 'Age', 'Race', 'Ethnicity', 'Sex_At_Birth', 'Sunday_Prior_To_Visit_1']
     baseline_dates = all_data.drop_duplicates(subset='Seronet ID').set_index('Seronet ID').loc[:, 'Date']
     baseline_sundays = baseline_dates - np.mod(baseline_dates.dt.weekday + 1, 7) * datetime.timedelta(days=1)
-    ppl_data = dfs_clin['Baseline'].loc[:, ppl_cols[:-1]].query('Research_Participant_ID in @data_ppl').join(baseline_sundays, on='Research_Participant_ID').rename(columns={'Date': ppl_cols[-1]})
+    ppl_data = (dfs_clin['Baseline']
+                    .loc[:, ppl_cols[:-1]] # column subset
+                    .query('Research_Participant_ID in @data_ppl') # row subset
+                    .join(baseline_sundays, on='Research_Participant_ID') # add date info
+                    .rename(columns={'Date': ppl_cols[-1]})) # rename date column
     output_outer = util.cross_d4 + 'Accrual/'
     output_inner = output_outer + '{}/'.format(datetime.date.today())
     if not os.path.exists(output_inner):
