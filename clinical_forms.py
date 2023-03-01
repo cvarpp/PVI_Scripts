@@ -352,15 +352,17 @@ def write_clinical(input_df, output_fname):
 
     output_folder = util.cross_d4
     output = {}
-    writer = pd.ExcelWriter(output_folder + '{}.xlsx'.format(output_fname)) # Output sheet
-    for sname, df2b in future_output.items():
-        print(sname)
-        for k, vs in df2b.items():
-            print(k, len(vs))
-        print()
-        df = pd.DataFrame(df2b)
-        output[sname] = df
-        df.to_excel(writer, sheet_name=sname, index=False, na_rep='N/A')
+    with pd.ExcelWriter(output_folder + '{}.xlsx'.format(output_fname)) as writer:
+        for sname, df2b in future_output.items():
+            try:
+                df = pd.DataFrame(df2b)
+                output[sname] = df
+                df.to_excel(writer, sheet_name=sname, index=False, na_rep='N/A')
+            except:
+                print(sname)
+                for k, vs in df2b.items():
+                    print(k, len(vs))
+                print()
     writer.save()
     writer.close()
     return output
