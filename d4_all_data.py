@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import util
+from datetime import datetime
 from helpers import query_dscf, query_research
 
 def clean_auc(df):
@@ -127,6 +128,7 @@ def pull_from_source():
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
     samplesClean = samples.dropna(subset=['Participant ID'])
+    cutoff_date = datetime.strptime('2023-01-01', '%Y-%m-%d').date()
     participant_samples = {participant: [] for participant in participants}
     submitted_key = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Source').drop_duplicates(subset=['Participant ID']).set_index('Participant ID')
     sample_exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Sample Exclusions')
@@ -160,6 +162,8 @@ def pull_from_source():
             participant_samples[participant].append((sample_date, str(sample_id).strip().upper(), sample[visit_type], sample[newCol], result_new, sample['Blood Collector Initials']))
             samples_of_interest.add(str(sample_id).strip().upper())
 
+    
+
     research_results = query_research(samples_of_interest)
 
     shared_samples = pd.read_excel(util.shared_samples, sheet_name='Released Samples')
@@ -173,10 +177,12 @@ def pull_from_source():
     proc_cols = ['Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
 
     columns = ['Cohort', 'Seronet ID', 'Index Date', 'Days from Index', 'Vaccine', '1st Dose Date', 'Days to 1st', '2nd Dose Date', 'Days to 2nd', '3rd Dose Date', 'Days to 3rd', 'Boost Vaccine', 'Boost Date', 'Days to Boost', 'Boost 2 Vaccine', 'Boost 2 Date', 'Days to Boost 2', 'Participant ID', 'Date', 'Post-Baseline', 'Sample ID', 'Visit Type', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_inits', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
+
     data = {col: [] for col in columns}
     participant_data = {}
     exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
     exclude_ppl = set(exclusions['Participant ID'].unique())
+    
     for participant, samples in participant_samples.items():
         if participant in exclude_ppl:
             continue
@@ -224,8 +230,12 @@ def pull_from_source():
             exit(1)
         if participant in submitted_key.index:
             seronet_id = submitted_key.loc[participant, 'Research_Participant_ID']
+
         for date_, sample_id, visit_type, result, result_new, coll_inits in samples:
             sample_id = str(sample_id).strip().upper()
+            if cohort == 'IRIS' :
+                if date_ > cutoff_date:
+                    continue
             if sample_id not in sample_info.index:
                 continue
             for col in proc_cols:
@@ -262,7 +272,8 @@ def pull_from_source():
             try:
                 data['Days to Boost 2'].append(int((date_ - data['Boost 2 Date'][-1]).days))
             except:
-                data['Days to Boost 2'].append('')
+                data['Days to Boost 2'].append('')            
+            
             data['Boost 2 Vaccine'].append(participant_data[participant]['Boost 2 Vaccine'])
             data['Seronet ID'].append(seronet_id)
             data['Participant ID'].append(participant)
