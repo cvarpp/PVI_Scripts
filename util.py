@@ -4,13 +4,18 @@ home = os.path.expanduser('~') + '/'
 onedrive = home + 'The Mount Sinai Hospital/'
 proc = onedrive + 'Simon Lab - Processing Team/'
 dscf = proc + 'Data Sample Collection Form.xlsx'
-pvi = onedrive + 'Simon Lab - PVI - Personalized Virology Initiative/'
+
 tracking = onedrive + 'Simon Lab - Sample Tracking/'
 shared_samples = tracking + 'Released Samples/Collaborator Samples Tracker.xlsx'
+intake = tracking + 'Sample Intake Log.xlsx'
+
+pvi = onedrive + 'Simon Lab - PVI - Personalized Virology Initiative/'
 clin_ops = pvi + 'Clinical Research Study Operations/'
 umbrella = clin_ops + 'Umbrella Viral Sample Collection Protocol/'
 secret_charles = pvi + 'Secret Sheets/Charles/'
-intake = tracking + 'Sample Intake Log.xlsx'
+
+project_ws = onedrive + 'Simon Lab - Project Workspace/'
+
 
 reports = pvi + 'Reports & Data/'
 research = reports + 'From Krammer Lab/Master Sheet.xlsx'
@@ -23,6 +28,8 @@ paris_datasets = paris + 'Datasets/'
 iris_folder = umbrella + 'IRIS/'
 titan_folder = umbrella + 'TITAN/'
 mars_folder = umbrella + 'MARS/'
+
+crp_folder = umbrella + 'Critical Reference Panel/'
 
 umbrella_tracker = umbrella + "Patient Tracker - Umbrella Virology Protocol.xlsx"
 
