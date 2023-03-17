@@ -75,13 +75,17 @@ def pull_from_source():
     titan_data['Participant ID'] = titan_data['Umbrella Corresponding Participant ID'].apply(lambda val: val.strip().upper())
     mars_data = pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name='Pt List').dropna(subset=['Participant ID'])
     mars_data['Participant ID'] = mars_data['Participant ID'].apply(lambda val: val.strip().upper())
-    participants = [p.strip().upper() for p in np.concatenate((mars_data['Participant ID'].unique(), titan_data['Participant ID'].unique(), iris_data['Participant ID'].unique()))]
+    gaea_data = pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name='GAEA-M').dropna(subset=['Participant ID'])
+    gaea_data['Participant ID'] = gaea_data['Participant ID'].apply(lambda val: val.strip().upper())
+    participants = [p for p in np.concatenate((mars_data['Participant ID'].unique(), titan_data['Participant ID'].unique(), iris_data['Participant ID'].unique(), gaea_data['Participant ID'].unique()))]
     participant_study = {p: 'MARS' for p in mars_data['Participant ID'].unique()}
     participant_study.update({p: 'TITAN' for p in titan_data['Participant ID'].unique()})
     participant_study.update({p: 'IRIS' for p in iris_data['Participant ID'].unique()})
+    participant_study.update({p: 'GAEA' for p in gaea_data['Participant ID'].unique()})
     mars_data.set_index('Participant ID', inplace=True)
     iris_data.set_index('Participant ID', inplace=True)
     titan_data.set_index('Participant ID', inplace=True)
+    gaea_data.set_index('Participant ID', inplace=True)
     titan_convert = {
         'Vaccine': 'Vaccine Type',
         '1st Dose Date': 'Vaccine #1 Date',
@@ -97,30 +101,43 @@ def pull_from_source():
         'Vaccine': 'Vaccine Name',
         '1st Dose Date': 'Vaccine #1 Date',
         '2nd Dose Date': 'Vaccine #2 Date',
-        '3rd Dose Date': '3rd Dose Date', # This is super confusing
-        '3rd Dose Vaccine': '3rd Dose Vaccine', # This is super confusing
-        'Boost Date': '3rd Vaccine',
-        'Boost Vaccine': '3rd Vaccine Type ',
-        'Boost 2 Date': '4th vaccine',
-        'Boost 2 Vaccine': '4th Vaccine Type'
+        '3rd Dose Date': '3rd Vaccine',
+        '3rd Dose Vaccine': '3rd Vaccine Type ',
+        'Boost Date': '4th vaccine',
+        'Boost Vaccine': '4th Vaccine Type',
+        'Boost 2 Date': '5th vaccine',
+        'Boost 2 Vaccine': '5th Vaccine Type'
     }
     iris_convert = {
         'Vaccine': 'Which Vaccine?',
         '1st Dose Date': 'First Dose Date',
         '2nd Dose Date': 'Second Dose Date',
-        '3rd Dose Date': '3rd Dose Date', # This is super confusing
-        '3rd Dose Vaccine': '3rd Dose Vaccine', # This is super confusing
-        'Boost Date': 'Third Dose Date',
-        'Boost Vaccine': 'Third Dose Type',
-        'Boost 2 Date': 'Fourth Dose Date',
-        'Boost 2 Vaccine': 'Fourth Dose Type'
+        '3rd Dose Date': 'Third Dose Date',
+        '3rd Dose Vaccine': 'Third Dose Type',
+        'Boost Date': 'Fourth Dose Date',
+        'Boost Vaccine': 'Fourth Dose Type',
+        'Boost 2 Date': 'Fifth Dose Date',
+        'Boost 2 Vaccine': 'Fifth Dose Type'
     }
-    mars_data['3rd Dose Date'] = ''
-    mars_data['3rd Dose Vaccine'] = ''
-    iris_data['3rd Dose Date'] = ''
-    iris_data['3rd Dose Vaccine'] = ''
-    source_dfs = {'TITAN': titan_data, 'MARS': mars_data, 'IRIS': iris_data}
-    conversions = {'TITAN': titan_convert, 'MARS': mars_convert, 'IRIS': iris_convert}
+    gaea_convert = {
+        'Vaccine': 'Vaccine Name',
+        '1st Dose Date': 'Vaccine #1 Date',
+        '2nd Dose Date': 'Vaccine #2 Date',
+        '3rd Dose Date': '3rd Vaccine',
+        '3rd Dose Vaccine': '3rd Vaccine Type ',
+        'Boost Date': '4th vaccine',
+        'Boost Vaccine': '4th Vaccine Type',
+        'Boost 2 Date': '5th vaccine',
+        'Boost 2 Vaccine': '5th Vaccine Type'
+    }
+    # mars_data['3rd Dose Date'] = ''
+    # mars_data['3rd Dose Vaccine'] = ''
+    # gaea_data['3rd Dose Date'] = ''
+    # gaea_data['3rd Dose Vaccine'] = ''
+    # iris_data['3rd Dose Date'] = ''
+    # iris_data['3rd Dose Vaccine'] = ''
+    source_dfs = {'TITAN': titan_data, 'MARS': mars_data, 'IRIS': iris_data, 'GAEA': gaea_data}
+    conversions = {'TITAN': titan_convert, 'MARS': mars_convert, 'IRIS': iris_convert, 'GAEA': gaea_convert}
     intake_source = pd.ExcelFile(util.intake)
     collection_log = intake_source.parse(sheet_name='Collection Log').assign(sample_id=lambda df: df['Sample ID'].astype(str).str.strip().str.upper()).drop('Sample ID', axis=1).set_index('sample_id')
     samples = intake_source.parse(sheet_name='Sample Intake Log', header=util.header_intake, dtype=str)
@@ -128,7 +145,7 @@ def pull_from_source():
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
     samplesClean = samples.dropna(subset=['Participant ID'])
-    cutoff_date = datetime.strptime('2023-01-01', '%Y-%m-%d').date()
+    cutoff_date = pd.to_datetime('2023-01-01').date()
     participant_samples = {participant: [] for participant in participants}
     submitted_key = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Source').drop_duplicates(subset=['Participant ID']).set_index('Participant ID')
     sample_exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Sample Exclusions')
