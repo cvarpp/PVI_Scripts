@@ -4,64 +4,6 @@ import util
 from datetime import datetime
 from helpers import query_dscf, query_research
 
-def clean_auc(df):
-    df = df.copy()
-    neg_spike = df['Spike endpoint'].astype(str).str.strip().str.upper().str[:2] == "NE"
-    neg_auc = df['AUC'] == 0.
-    df.loc[neg_spike | neg_auc, 'AUC'] = 1.
-    return df['AUC']
-
-def clean_sample_id(df):
-    return df['Sample ID'].astype(str).str.strip().str.upper()
-
-def clean_research(df):
-    return (df.assign(sample_id=clean_sample_id,
-                      AUC=clean_auc)
-              .dropna(subset=['AUC'])
-              .loc[:, ['sample_id', 'Spike endpoint', 'AUC']])
-
-def convert_serum(vol):
-    try:
-        serum_volume = float(str(vol).strip().strip("mlML ").split()[0])
-    except:
-        try:
-            serum_volume = float(str(vol).strip().strip("ulUL ").split()[0]) / 1000.
-        except:
-            if type(vol) == str:
-                serum_volume = 0
-            else:
-                serum_volume = vol
-    if type(serum_volume) != str and serum_volume > 4.5:
-        serum_volume = 4.5
-    return serum_volume
-
-def clean_serum(df):
-        return df['Total volume of serum (ml)'].apply(convert_serum)
-
-def clean_pbmc(row, no_pbmcs):
-    pbmc_conc = row['# cells per aliquot']
-    if row['sample_id'] in no_pbmcs:
-        return 0.
-    elif (type(pbmc_conc) != float or pd.isna(pbmc_conc)) and type(pbmc_conc) != int:
-        return 0.
-    else:
-        return float(pbmc_conc)
-
-def clean_vials(row):
-    vial_count = row['# of aliquots frozen']
-    if row['pbmc_conc'] == 0.:
-        return 0
-    elif type(vial_count) in [int, float] and vial_count > 2:
-        return 2
-    else:
-        return vial_count
-
-def clean_cells(df, no_pbmcs):
-    df = df.copy()
-    df['pbmc_conc'] = df.apply(lambda row: clean_pbmc(row, no_pbmcs), axis=1)
-    df['vial_count'] = df.apply(clean_vials, axis=1)
-    return df
-
 def sufficient(val):
     try:
         return float(val) > 0
@@ -185,11 +127,12 @@ def pull_from_source():
 
     shared_samples = pd.read_excel(util.shared_samples, sheet_name='Released Samples')
     no_pbmcs = set([str(sid).strip().upper() for sid in shared_samples[shared_samples['Sample Type'] == 'PBMC']['Sample ID'].unique()])
-    all_samples = query_dscf(sid_list=samples_of_interest, no_pbmcs=no_pbmcs).reset_index()
-    all_samples['coll_time'] = all_samples.apply(lambda row: collection_log.loc[row['sample_id'], 'Time Collected'] if row['sample_id'] in collection_log.index else row['Time Collected'], axis=1)
+    all_samples = query_dscf(sid_list=samples_of_interest, no_pbmcs=no_pbmcs)
+    all_samples['coll_time'] = all_samples.apply(lambda row: collection_log.loc[row.name, 'Time Collected'] if row.name in collection_log.index else row['Time Collected'], axis=1)
     serum_or_cells = all_samples['Volume of Serum Collected (mL)'].apply(sufficient) | all_samples['PBMC concentration per mL (x10^6)'].apply(sufficient)
     all_samples[~serum_or_cells].to_excel(util.script_output + 'missing_info.xlsx', index=False)
-    sample_info = all_samples[serum_or_cells].set_index('sample_id')
+    sample_info = all_samples[serum_or_cells].copy()
+    sample_info.loc[sample_info['Volume of Serum Collected (mL)'] > 4.5, 'Volume of Serum Collected (mL)'] = 4.5
 
     proc_cols = ['Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
 
