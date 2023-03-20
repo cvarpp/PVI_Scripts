@@ -32,7 +32,7 @@ def convert_serum(vol):
     return serum_volume
 
 def clean_serum(df):
-        return df['Total volume of serum (ml)'].apply(convert_serum)
+        return df['Total volume of serum (mL)'].apply(convert_serum)
 
 def clean_pbmc(row, no_pbmcs):
     pbmc_conc = row['# cells per aliquot']
