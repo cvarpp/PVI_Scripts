@@ -21,6 +21,10 @@ reports = pvi + 'Reports & Data/'
 research = reports + 'From Krammer Lab/Master Sheet.xlsx'
 projects = reports + 'Projects/'
 
+printing = onedrive + 'Simon Lab - Print Shop/'
+tube_print = printing + 'Tube Printing/'
+plog = tube_print + 'Printing Log.xlsx'
+
 paris = clin_ops + 'PARIS/'
 paris_tracker = paris + 'Patient Tracking - PARIS.xlsx'
 paris_datasets = paris + 'Datasets/'
@@ -53,7 +57,6 @@ seronet_vax = cross_d4 + 'Vax/'
 header_intake = 6
 
 # Column Names
-
 
 qual = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
 quant = 'Ab Concentration (Units - AU/mL)'
