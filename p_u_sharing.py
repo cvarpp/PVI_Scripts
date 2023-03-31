@@ -15,7 +15,6 @@ if __name__ == '__main__':
     result_stat_col = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     result_value_col = 'Ab Concentration (Units - AU/mL)'
     was_shared_col = 'Clinical Ab Result Shared?'
-    result_type = "Visit Type / Samples Needed"
     pemail = paris_info[['Subject ID', 'E-mail']].rename(columns={'E-mail': 'Email'})
     uemail = umbrella_info[['Subject ID', 'Email']]
     samplesClean = samples.dropna(subset=['Participant ID'])
