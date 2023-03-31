@@ -9,7 +9,7 @@ from dateutil import parser
 if __name__ == '__main__':
     paris_info = pd.read_excel(util.paris_tracker, sheet_name='Main', header=8)
     umbrella_info = pd.read_excel(util.umbrella_tracker, sheet_name='Summary', header=0)
-    samples = pd.read_excel(util.intake, sheet_name='Sample Intake Log', header=6, keep_default_na=False)
+    samples = pd.read_excel(util.intake, sheet_name='Sample Intake Log', header=6)
     visit_type = "Visit Type / Samples Needed"
     results_recieved = 'Results'
     result_stat_col = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
@@ -25,7 +25,7 @@ if __name__ == '__main__':
 
     share_filter = samples[was_shared_col].apply(not_shared)
     ppl_filter = samples['Participant ID'] != ''
-    result_filter = (samples[result_value_col] != '') & (samples[result_value_col] != 'N/A')
+    result_filter = (samples[result_value_col] != '') & ~samples[result_value_col].apply(pd.isna)
     emails = pd.concat([pemail, uemail])
 
     samplesClean = samples[share_filter & ppl_filter & result_filter].dropna(subset=['Participant ID', result_value_col])
