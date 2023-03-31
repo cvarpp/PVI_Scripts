@@ -11,7 +11,7 @@ if __name__ == '__main__':
     umbrella_info = pd.read_excel(util.umbrella_tracker, sheet_name='Summary', header=0)
     samples = pd.read_excel(util.intake, sheet_name='Sample Intake Log', header=6)
     visit_type = "Visit Type / Samples Needed"
-    results_recieved = 'Results'
+    results_recieved = 'Results received' # never used
     result_stat_col = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     result_value_col = 'Ab Concentration (Units - AU/mL)'
     was_shared_col = 'Clinical Ab Result Shared?'
