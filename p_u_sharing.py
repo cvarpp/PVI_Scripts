@@ -60,7 +60,7 @@ if __name__ == '__main__':
                     except:
                         print("Sample", sample['Sample_ID'], "improperly recorded as collected on", sample['Date Collected'])
                         print("Not included in result sharing")
-    data_filtered = {'Participant ID': [], 'Date': [], 'Email': [], 'Visit Type': [], 'Qualitative': [], 'Quantitative': []}
+    data_filtered = {'Participant ID': [], 'Sample ID': [], 'Date': [], 'Email': [], 'Visit Type': [], 'Qualitative': [], 'Quantitative': []}
     today = date.today()
     last_60_days = today - datetime.timedelta(days=60)
     for participant, results in participant_results.items():
@@ -68,6 +68,7 @@ if __name__ == '__main__':
             if result[0] >= last_60_days:
                 for date_collected, sample_id, visit_type, result_stat, result_value in participant_results[participant]:
                     data_filtered['Participant ID'].append(participant)
+                    data_filtered['Sample ID'].append(sample_id)
                     data_filtered['Date'].append(date_collected)
                     data_filtered['Visit Type'].append(visit_type)
                     data_filtered['Qualitative'].append(result_stat)
@@ -80,7 +81,7 @@ if __name__ == '__main__':
 if __name__ == '__main__':
     print(data_filtered)
     report = pd.DataFrame(data_filtered)
-    report.columns = ['Participant ID', 'Date', 'Email', 'Visit Type / Sample ID', 'Qualitative', 'Quantitative']
+    report.columns = ['Participant ID', 'Sample ID', 'Date', 'Email', 'Visit Type / Sample ID', 'Qualitative', 'Quantitative']
     output_filename = util.script_output + 'result_reporting_test_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
     writer = pd.ExcelWriter(output_filename)
     report.to_excel(writer, index=False)
