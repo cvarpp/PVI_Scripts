@@ -82,7 +82,7 @@ if __name__ == '__main__':
     print(data_filtered)
     report = pd.DataFrame(data_filtered)
     report.columns = ['Participant ID', 'Sample ID', 'Date', 'Email', 'Visit Type / Sample ID', 'Qualitative', 'Quantitative']
-    output_filename = util.script_output + 'result_reporting_test_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
+    output_filename = util.sharing + 'result_reporting_test_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
     writer = pd.ExcelWriter(output_filename)
     report.to_excel(writer, index=False)
     writer.save()
