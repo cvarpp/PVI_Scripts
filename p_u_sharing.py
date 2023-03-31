@@ -16,7 +16,7 @@ if __name__ == '__main__':
     result_value_col = 'Ab Concentration (Units - AU/mL)'
     was_shared_col = 'Clinical Ab Result Shared?'
     result_type = "Visit Type / Samples Needed"
-    pemail = paris_info[['Subject ID', 'E-mail']]
+    pemail = paris_info[['Subject ID', 'E-mail']].rename(columns={'E-mail': 'Email'})
     uemail = umbrella_info[['Subject ID', 'Email']]
     samplesClean = samples.dropna(subset=['Participant ID'])
     participants = [str(x).strip().upper() for x in pd.read_excel(util.intake, sheet_name='Sample Intake Log', header=6)['Participant ID']]
@@ -26,9 +26,7 @@ if __name__ == '__main__':
     share_filter = samples[was_shared_col].apply(not_shared)
     ppl_filter = samples['Participant ID'] != ''
     result_filter = (samples[result_value_col] != '') & (samples[result_value_col] != 'N/A')
-    emails = pd.merge(pemail, uemail, on='Subject ID', how='outer')
-    emails['Email'] = emails['Email'].fillna(emails['E-mail'])
-    emails = emails[['Subject ID', 'Email']]
+    emails = pd.concat([pemail, uemail])
 
     samplesClean = samples[share_filter & ppl_filter & result_filter].dropna(subset=['Participant ID', result_value_col])
     participants = [str(x).strip().upper() for x in samplesClean['Participant ID'].unique()]
