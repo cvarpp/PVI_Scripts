@@ -33,6 +33,7 @@ iris_folder = umbrella + 'IRIS/'
 titan_folder = umbrella + 'TITAN/'
 mars_folder = umbrella + 'MARS/'
 gaea_folder = umbrella + 'GAEA/'
+prio_folder = clin_ops + 'PRIORITY/'
 
 crp_folder = umbrella + 'Critical Reference Panel/'
 

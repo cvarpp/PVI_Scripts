@@ -26,15 +26,12 @@ def write_clinical(input_df, output_fname):
     auto_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Autoimmune_Condition', 'Autoimmune_Condition_ICD10_code', 'Year_Of_Diagnosis_Duration_to_Index', 'Antibody_Name', 'Antibody_Present', 'Update', 'Comments']
     trans_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Organ Transplant', 'Organ_Transplant_Other', 'Number_of_Hematopoietic_Cell_Transplants', 'Number_Of_Solid_Organ_Transplants', 'Date_of_Latest_Hematopoietic_Cell_Transplant_Duration_From_Index', 'Date_of_Latest_Solid_Organ_Transplant_Duration_From_Index', 'Update', 'Comments']
     cancer_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Cancer', 'ICD_10_Code', 'Year_Of_Diagnosis_Duration_From_Index', 'Cured', 'In_Remission', 'In_Unspecified_Therapy', 'Chemotherapy', 'Radiation Therapy', 'Surgery', 'Update', 'Comments']
-    iris_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/IRIS/'
-    titan_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/TITAN/'
-    mars_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/MARS/'
-    priority_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/PRIORITY/'
 
-    iris_data = iris_folder + 'IRIS for D4 Long.xlsx'
-    mars_data = mars_folder + 'MARS for D4 Long.xlsx'
-    titan_data = titan_folder + 'TITAN for D4 Long.xlsx'
-    priority_data = priority_folder + 'PRIORITY for D4 Long.xlsx'
+    iris_data = util.iris_folder + 'IRIS for D4 Long.xlsx'
+    mars_data = util.mars_folder + 'MARS for D4 Long.xlsx'
+    titan_data = util.titan_folder + 'TITAN for D4 Long.xlsx'
+    priority_data = util.prio_folder + 'PRIORITY for D4 Long.xlsx'
+    gaea_data = util.gaea_folder + 'GAEA for D4 Long.xlsx'
     participant_study = input_df.drop_duplicates(subset='Participant ID').set_index('Participant ID')['Cohort']
 
     exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
@@ -63,7 +60,7 @@ def write_clinical(input_df, output_fname):
         df2b['Sample ID'] = []
 
     current_input = {}
-    cohort_df_names = [iris_data, mars_data, titan_data, priority_data]
+    cohort_df_names = [iris_data, mars_data, titan_data, priority_data, gaea_data]
     current_input['Baseline'] = pd.concat([pd.read_excel(df_name, sheet_name='Baseline Info', keep_default_na=False).set_index('Research_Participant_ID') for df_name in cohort_df_names])
     current_input['COVID'] = pd.concat([pd.read_excel(df_name, sheet_name='COVID Infections', keep_default_na=False) for df_name in cohort_df_names]).reset_index()
     current_input['Vax'] = pd.concat([pd.read_excel(df_name, sheet_name='COVID Vaccinations', keep_default_na=False) for df_name in cohort_df_names]).reset_index()
