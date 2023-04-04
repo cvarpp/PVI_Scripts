@@ -32,6 +32,7 @@ paris_datasets = paris + 'Datasets/'
 iris_folder = umbrella + 'IRIS/'
 titan_folder = umbrella + 'TITAN/'
 mars_folder = umbrella + 'MARS/'
+gaea_folder = umbrella + 'GAEA/'
 
 crp_folder = umbrella + 'Critical Reference Panel/'
 

@@ -12,14 +12,15 @@ def sufficient(val):
 
 def pull_from_source():
     iris_data = pd.read_excel(util.iris_folder + 'Participant Tracking - IRIS.xlsx', sheet_name='Main Project', header=4).dropna(subset=['Participant ID'])
-    iris_data['Participant ID'] = iris_data['Participant ID'].apply(lambda val: val.strip().upper())
-    titan_data = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Tracker', header=4).dropna(subset=['Umbrella Corresponding Participant ID'])
-    titan_data['Participant ID'] = titan_data['Umbrella Corresponding Participant ID'].apply(lambda val: val.strip().upper())
+    titan_data = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Tracker', header=4).rename(columns={'Umbrella Corresponding Participant ID': 'Participant ID'}).dropna(subset=['Participant ID'])
     mars_data = pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name='Pt List').dropna(subset=['Participant ID'])
-    mars_data['Participant ID'] = mars_data['Participant ID'].apply(lambda val: val.strip().upper())
-    gaea_data = pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name='GAEA-M').dropna(subset=['Participant ID'])
-    gaea_data['Participant ID'] = gaea_data['Participant ID'].apply(lambda val: val.strip().upper())
-    participants = [p for p in np.concatenate((mars_data['Participant ID'].unique(), titan_data['Participant ID'].unique(), iris_data['Participant ID'].unique(), gaea_data['Participant ID'].unique()))]
+    gaea_data = pd.read_excel(util.gaea_folder + 'GAEA Tracker.xlsx', sheet_name='Summary').dropna(subset=['Participant ID'])
+    for df in [iris_data, titan_data, mars_data, gaea_data]:
+        df['Participant ID'] = df['Participant ID'].apply(lambda val: val.strip().upper())
+    participants = np.concatenate((mars_data['Participant ID'].unique(),
+                                   titan_data['Participant ID'].unique(),
+                                   iris_data['Participant ID'].unique(),
+                                   gaea_data['Participant ID'].unique()))
     participant_study = {p: 'MARS' for p in mars_data['Participant ID'].unique()}
     participant_study.update({p: 'TITAN' for p in titan_data['Participant ID'].unique()})
     participant_study.update({p: 'IRIS' for p in iris_data['Participant ID'].unique()})
@@ -37,7 +38,8 @@ def pull_from_source():
         'Boost Date': 'First Booster Vaccine Type',
         'Boost Vaccine': 'First Booster Dose Date',
         'Boost 2 Date': 'Second Booster Vaccine Type',
-        'Boost 2 Vaccine': 'Second Booster Dose Date'
+        'Boost 2 Vaccine': 'Second Booster Dose Date',
+        'Baseline Date': 'Baseline date'
     }
     mars_convert = {
         'Vaccine': 'Vaccine Name',
@@ -48,7 +50,8 @@ def pull_from_source():
         'Boost Date': '4th vaccine',
         'Boost Vaccine': '4th Vaccine Type',
         'Boost 2 Date': '5th vaccine',
-        'Boost 2 Vaccine': '5th Vaccine Type'
+        'Boost 2 Vaccine': '5th Vaccine Type',
+        'Baseline Date': 'T1'
     }
     iris_convert = {
         'Vaccine': 'Which Vaccine?',
@@ -59,18 +62,20 @@ def pull_from_source():
         'Boost Date': 'Fourth Dose Date',
         'Boost Vaccine': 'Fourth Dose Type',
         'Boost 2 Date': 'Fifth Dose Date',
-        'Boost 2 Vaccine': 'Fifth Dose Type'
+        'Boost 2 Vaccine': 'Fifth Dose Type',
+        'Baseline Date': 'Baseline Date'
     }
     gaea_convert = {
-        'Vaccine': 'Vaccine Name',
-        '1st Dose Date': 'Vaccine #1 Date',
-        '2nd Dose Date': 'Vaccine #2 Date',
-        '3rd Dose Date': '3rd Vaccine',
+        'Vaccine': 'Vaccine Type',
+        '1st Dose Date': 'Dose #1 Date',
+        '2nd Dose Date': 'Dose #2 Date',
+        '3rd Dose Date': '3rd Vaccine Date',
         '3rd Dose Vaccine': '3rd Vaccine Type ',
-        'Boost Date': '4th vaccine',
+        'Boost Date': '4th Vaccine Date',
         'Boost Vaccine': '4th Vaccine Type',
-        'Boost 2 Date': '5th vaccine',
-        'Boost 2 Vaccine': '5th Vaccine Type'
+        'Boost 2 Date': '5th Vaccine Type',
+        'Boost 2 Vaccine': '5th Vaccine Type',
+        'Baseline Date': 'Baseline Date'
     }
     # mars_data['3rd Dose Date'] = ''
     # mars_data['3rd Dose Vaccine'] = ''
@@ -161,7 +166,7 @@ def pull_from_source():
         participant_data[participant] = {}
         cohort = participant_study[participant].strip().upper()
         seronet_id = "14_{}{}".format(cohort[:1], samples[0][1])
-        key_cols = ['Vaccine', '1st Dose Date', '2nd Dose Date', '3rd Dose Date', '3rd Dose Vaccine', 'Boost Date', 'Boost Vaccine', 'Boost 2 Date', 'Boost 2 Vaccine']
+        key_cols = ['Vaccine', '1st Dose Date', '2nd Dose Date', '3rd Dose Date', '3rd Dose Vaccine', 'Boost Date', 'Boost Vaccine', 'Boost 2 Date', 'Boost 2 Vaccine', 'Baseline Date']
         if cohort in conversions.keys():
             source_df = source_dfs[cohort]
             converter = conversions[cohort]
@@ -175,6 +180,8 @@ def pull_from_source():
                     participant_data[participant][k] = source_df.loc[participant, converter[k]]
             if cohort == 'TITAN':
                 participant_data[participant]['Index Date'] = participant_data[participant]['3rd Dose Date']
+            elif cohort == 'GAEA':
+                participant_data[participant]['Index Date'] = participant_data[participant]['Baseline Date']
             elif str(participant_data[participant]['Vaccine'])[:1].upper() == 'J':
                 participant_data[participant]['Index Date'] = participant_data[participant]['1st Dose Date']
             else:
