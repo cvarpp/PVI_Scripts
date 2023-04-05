@@ -23,7 +23,7 @@ projects = reports + 'Projects/'
 
 printing = onedrive + 'Simon Lab - Print Shop/'
 tube_print = printing + 'Tube Printing/'
-plog = tube_print + 'Printing Log.xlsx'
+print_log = tube_print + 'Printing Log.xlsx'
 
 paris = clin_ops + 'PARIS/'
 paris_tracker = paris + 'Patient Tracking - PARIS.xlsx'
