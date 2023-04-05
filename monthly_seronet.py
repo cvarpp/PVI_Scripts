@@ -99,7 +99,7 @@ if __name__ == '__main__':
         '# of PBMC vials': 'Num_PBMC_Vials_For_FNL'
     }
     df_start = all_data.loc[:, keep_cols].rename(columns=col_map).query('Date <= @args.report_end').copy()
-    cohort_key = {'MARS': 'Cancer', 'IRIS': 'IBD', 'TITAN': 'Transplant', 'PRIORITY': 'PRIORITY'}
+    cohort_key = {'MARS': 'Cancer', 'IRIS': 'IBD', 'TITAN': 'Transplant', 'PRIORITY': 'Chronic Conditions', 'GAEA': 'Healthy Control'}
     df_start['Primary_Cohort'] = df_start['Site_Cohort_Name'].apply(lambda val: cohort_key[val])
     df_start['Visit_Date_Duration_From_Visit_1'] = df_start['Days from Index'] - df_start['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
     df_start['Visit_Number'] = df_start.groupby('Research_Participant_ID').cumcount() + 1
