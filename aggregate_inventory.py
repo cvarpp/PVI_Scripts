@@ -7,10 +7,16 @@ from copy import deepcopy
 import os
 import pickle
 import argparse
+from helpers import clean_sample_id
 
 # Pull all file/folder locations from util.py
 # Pull in sample data from dscf to check (query_dscf in helpers.py)
 
+
+def filter_box(box_name, box_df=None):
+    if box_df is None:
+        return False
+    return (box_name not in uploaded) and ((args.min_count <= box_df.set_index('Name').loc[box_name, 'Tube Count'] <= 81) or (box_name in full_des))
 
 def timp_check(name):
     mit = "MIT" in name.upper()
@@ -27,19 +33,23 @@ if __name__ == '__main__':
     home = '~/The Mount Sinai Hospital/'
     processing = home + 'Simon Lab - Processing Team/'
     inventory_boxes = pd.read_excel(processing + 'ACTIVE_FreezerPro Import Sheet (use this!!).xlsx', sheet_name=None)
-    sample_types = ['Plasma', 'Serum', 'Pellet', 'Saliva', 'PBMC', 'HT', '4.5', 'All']
+    sample_types = ['Plasma', 'Serum', 'Pellet', 'Saliva', 'PBMC', 'HT', '4.5 mL Tube', 'All']
     data = {'Name': [], 'Sample ID': [], 'Sample Type': [],'Freezer': [],'Level1': [],'Level2': [],'Level3': [],'Box': [],'Position': [], 'ALIQUOT': []}
     samples_data = {st: deepcopy(data) for st in sample_types if st != 'HT'}
     samples_data['Serum']['Heat treated?'] = []
     samples_data['Plasma']['Heat treated?'] = []
+    samples_data['4.5 mL Tube']['Serum or Plasma?'] = []
     samples_data['All'] = deepcopy(data)
     box_counts = {}
     aliquot_counts = {}
     for name, sheet in inventory_boxes.items():
-        if not re.search('[0-9]{2,3}', name):
+        try:
+            box_number = int(name.split()[-1])
+        except:
             print(name, "has no box number")
             continue
-        box_number = int(re.search('[0-9]{2,3}', name)[0])
+        if "Sample ID" not in sheet.columns:
+            continue
         if re.search('PSP', name):
             team = 'PSP'
         elif timp_check(name):
@@ -48,7 +58,7 @@ if __name__ == '__main__':
             team = 'PVI'
         sample_type = 'N/A'
         for val in sample_types:
-            if re.search(val.upper(), name.upper()):
+            if re.search(str(val).upper().split()[0], name.upper()):
                 sample_type = val
                 break
         if sample_type == 'N/A':
@@ -60,14 +70,14 @@ if __name__ == '__main__':
         if re.search("FF", name.upper()):
             box_kinds.append("FF")
         if len(box_kinds) == 0:
-            if sample_type == 'PBMC' or sample_type == 'HT' or sample_type == '4.5':
+            if sample_type in ['PBMC', 'HT', '4.5 mL Tube']:
                 box_kinds.append('')
             else:
                 print(name, " is neither lab nor ff")
         box_sample_type = sample_type
-        sheet['Sample ID'] = sheet['Sample ID'].astype(str).str.upper().str.strip()
+        sheet = sheet.assign(sample_id=clean_sample_id).set_index('sample_id')
         for kind in box_kinds:
-            if box_sample_type == 'PBMC' or box_sample_type == 'HT':
+            if box_sample_type in ['PBMC', 'HT', '4.5 mL Tube']:
                 box_name = "{} {} {}".format(team, box_sample_type, box_number)
             else:
                 box_name = "{} {} {} {}".format(team, box_sample_type, kind, box_number)
@@ -85,19 +95,13 @@ if __name__ == '__main__':
                 level3 = ''
             else:
                 level3 = '{} {} Rack'.format(box_sample_type, kind)
-            for i, row in sheet.iterrows():
-                try:
-                    sample_id = row['Sample ID']
-                except:
-                    print(name, "has no Sample ID column")
-                    print("Fatal Error! Exiting...")
-                    exit(1)
-                if len(str(row['Sample ID'])) < 5:
+            for i, (sample_id, row) in enumerate(sheet.iterrows()):
+                if re.search("[1-9A-Z][0-9]{4,5}", sample_id) is None:
                     continue
                 sample_type = 'N/A'
                 for val in sample_types:
                     try:
-                        if re.search(val.upper(), str(row['Sample Type']).upper()):
+                        if re.search(str(val).upper().split()[0], str(row['Sample Type']).upper()):
                             sample_type = val
                             break
                     except:
@@ -106,12 +110,12 @@ if __name__ == '__main__':
                 if sample_type == 'N/A':
                     print(row['Sample ID'], 'in box', box_name, 'has no sample type specified. (', row['Sample Type'], ')')
                     continue
-                if (row['Sample ID'], sample_type) in aliquot_counts.keys():
-                    aliquot = aliquot_counts[(row['Sample ID'], sample_type)]
-                    aliquot_counts[(row['Sample ID'], sample_type)] += 1
-                else:
-                    aliquot = 1
-                    aliquot_counts[(row['Sample ID'], sample_type)] = 2
+                # if (row['Sample ID'], sample_type) in aliquot_counts.keys():
+                #     aliquot = aliquot_counts[(row['Sample ID'], sample_type)]
+                #     aliquot_counts[(row['Sample ID'], sample_type)] += 1
+                # else:
+                #     aliquot = 1
+                #     aliquot_counts[(row['Sample ID'], sample_type)] = 2
                 data = samples_data[sample_type]
                 data['Name'].append(row['Sample ID'])
                 data['Sample ID'].append(row['Sample ID'])
@@ -128,6 +132,8 @@ if __name__ == '__main__':
                         data['Heat treated?'].append('Yes')
                     else:
                         data['Heat treated?'].append('No')
+                if sample_type == '4.5 mL Tube':
+                    data['Serum or Plasma?'].append(row['Serum or Plasma?'])
                 data = samples_data['All']
                 data['Name'].append(row['Sample ID'])
                 data['Sample ID'].append(row['Sample ID'])
@@ -140,37 +146,34 @@ if __name__ == '__main__':
                 data['Position'].append(i + 1)
                 data['ALIQUOT'].append(row['Sample ID'])
                 box_counts[box_name] += 1
-    writer = pd.ExcelWriter(processing + 'aggregate_inventory_{}.xlsx'.format(date.today().strftime("%m.%d.%y")))
-    box_data = {'Name': [], 'Tube Count': []}
-    if os.path.exists(processing + 'script_data/uploaded_boxes.pkl'):
-        with open(processing + 'script_data/uploaded_boxes.pkl', 'rb') as f:
-            uploaded = pickle.load(f)
-    else:
-        uploaded = set()
+    # if os.path.exists(processing + 'script_data/uploaded_boxes.pkl'):
+        # with open(processing + 'script_data/uploaded_boxes.pkl', 'rb') as f:
+            # uploaded = pickle.load(f)
+    # else:
+        # uploaded = set()
+    uploaded = set()
     full_des = set(inventory_boxes['Full Boxes, DES']['Name'].to_numpy())
-    def filter_box(box_name):
-        return (box_name not in uploaded) and ((args.min_count <= box_df.loc[box_name, 'Tube Count'] <= 81) or (box_name in full_des))
+    box_data = {'Name': [], 'Tube Count': []}
     for box_name, tube_count in box_counts.items():
         box_data['Name'].append(box_name)
         box_data['Tube Count'].append(tube_count)
-        if tube_count < args.min_count or tube_count > 81:
-            print(box_name, ',', tube_count)
-    box_df = pd.DataFrame(box_data).set_index('Name')
-    for sample_type, data in samples_data.items():
-        df = pd.DataFrame(data)
-        if sample_type != 'All':
-            df = df[df['Box'].apply(filter_box)]
-            df.to_excel(writer, sheet_name='{}'.format(sample_type), index=False)
-        else:
-            df.to_excel(processing + 'inventory_in_progress.xlsx')
-    box_df.to_excel(writer, sheet_name='Box Counts')
-    box_df[((box_df['Tube Count'].apply(lambda val: args.min_count <= val <= 81)) | box_df.apply(lambda row: row.name in full_des, axis=1)) & (box_df.apply(lambda row: row.name not in uploaded, axis=1))].to_excel(writer, sheet_name='Uploaded Box Counts')
-    print("Boxes to upload today:")
-    for box_name, tube_count in box_counts.items():
-        if filter_box(box_name):
-            if box_name not in uploaded:
-                print(box_name)
-                uploaded.add(box_name)
-    with open(processing + 'script_data/uploaded_boxes.pkl', 'wb+') as f:
-        pickle.dump(uploaded, f)
-    writer.save()
+    box_df = pd.DataFrame(box_data)
+    pd.DataFrame(samples_data['All']).to_excel(processing + 'inventory_in_progress.xlsx')
+    uploading_boxes = box_df[box_df['Name'].apply(lambda val: filter_box(val, box_df=box_df))]
+    with pd.ExcelWriter(processing + 'aggregate_inventory_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))) as writer:
+        for sample_type, data in samples_data.items():
+            if sample_type != 'All':
+                df = pd.DataFrame(data)
+                df = df[df['Box'].apply(lambda val: filter_box(val, box_df=box_df))]
+                df.to_excel(writer, sheet_name='{}'.format(sample_type), index=False)
+        box_df.to_excel(writer, sheet_name='Box Counts')
+        uploading_boxes.to_excel(writer, sheet_name='Uploaded Box Counts')
+    for _, row in box_df[~box_df['Name'].apply(lambda val: filter_box(val, box_df=box_df))].iterrows():
+        print(row['Name'], 'with', row['Tube Count'], "tubes is partially inventoried and not being uploaded")
+    if uploading_boxes.shape[0] > 0:
+        print("Boxes to upload today:")
+    for _, row in uploading_boxes.iterrows():
+            print(row['Name'])
+            uploaded.add(row['Name'])
+    # with open(processing + 'script_data/uploaded_boxes.pkl', 'wb+') as f:
+        # pickle.dump(uploaded, f)
