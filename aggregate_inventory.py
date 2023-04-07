@@ -120,8 +120,8 @@ if __name__ == '__main__':
                 #     aliquot = 1
                 #     aliquot_counts[(row['Sample ID'], sample_type)] = 2
                 data = samples_data[sample_type]
-                data['Name'].append(row['Sample ID'])
-                data['Sample ID'].append(row['Sample ID'])
+                data['Name'].append(sample_id)
+                data['Sample ID'].append(sample_id)
                 data['Sample Type'].append(row['Sample Type'].strip())
                 data['Freezer'].append(freezer)
                 data['Level1'].append(level1)
@@ -129,7 +129,7 @@ if __name__ == '__main__':
                 data['Level3'].append(level3)
                 data['Box'].append(box_name)
                 data['Position'].append(pos_convert(idx))
-                data['ALIQUOT'].append(row['Sample ID'])
+                data['ALIQUOT'].append(sample_id)
                 if sample_type in ['Serum', 'Plasma']:
                     if box_sample_type == 'HT':
                         data['Heat treated?'].append('Yes')
@@ -138,8 +138,8 @@ if __name__ == '__main__':
                 if sample_type == '4.5 mL Tube':
                     data['Serum or Plasma?'].append(row['Serum or Plasma?'])
                 data = samples_data['All']
-                data['Name'].append(row['Sample ID'])
-                data['Sample ID'].append(row['Sample ID'])
+                data['Name'].append(sample_id)
+                data['Sample ID'].append(sample_id)
                 data['Sample Type'].append(row['Sample Type'].strip())
                 data['Freezer'].append(freezer)
                 data['Level1'].append(level1)
@@ -147,7 +147,7 @@ if __name__ == '__main__':
                 data['Level3'].append(level3)
                 data['Box'].append(box_name)
                 data['Position'].append(pos_convert(idx))
-                data['ALIQUOT'].append(row['Sample ID'])
+                data['ALIQUOT'].append(sample_id)
                 box_counts[box_name] += 1
     # if os.path.exists(processing + 'script_data/uploaded_boxes.pkl'):
         # with open(processing + 'script_data/uploaded_boxes.pkl', 'rb') as f:
