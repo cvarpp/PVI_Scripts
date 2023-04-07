@@ -13,6 +13,9 @@ from helpers import clean_sample_id
 # Pull in sample data from dscf to check (query_dscf in helpers.py)
 
 
+def pos_convert(idx):
+    return str((idx // 9) + 1) + "/" + "ABCDEFGHI"[idx % 9]
+
 def filter_box(box_name, box_df=None):
     if box_df is None:
         return False
@@ -95,7 +98,7 @@ if __name__ == '__main__':
                 level3 = ''
             else:
                 level3 = '{} {} Rack'.format(box_sample_type, kind)
-            for i, (sample_id, row) in enumerate(sheet.iterrows()):
+            for idx, (sample_id, row) in enumerate(sheet.iterrows()):
                 if re.search("[1-9A-Z][0-9]{4,5}", sample_id) is None:
                     continue
                 sample_type = 'N/A'
@@ -125,7 +128,7 @@ if __name__ == '__main__':
                 data['Level2'].append(level2)
                 data['Level3'].append(level3)
                 data['Box'].append(box_name)
-                data['Position'].append(i + 1)
+                data['Position'].append(pos_convert(idx))
                 data['ALIQUOT'].append(row['Sample ID'])
                 if sample_type in ['Serum', 'Plasma']:
                     if box_sample_type == 'HT':
@@ -143,7 +146,7 @@ if __name__ == '__main__':
                 data['Level2'].append(level2)
                 data['Level3'].append(level3)
                 data['Box'].append(box_name)
-                data['Position'].append(i + 1)
+                data['Position'].append(pos_convert(idx))
                 data['ALIQUOT'].append(row['Sample ID'])
                 box_counts[box_name] += 1
     # if os.path.exists(processing + 'script_data/uploaded_boxes.pkl'):
