@@ -31,7 +31,7 @@ if __name__ == '__main__':
     mars_ppl = set(ppl_info['Participant ID'].str.strip().unique()) - exclude_ppl
     intake = query_intake(participants=mars_ppl)
     soi = set(intake.index.to_numpy())
-    tcell_data = pd.read_excel(util.crp_folder + 'T Cell Experiments.xlsx', sheet_name=None)
+    tcell_data = pd.read_excel(util.proc + 'T Cell Experiments.xlsx', sheet_name=None)
     tcell_samples = tcell_data['Data'].set_index('Name').assign(sample_id=clean_sample_id)
     tcell_samples.loc[tcell_samples['IU/mL'] == '> 10¶', 'IU/mL'] = 20
     tcell_ids = set(tcell_samples['sample_id'].unique())
