@@ -42,11 +42,11 @@ Intake['Intake ind'] = True
 Mast_list['Mast ind'] = True
 df_perbox['plog ind'] = True
 
-pre_combine = Mast_list.merge(df_perbox, on='Box #')
+pre_combine = Mast_list.join(df_perbox, on='Box #', rsuffix='FEEDBACK')
 
 pre_combine['Sample ID'] = pre_combine['Study ID']
 
-Combine = pre_combine.merge(Intake, on='Sample ID')
+Combine = pre_combine.join(Intake, on='Sample ID', rsuffix='Intake ind')
 # %%
 
 Combine.to_csv( util.script_output + 'plog link.csv', sep=',')
