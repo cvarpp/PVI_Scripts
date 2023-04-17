@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import util
 
 def clean_auc(df):
@@ -130,7 +131,7 @@ def try_datediff(start_date, end_date):
     try:
         return int((end_date - start_date).days)
     except:
-        return pd.NA
+        return np.nan
 
 def coerce_date(val):
     return pd.to_datetime(val, errors='coerce').date()
