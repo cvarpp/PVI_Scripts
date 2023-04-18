@@ -14,16 +14,13 @@ def auc_logger(val):
     else:
         return np.log2(float(val))
 
-
-def fallible(row, date_lkp):
-    try:
-        output = bisect_left(date_lkp[row['participant_id']], pd.to_datetime(row['Date Collected']).date())
-    except:
-        print("Failed on {} at {}".format(row['participant_id'], row.name))
-        print(date_lkp[row['participant_id']])
-        print(row['Date Collected'])
-        exit(1)
-    return output
+def find_last_event(row):
+    if pd.isna(row['Days to Last Vax']) and pd.isna(row['Days to Last Infection']):
+        return "No Vaccine or Infection"
+    elif pd.isna(row['Days to Last Infection']) or row['Days to Last Vax'] < row['Days to Last Infection']:
+        return "Vax"
+    else:
+        return "Infection"
 
 def crp_results():
     crp_data = (pd.read_excel(util.crp_folder + 'CRP Patient Tracker.xlsx', sheet_name='Tracker', header=4)
@@ -38,9 +35,9 @@ def crp_results():
     samples = sample_info.index.to_numpy()
     research_results = query_research(sid_list=samples)
 
-    first_cols = ['Participant ID', 'Date', 'Sample ID', 'Post-Vax', 'Prior Boosts', 'Prior COVID Infections', 'Days to Vaccine #1',
+    first_cols = ['Participant ID', 'Date', 'Sample ID', 'last_event', 'Post-Vax', 'Prior Boosts', 'Prior COVID Infections', 'Days to Vaccine #1',
                 'Days to 3rd Dose Vaccine', 'Days to Last Infection', 'Days to Last Vax',
-                'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'COVID-19 Vaccine Type',
+                'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Has Path?', 'Has AUC?', 'COVID-19 Vaccine Type',
                 '3rd Dose Vaccine Type', 'Days to Infection 1', 'Days to Infection 2', 'Days to Infection 3']
     dem_cols = ['Sex', 'Gender', 'Age at Visit', 'Race', 'Ethnicity']
     vax_cols = ['COVID-19 Vaccine Type', 'Vaccine #1 Date', 'Vaccine #2 Date', '3rd Dose? or Booster?',
@@ -52,9 +49,7 @@ def crp_results():
     inf_dates = [col for col in inf_cols if 'Date' in col]
     sample_info['Date'] = sample_info['Date Collected']
     intake_drops = ['Date Collected', 'Date Shared', 'Clinical Ab Result Shared?', 'Shared By']
-    sample_info = (sample_info[~sample_info['Qualitative'].astype(str).str.strip().isin(['-', '']) &
-                              ~sample_info['Qualitative'].apply(pd.isna)]
-                              .join(research_results)
+    sample_info = (sample_info.join(research_results)
                               .join(crp_data.loc[:, inf_cols + vax_cols + dem_cols], on='participant_id')
                               .drop(intake_drops, axis='columns')
                               .sort_values(by=['participant_id', 'Date'])
@@ -75,6 +70,8 @@ def crp_results():
     sample_info['Sample ID'] = sample_info['sample_id']
     sample_info['Visit Type'] = sample_info[util.visit_type]
     sample_info['Log2AUC'] = sample_info['AUC'].apply(auc_logger)
+    sample_info['Has Path?'] = sample_info['Quantitative'].apply(lambda val: "Yes" if not pd.isna(val) else "No")
+    sample_info['Has AUC?'] = sample_info['AUC'].apply(lambda val: "Yes" if not pd.isna(val) else "No")
 
 
     pre_infs = []
@@ -100,7 +97,10 @@ def crp_results():
                  [col for col in inf_cols if col not in first_cols] +
                  dem_cols +
                  ['Visit Type', 'Most Recent Infection', 'Most Recent Vax'])
-    return sample_info.loc[:, col_order]
+    if sample_info['Participant ID'].unique().size < participants.size:
+        print("Participants with no samples in report:")
+        print([p for p in participants if p not in sample_info['Participant ID'].to_numpy()])
+    return sample_info.assign(last_event=lambda df: df.apply(find_last_event, axis=1)).loc[:, col_order]
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='CRP Report')
@@ -115,14 +115,49 @@ if __name__ == '__main__':
         with pd.ExcelWriter(output_filename) as writer:
             report.to_excel(writer, sheet_name='Source', index=False)
             report[~report['Post-Vax']].to_excel(writer, sheet_name='Unvaccinated')
-            df_first = report[report['Post-Vax']].drop_duplicates(subset='Participant ID', keep='first')
-            pd.crosstab(df_first['Prior Boosts'], df_first['Prior COVID Infections']).to_excel(writer, sheet_name='Boosts vs Infs Baseline')
-            df_last = report[report['Post-Vax']].drop_duplicates(subset='Participant ID', keep='last')
-            pd.crosstab(df_last['Prior Boosts'], df_last['Prior COVID Infections']).to_excel(writer, sheet_name='Boosts vs Infs Latest')
             df_all = report.drop_duplicates(subset='Participant ID', keep='first')
+            last_vax_valencies = []
+            for _, row in df_all.iterrows():
+                valency = ['Monovalent']
+                for val in [row['3rd Dose Vaccine Type'], row['4th Dose Vaccine Type'], row['5th Dose Vaccine Type']]:
+                    if 'bivalent' in str(val).lower():
+                        valency.append('Bivalent')
+                    else:
+                        valency.append('Monovalent')
+                last_vax_valencies.append(valency[row['Prior Boosts']])
+            df_all['Last Vax Valency'] = last_vax_valencies
+            df_all['Prior Boosts + Valency'] = df_all['Prior Boosts'].astype(str) + ': ' + df_all['Last Vax Valency']
             pd.crosstab([df_all['Post-Vax'], df_all['Prior Boosts']], df_all['Prior COVID Infections']).to_excel(writer, sheet_name='Vax vs Inf Baseline')
+            pd.crosstab([df_all['Post-Vax'], df_all['Prior Boosts + Valency']], df_all['Prior COVID Infections']).to_excel(writer, sheet_name='Vax vs Inf Baseline Bivalent')
+            pd.crosstab([df_all['Post-Vax'], df_all['Prior Boosts + Valency']], [df_all['last_event'], df_all['Prior COVID Infections']]).to_excel(writer, sheet_name='Vax vs Inf Base Biv Col')
+            for ycol in ['AUC', 'Quantitative']:
+                df_local = df_all[~df_all[ycol].apply(pd.isna)]
+                pd.crosstab([df_local['Post-Vax'], df_local['Prior Boosts + Valency']], [df_local['last_event'], df_local['Prior COVID Infections']]).to_excel(writer, sheet_name='Vax vs Inf Base Biv Col {}'.format(ycol[:5]))
+            pd.crosstab([df_all['last_event'], df_all['Post-Vax'], df_all['Prior Boosts + Valency']], df_all['Prior COVID Infections']).to_excel(writer, sheet_name='Vax vs Inf Base Biv Row')
+            for last_event in ['Vax', 'Infection']:
+                df_local = df_all[df_all['last_event'] == last_event]
+                pd.crosstab([df_local['Post-Vax'], df_local['Prior Boosts + Valency']], df_local['Prior COVID Infections']).to_excel(writer, sheet_name='Vax vs Inf Base Biv {}'.format(last_event))
+            for last_event, last_ev_col in zip(['Vax', 'Infection'], ['Days to Last Vax', 'Days to Last Infection']):
+                df_local = df_all[(df_all['last_event'] == last_event) & ~df_all['AUC'].apply(pd.isna)].drop_duplicates(subset='Participant ID')
+                for col in ['Prior Boosts', 'Prior COVID Infections']:
+                    dfs = {}
+                    for num in [0, 1, 2, 3]:
+                        dfs[num] = df_local[df_local[col] == num].loc[:, ['Participant ID', last_ev_col, 'AUC']].rename(columns={'AUC': '{} {}'.format(num, col[6:])}).set_index(['Participant ID', last_ev_col])
+                    df_output = dfs[0].join(dfs[1], how='outer').join(dfs[2], how='outer').join(dfs[3], how='outer').reset_index()
+                    df_output.to_excel(writer, sheet_name="AUC {} by {}".format(last_event, col[:12].strip()), index=False)
+            for last_event, last_ev_col in zip(['Vax', 'Infection'], ['Days to Last Vax', 'Days to Last Infection']):
+                df_local = df_all[(df_all['last_event'] == last_event) & ~df_all['Quantitative'].apply(pd.isna)].drop_duplicates(subset='Participant ID')
+                for col in ['Prior Boosts', 'Prior COVID Infections']:
+                    dfs = {}
+                    for num in [0, 1, 2, 3]:
+                        dfs[num] = df_local[df_local[col] == num].loc[:, ['Participant ID', last_ev_col, 'Quantitative']].rename(columns={'Quantitative': '{} {}'.format(num, col[6:])}).set_index(['Participant ID', last_ev_col])
+                    df_output = dfs[0].join(dfs[1], how='outer').join(dfs[2], how='outer').join(dfs[3], how='outer').reset_index()
+                    df_output.to_excel(writer, sheet_name="Path {} by {}".format(last_event, col[:12].strip()), index=False)
+
         print("CRP report written to {}".format(output_filename))
-    print("{} samples from {} participants".format(
+    print("{} samples from {} participants.\n{} with research results, {} with path results".format(
         report.shape[0],
-        report['Participant ID'].unique().size
+        report['Participant ID'].unique().size,
+        report[report['Has AUC?'] == 'Yes'].shape[0],
+        report[report['Has Path?'] == 'Yes'].shape[0]
     ))
