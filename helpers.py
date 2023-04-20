@@ -57,13 +57,32 @@ def clean_cells(df, no_pbmcs):
     df['vial_count'] = df.apply(clean_vials, axis=1)
     return df
 
+def fallible(f, default=np.nan):
+    def tmp(val):
+        try:
+            return f(val)
+        except:
+            return default
+    return tmp
+
 def query_dscf(sid_list=None, no_pbmcs=set()):
     correct_2p = {'Comments': 'COMMENTS'}
     dscf_info = pd.ExcelFile(util.dscf)
     bsl2p_samples = dscf_info.parse(sheet_name='BSL2+ Samples', header=1).rename(columns=correct_2p)
     bsl2_samples = dscf_info.parse(sheet_name='BSL2 Samples')
+    correct_crp = {'CELL COUNTER (Total)': 'Cell Count',
+                   '# Aliquots Frozen': '# of aliquots frozen',
+                   'Total Volume of Serum after first spin (ml)': 'Total volume of serum (mL)'}
+    crp_samples = dscf_info.parse(sheet_name='CRP').rename(columns=correct_crp)
+    crp_samples['# cells per aliquot'] = crp_samples.apply(fallible(lambda row: row['Cell Count'] / row['# of aliquots frozen']), axis=1)
+    crp_samples.loc[crp_samples['Total volume of serum after second spin (ml)'].str.upper().str.strip() != 'X', 'Total volume of serum (mL)'] = crp_samples.loc[crp_samples['Total volume of serum after second spin (ml)'].str.upper().str.strip() != 'X', 'Total volume of serum after second spin (ml)']
     date_cols = ['Date Processing Started']
-    all_samples = (pd.concat([bsl2p_samples, bsl2_samples])
+    correct_new = {'# PBMCs per Aliquot': '# cells per aliquot',
+                   '# Aliquots': '# of aliquots frozen',
+                   'Total Plasma Vol. (mL)': 'Total volume of plasma (mL)',
+                   'Total Serum Vol. (mL)': 'Total volume of serum (mL)'}
+    new_samples = pd.read_excel(util.proc + 'Processing Notebook.xlsx', sheet_name='Specimen Dashboard', header=1).rename(columns=correct_new)
+    all_samples = (pd.concat([bsl2p_samples, bsl2_samples, crp_samples, new_samples])
                      .assign(sample_id=clean_sample_id)
                      .drop_duplicates(subset=['sample_id'], keep='last')
                      .assign(serum_vol=clean_serum)

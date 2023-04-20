@@ -3,7 +3,7 @@ import numpy as np
 from datetime import date
 import util
 import argparse
-from helpers import try_datediff, permissive_datemax, query_intake, query_research, map_dates
+from helpers import try_datediff, permissive_datemax, query_intake, query_research, map_dates, query_dscf
 from bisect import bisect_left
 
 def auc_logger(val):
@@ -24,16 +24,18 @@ def find_last_event(row):
 
 def crp_results():
     crp_data = (pd.read_excel(util.crp_folder + 'CRP Patient Tracker.xlsx', sheet_name='Tracker', header=4)
-                  .dropna(subset=['Umbrella Corresponding Participant ID'])
-                  .assign(participant_id = lambda df: df['Umbrella Corresponding Participant ID'].str.strip())
+                  .dropna(subset=['Participant ID'])
+                  .assign(participant_id = lambda df: df['Participant ID'].str.strip())
                   .set_index('participant_id')
-                  .drop('Umbrella Corresponding Participant ID', axis='columns'))
+                  .drop('Participant ID', axis='columns'))
     participants = crp_data.index.to_numpy()
 
     sample_info = query_intake(participants=participants)
     sample_info = sample_info[sample_info['Study'] == 'CRP'].copy()
     samples = sample_info.index.to_numpy()
     research_results = query_research(sid_list=samples)
+    proc_cols = ['Volume of Serum Collected (mL)', 'Total volume of plasma (mL)', 'PBMC concentration per mL (x10^6)', 'viability', '# of PBMC vials', 'cpt_vol', 'sst_vol', 'proc_comment']
+    proc_data = query_dscf(sid_list=samples).loc[:, proc_cols]
 
     first_cols = ['Participant ID', 'Date', 'Sample ID', 'last_event', 'Post-Vax', 'Prior Boosts', 'Prior COVID Infections', 'Days to Vaccine #1',
                 'Days to 3rd Dose Vaccine', 'Days to Last Infection', 'Days to Last Vax',
@@ -51,6 +53,7 @@ def crp_results():
     intake_drops = ['Date Collected', 'Date Shared', 'Clinical Ab Result Shared?', 'Shared By']
     sample_info = (sample_info.join(research_results)
                               .join(crp_data.loc[:, inf_cols + vax_cols + dem_cols], on='participant_id')
+                              .join(proc_data)
                               .drop(intake_drops, axis='columns')
                               .sort_values(by=['participant_id', 'Date'])
                               .reset_index().copy())
@@ -96,11 +99,12 @@ def crp_results():
                  [col for col in vax_cols if col not in first_cols] +
                  [col for col in inf_cols if col not in first_cols] +
                  dem_cols +
-                 ['Visit Type', 'Most Recent Infection', 'Most Recent Vax'])
+                 ['Visit Type', 'Most Recent Infection', 'Most Recent Vax'] +
+                 proc_cols)
     if sample_info['Participant ID'].unique().size < participants.size:
         print("Participants with no samples in report:")
         print([p for p in participants if p not in sample_info['Participant ID'].to_numpy()])
-    return sample_info.assign(last_event=lambda df: df.apply(find_last_event, axis=1)).loc[:, col_order]
+    return sample_info.assign(last_event=lambda df: df.apply(find_last_event, axis=1)).loc[:, col_order].assign(total_pbmcs=lambda df: df['PBMC concentration per mL (x10^6)'] * df['# of PBMC vials'])
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(description='CRP Report')
@@ -109,12 +113,20 @@ if __name__ == '__main__':
     args = argparser.parse_args()
 
     report = crp_results()
+    converter = pd.read_excel(util.tracking + 'AUC Converter.xlsx', sheet_name='Key').set_index('Spike Endpoint')
+    report['False Path Value'] = report.apply(lambda row: row['AUC'] / converter.loc[row['Spike endpoint'], 'Corrective Factor'] if row['Spike endpoint'] in converter.index else np.nan, axis=1)
+    report['Path Plus'] = report.apply(lambda row: row['Quantitative'] if not pd.isna(row['Quantitative']) else row['False Path Value'], axis=1)
     output_filename = util.crp_folder + 'dataset_{}_{}.xlsx'.format(args.output_file, date.today().strftime("%m.%d.%y"))
     oneline_cols = ['Post-Vax', 'Prior Boosts', 'Prior COVID Infections']
+    just_proc = ['Participant ID', 'Sample ID', 'Date',
+                 'Volume of Serum Collected (mL)', 'Total volume of plasma (mL)', 'total_pbmcs',
+                 'PBMC concentration per mL (x10^6)', 'viability', '# of PBMC vials',
+                 'cpt_vol', 'sst_vol', 'proc_comment']
     if not args.debug:
         with pd.ExcelWriter(output_filename) as writer:
             report.to_excel(writer, sheet_name='Source', index=False)
-            report[~report['Post-Vax']].to_excel(writer, sheet_name='Unvaccinated')
+            report.loc[:, just_proc].to_excel(writer, sheet_name='Processing Data', index=False)
+            report[~report['Post-Vax']].to_excel(writer, sheet_name='Unvaccinated', index=False)
             df_all = report.drop_duplicates(subset='Participant ID', keep='first')
             last_vax_valencies = []
             for _, row in df_all.iterrows():
@@ -130,7 +142,7 @@ if __name__ == '__main__':
             pd.crosstab([df_all['Post-Vax'], df_all['Prior Boosts']], df_all['Prior COVID Infections']).to_excel(writer, sheet_name='Vax vs Inf Baseline')
             pd.crosstab([df_all['Post-Vax'], df_all['Prior Boosts + Valency']], df_all['Prior COVID Infections']).to_excel(writer, sheet_name='Vax vs Inf Baseline Bivalent')
             pd.crosstab([df_all['Post-Vax'], df_all['Prior Boosts + Valency']], [df_all['last_event'], df_all['Prior COVID Infections']]).to_excel(writer, sheet_name='Vax vs Inf Base Biv Col')
-            for ycol in ['AUC', 'Quantitative']:
+            for ycol in ['AUC', 'Quantitative', 'Path Plus']:
                 df_local = df_all[~df_all[ycol].apply(pd.isna)]
                 pd.crosstab([df_local['Post-Vax'], df_local['Prior Boosts + Valency']], [df_local['last_event'], df_local['Prior COVID Infections']]).to_excel(writer, sheet_name='Vax vs Inf Base Biv Col {}'.format(ycol[:5]))
             pd.crosstab([df_all['last_event'], df_all['Post-Vax'], df_all['Prior Boosts + Valency']], df_all['Prior COVID Infections']).to_excel(writer, sheet_name='Vax vs Inf Base Biv Row')
@@ -153,6 +165,14 @@ if __name__ == '__main__':
                         dfs[num] = df_local[df_local[col] == num].loc[:, ['Participant ID', last_ev_col, 'Quantitative']].rename(columns={'Quantitative': '{} {}'.format(num, col[6:])}).set_index(['Participant ID', last_ev_col])
                     df_output = dfs[0].join(dfs[1], how='outer').join(dfs[2], how='outer').join(dfs[3], how='outer').reset_index()
                     df_output.to_excel(writer, sheet_name="Path {} by {}".format(last_event, col[:12].strip()), index=False)
+            for last_event, last_ev_col in zip(['Vax', 'Infection'], ['Days to Last Vax', 'Days to Last Infection']):
+                df_local = df_all[(df_all['last_event'] == last_event) & ~df_all['Path Plus'].apply(pd.isna)].drop_duplicates(subset='Participant ID')
+                for col in ['Prior Boosts', 'Prior COVID Infections']:
+                    dfs = {}
+                    for num in [0, 1, 2, 3]:
+                        dfs[num] = df_local[df_local[col] == num].loc[:, ['Participant ID', last_ev_col, 'Path Plus']].rename(columns={'Path Plus': '{} {}'.format(num, col[6:])}).set_index(['Participant ID', last_ev_col])
+                    df_output = dfs[0].join(dfs[1], how='outer').join(dfs[2], how='outer').join(dfs[3], how='outer').reset_index()
+                    df_output.to_excel(writer, sheet_name="Path+ {} by {}".format(last_event, col[:12].strip()), index=False)
 
         print("CRP report written to {}".format(output_filename))
     print("{} samples from {} participants.\n{} with research results, {} with path results".format(
