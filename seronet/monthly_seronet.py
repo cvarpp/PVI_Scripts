@@ -4,9 +4,9 @@ import datetime
 from dateutil.relativedelta import relativedelta
 import argparse
 import util
-from d4_all_data import pull_from_source
-from ecrabs_seronet import make_ecrabs
-from clinical_forms import write_clinical
+from seronet.d4_all_data import pull_from_source
+from seronet.ecrabs_seronet import make_ecrabs
+from seronet.clinical_forms import write_clinical
 import os
 
 def lost_calculate(row):
