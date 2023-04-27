@@ -73,7 +73,7 @@ if __name__ == '__main__':
     report.columns = ['Participant ID', 'Sample ID', 'Date', 'Email', 'Visit Type / Sample ID', 'Qualitative', 'Quantitative']
     output_filename = util.sharing + 'result_reporting_test_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
     with pd.ExcelWriter(output_filename) as writer:
-        report.to_excel(writer, sheet_name='Needs Results - Recent', index=False)
-        old_report.to_excel(writer, sheet_name='Needs Results - Old(60d+)', index=False)
+        report.to_excel(writer, sheet_name='Needs Results - Recent', index=True)
+        old_report.to_excel(writer, sheet_name='Needs Results - Old(60d+)', index=True)
         #make new sheet
-    print("Report written to {}".format(output_filename))
+    print("Report written to {}".format(output_filename)) 
