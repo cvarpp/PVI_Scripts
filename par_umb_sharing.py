@@ -23,9 +23,9 @@ if __name__ == '__main__':
     samplesCleanAll = samplesClean.copy()
     #samplesClean = samplesClean[samplesClean['Date Collected'] >= (today - datetime.timedelta(days=60))]
     
-    older_results = samplesClean[samplesClean['Date Collected'] < (today - datetime.timedelta(days=60))]
+    # older_results = samplesClean[samplesClean['Date Collected'] < (today - datetime.timedelta(days=60))]
+    older_results = []
     #df for results older than 60 days
-
     pemail = paris_info[['Subject ID', 'E-mail']].rename(columns={'E-mail': 'Email'})
     uemail = umbrella_info[['Subject ID', 'Email']]
     # emails = pd.concat([pemail, uemail])
@@ -52,7 +52,7 @@ if __name__ == '__main__':
         for result in results:
             date_collected, sample_id, util.visit_type, result_stat, result_value = result
             if date_collected < last_60_days:
-                older_results = older_results.append({'Participant ID': participant, 'Sample ID': sample_id, 'Date': date_collected, 'Visit Type / Sample ID': util.visit_type,'Qualitative': result_stat,'Quantitative': result_value}, ignore_index=True)
+                older_results.append({'Participant ID': participant, 'Sample ID': sample_id, 'Date': date_collected, 'Visit Type': util.visit_type,'Qualitative': result_stat,'Quantitative': result_value})
                 #add older results to 'older_results' df
                 continue
             if date_collected >= last_60_days:
@@ -73,7 +73,7 @@ if __name__ == '__main__':
     report.columns = ['Participant ID', 'Sample ID', 'Date', 'Email', 'Visit Type / Sample ID', 'Qualitative', 'Quantitative']
     output_filename = util.sharing + 'result_reporting_test_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
     with pd.ExcelWriter(output_filename) as writer:
-        report.to_excel(writer, sheet_name='Needs Results - Recent', index=True)
-        old_report.to_excel(writer, sheet_name='Needs Results - Old(60d+)', index=True)
+        report.to_excel(writer, sheet_name='Needs Results - Recent', index=False)
+        old_report.to_excel(writer, sheet_name='Needs Results - Old(60d+)', index=False)
         #make new sheet
     print("Report written to {}".format(output_filename)) 
