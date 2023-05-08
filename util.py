@@ -4,6 +4,7 @@ home = os.path.expanduser('~') + '/'
 onedrive = home + 'The Mount Sinai Hospital/'
 proc = onedrive + 'Simon Lab - Processing Team/'
 dscf = proc + 'Data Sample Collection Form.xlsx'
+proc_ntbk = proc + 'Processing Notebook.xlsx'
 
 tracking = onedrive + 'Simon Lab - Sample Tracking/'
 shared_samples = tracking + 'Released Samples/Collaborator Samples Tracker.xlsx'
