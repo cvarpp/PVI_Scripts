@@ -26,7 +26,7 @@ if __name__ == '__main__':
     df = pd.read_excel(proc_ntbk, sheet_name='Specimen Dashboard')
 
 
-    # Cannot figure out what's wrong with missing_df so check dataframe here, delete later
+    # Issue with missing_df so check dataframe here, delete later
     print(df.columns)
 
     
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     outlook = win32.Dispatch('outlook.application')
     mail = outlook.CreateItem(0)
     
-    for initials, email in {'YC': 'yuexing.chen@mssm.edu'}.items():
+    for initials, email in {'YC': 'yuexing.chen@mssm.edu'}.items():    # testing use
         initials_missing_df = missing_df.loc[missing_df['Processor Initials'] == initials]
         if len(initials_missing_df) > 0:
             mail.To = email
