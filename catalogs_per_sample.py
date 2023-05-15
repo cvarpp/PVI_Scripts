@@ -1,53 +1,56 @@
-#%%
 import pandas as pd
 import numpy as np
 import openpyxl as opx
 import argparse
 import util
+from helpers import query_intake
 
-Mast_list = pd.read_excel(util.tracking + "Sample ID Master List.xlsx", sheet_name='Master Sheet', header=0)
-plog = pd.read_excel(util.print_log, sheet_name='LOG', header=4)
-Intake = pd.read_excel(util.intake, sheet_name='Sample Intake Log', header=util.header_intake)
-plog.columns=plog.iloc[0]
-q = plog.columns.tolist()
-q[4] = 'Box Max'
-plog.columns = q
-# %%
-#despite the header statement in the load it keeps the annoying header 
-plog.drop(plog.index[0], axis=0,inplace=True)
-plog['idx'] = plog.index
 
-future_df = {'Cohort': [], 'Box #': [], 'idx': []}
+if __name__ == '__main__':
+    # Intake Log - used kits,  Printing Log - printed kits,  Sample ID Master List
+    # Notes: mast_list: Location - Kit Type, Study ID - Sample ID;
+            #plog: Study ID - Kit Type
+    mast_list = (pd.read_excel(util.tracking + "Sample ID Master List.xlsx", sheet_name='Master Sheet', header=0)
+                .rename(columns={'Location': 'Kit Type', 'Study ID': 'Sample ID'}))
+    plog = (pd.read_excel(util.print_log, sheet_name='LOG', header=5)
+            .rename(columns={'Box numbers': 'Box Min', 'Unnamed: 4': 'Box Max', 'Study': 'Kit Type'})
+            .drop(0))
+    intake = query_intake()
 
-for rname, row in plog.iterrows():
+    future_df = {'Box #': [], 'idx': []}
+
+    for rname, row in plog.dropna(subset=['Box Min', 'Box Max']).iterrows():
+        try:
+            box_min = int(row['Box Min'])
+            box_max = int(row['Box Max'])
+        except:
+            continue
+        for box_num in range(box_min, box_max+1):
+            future_df['Box #'].append(box_num)
+            future_df['idx'].append(rname)
     
-    if row['Box numbers']!= row['Box numbers'] or row['Box Max'] != row['Box Max']:
-        continue
-    if type(row['Box numbers']) == str or type(row['Box Max']) == str:
-        continue 
-    
-    for box_num in range(int(row['Box numbers']), int(row['Box Max'])+1):
 
-        future_df['Cohort'].append(row['Study'])
+    # Left join unused_kits & df_perbox on 'Kit Type' & 'Box #'
+    df_perbox = pd.DataFrame(future_df).join(plog, on='idx').set_index(['Kit Type', 'Box #'])
+    df_perbox['Date Printed'] = df_perbox['Date Printed'].ffill()
 
-        future_df['Box #'].append(box_num)
+    # Identify unused kit numbers for re-printing or discard
+    used_kit_ids = intake.index.unique()
+    # used_kit_ids = intake['Sample ID'].unique()
+    unused_kits = mast_list[~mast_list['Sample ID'].astype(str).str.strip().str.upper().isin(used_kit_ids)].copy()
+    # unused_kits['Printed'] = False
 
-        future_df['idx'].append(rname)
-            
-df_perbox = pd.DataFrame(future_df).join(plog.loc[:, 'Screw cap tubes brand and batch #' : 'Notes'], on='idx')
+    # Add annotations for discrepant sample IDs
+    unused_kits = unused_kits.join(df_perbox, on=['Kit Type', 'Box #'], rsuffix='_printing')
+    # print([c for c in unused_kits.columns if '_printing' in c]) # debugging, keep track of overlapping columns
+    # unused_kits['Date Printed'] = unused_kits['Date Printed'].fillna(unused_kits['Date Printed_printing'])
+    # unused_kits['Date Printed'] = unused_kits['Date Printed'].fillna('N/A')
+    # unused_kits['Num Kits Printed'] = unused_kits['# of screw cap tubes kits']
+    # unused_kits['Num Kits Used'] = np.where(unused_kits['Used'].isnull(), 0, 1)
+    unused_kits.drop(columns=['Box Min', 'Box Max'], inplace=True)
 
-# %%
+    # Output to Excel
+    unused_kits.dropna(subset='Date Printed').to_excel(util.proc + 'unused_kits.xlsx', index=False)  # Unused, Printed
+    # print("Total Unused Kit Count:", unused_kits.dropna(subset='Date Printed').shape[0]) # Debugging, how many unprinted kits do we have
 
-Intake['Intake ind'] = True
-Mast_list['Mast ind'] = True
-df_perbox['plog ind'] = True
 
-pre_combine = Mast_list.join(df_perbox, on='Box #', rsuffix='FEEDBACK')
-
-pre_combine['Sample ID'] = pre_combine['Study ID']
-
-Combine = pre_combine.join(Intake, on='Sample ID', rsuffix='Intake ind')
-# %%
-
-Combine.to_csv( util.script_output + 'plog link.csv', sep=',')
-# %%
