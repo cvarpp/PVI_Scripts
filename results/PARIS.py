@@ -32,8 +32,8 @@ def paris_results():
                 'Infection Pre-Vaccine?', 'Number of SARS-CoV-2 Infections', 'Infection on Study',
                 'First Dose Date', 'Second Dose Date', 'Days to 2nd', 'Boost Date', 'Boost 2 Date',
                 'Days to Boost 2', 'Boost 2 Type', 'Boost 3 Date', 'Days to Boost 3', 'Boost 3 Type',
-                'Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date', 'Most Recent Infection',
-                'Most Recent Vax', 'Post-Baseline', 'Visit Type', 'Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
+                'Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date', 'Most Recent Infection Date',
+                'Most Recent Vax Date', 'Post-Baseline', 'Visit Type', 'Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
     dem_cols = ['Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
     shared_cols = ['Infection Pre-Vaccine?', 'Vaccine Type', 'Number of SARS-CoV-2 Infections', 'Infection Timing', 'Boost Type', 'Boost 2 Type', 'Boost 3 Type']
     date_cols = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Boost 3 Date', 'Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date']
@@ -54,10 +54,10 @@ def paris_results():
     sample_info = sample_info.pipe(map_dates, date_cols)
     for date_col, day_col in zip(date_cols, day_cols):
         sample_info[day_col] = sample_info.apply(lambda row: try_datediff(row[date_col], row['Date']), axis=1)
-    sample_info['Most Recent Infection'] = sample_info.apply(lambda row: permissive_datemax([row[inf_date] for inf_date in inf_dates], row['Date']), axis=1)
-    sample_info['Most Recent Vax'] = sample_info.apply(lambda row: permissive_datemax([row[dose_date] for dose_date in dose_dates], row['Date']), axis=1)
-    sample_info['Days to Last Infection'] = sample_info.apply(lambda row: try_datediff(row['Most Recent Infection'], row['Date']), axis=1)
-    sample_info['Days to Last Vax'] = sample_info.apply(lambda row: try_datediff(row['Most Recent Vax'], row['Date']), axis=1)
+    sample_info['Most Recent Infection Date'] = sample_info.apply(lambda row: permissive_datemax([row[inf_date] for inf_date in inf_dates], row['Date']), axis=1)
+    sample_info['Most Recent Vax Date'] = sample_info.apply(lambda row: permissive_datemax([row[dose_date] for dose_date in dose_dates], row['Date']), axis=1)
+    sample_info['Days to Last Infection'] = sample_info.apply(lambda row: try_datediff(row['Most Recent Infection Date'], row['Date']), axis=1)
+    sample_info['Days to Last Vax'] = sample_info.apply(lambda row: try_datediff(row['Most Recent Vax Date'], row['Date']), axis=1)
     sample_info['Participant ID'] = sample_info['participant_id']
     sample_info['Sample ID'] = sample_info['sample_id']
     sample_info['Visit Type'] = sample_info[util.visit_type]
