@@ -104,12 +104,14 @@ if __name__ == '__main__':
     df_start['Visit_Date_Duration_From_Visit_1'] = df_start['Days from Index'] - df_start['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
     df_start['Visit_Number'] = df_start.groupby('Research_Participant_ID').cumcount() + 1
     manifests = seronet_key['Aliquots Shipped'].assign(sample_id=lambda df: df['Sample ID'].astype(str))
-    manifests['Sample Type'] = manifests['Aliquot_ID'].str[10]
+    # manifests['Sample Type'] = manifests['Aliquot_ID'].str[10]
     volcols = ['sample_id', 'Volume (mL)']
-    pbmcs = manifests[manifests['Sample Type'] == '2'].loc[:, volcols].groupby('sample_id').sum()
-    sera = manifests[manifests['Sample Type'] == '1'].loc[:, volcols].groupby('sample_id').sum()
+    pbmcs = manifests[manifests['Sample Type'] == 'PBMC'].loc[:, volcols].groupby('sample_id').sum()
+    sera = manifests[manifests['Sample Type'] == 'Serum'].loc[:, volcols].groupby('sample_id').sum()
     df_start['Serum_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: min(sera.loc[val, 'Volume (mL)'], 4.5) if val in sera.index else 0)
     df_start['PBMC_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: pbmcs.loc[val, 'Volume (mL)'] if val in pbmcs.index else 0)
+    # df_start['Serum_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: "Yes" if val in sera.index else "No")
+    # df_start['PBMC_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: "Yes" if val in pbmcs.index else "No")
     df_start['Collected_In_This_Reporting_Period'] = (df_start['Date'] >= args.report_start).apply(lambda val: "Yes" if val else "No")
     cov_info = dfs_clin['COVID'].assign(sample_id=lambda df: df['Sample ID'].astype(str).str.strip().str.upper()).drop_duplicates(subset='sample_id', keep='last').set_index('sample_id')
     cov_map = {'Positive, Test Not Specified': 'Has Reported Infection',
@@ -151,6 +153,7 @@ if __name__ == '__main__':
     df_start['Serum_Volume_For_FNL'] = df_start['Serum_Volume_For_FNL'] * ~vol_filter + df_start['Serum_Shipped_To_FNL'] * vol_filter
     df_start['Serum_Shipped_To_FNL'] = df_start['Serum_Shipped_To_FNL'].apply(yes_no)
     df_start.loc[df_start['Serum_Volume_For_FNL'] == 0, 'Serum_Shipped_To_FNL'] = 'N/A'
+    df_start.loc[df_start['PBMC_Shipped_To_FNL'] > 0, 'Num_PBMC_Vials_For_FNL'] = df_start.loc[df_start['PBMC_Shipped_To_FNL'] > 0, 'PBMC_Shipped_To_FNL']
     df_start['PBMC_Shipped_To_FNL'] = df_start['PBMC_Shipped_To_FNL'].apply(yes_no)
     df_start.loc[df_start['Num_PBMC_Vials_For_FNL'] == 0, 'PBMC_Shipped_To_FNL'] = 'N/A'
 
