@@ -68,7 +68,7 @@ if __name__ == '__main__':
     id_filter = ~all_data['Seronet ID'].isin(exclude_ids)
     all_data = all_data[ppl_filter & id_filter].copy()
     data_ppl = set(all_data['Seronet ID'].unique())
-    ppl_cols = ['Research_Participant_ID', 'Age', 'Race', 'Ethnicity', 'Sex_At_Birth', 'Week_Of_Visit_1']
+    ppl_cols = ['Research_Participant_ID', 'Age', 'Race', 'Ethnicity', 'Sex_At_Birth', 'Sunday_Prior_To_Visit_1']
     baseline_dates = all_data.drop_duplicates(subset='Seronet ID').set_index('Seronet ID').loc[:, 'Date']
     baseline_sundays = baseline_dates - np.mod(baseline_dates.dt.weekday + 1, 7) * datetime.timedelta(days=1)
     ppl_data = (dfs_clin['Baseline']
