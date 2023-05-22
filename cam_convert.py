@@ -17,19 +17,36 @@ def pull_archive(output_fname=util.clin_ops + 'CAM Archive/Archive Long.xlsx'):
     cam_archive = pd.read_excel(util.clin_ops + 'CAM Archive/CAM Archive.xlsx', sheet_name=None, header=None)
 
     sheet_df_arch = []
-
-    shared_header = ['Date', 'Time', 'Time collected', 'Patient Name', 'Study',
+    shared_header_1 = ['Date', 'Time', 'Time collected', 'Patient Name', 'Study',
         'Visit Type / Samples Needed', 'New or Follow-up?', 'Participant ID',
         'Sample ID', 'Visit Coordinator', 'Internal Notes']
+    shared_header_2 = ['Date', 'Time', 'Patient Name', 'Study',
+        'Visit Type / Samples Needed', 'New or Follow-up?', 'Participant ID',
+        'Sample ID', 'Time Collected', 'Phlebotomist', 'Visit Coordinator', 'Internal Notes']
+
+    # shared_header = ['Date', 'Time', 'Time collected', 'Patient Name', 'Study',
+    #     'Visit Type / Samples Needed', 'New or Follow-up?', 'Participant ID',
+    #     'Sample ID', 'Visit Coordinator', 'Internal Notes']
     for _sname, df_week in cam_archive.items():
         if df_week.shape[0] < 20:
             continue
-        df_week.columns = df_week.iloc[6, :]
-        date_dfs = [df_week.iloc[:, col_num:col_num + 11].copy() for col_num, col in enumerate(df_week.columns) if type(col) == str and 'date' in col.strip().lower()]
-        for df in date_dfs:
-            df.columns = shared_header
-            df = df[df['Date'] != 'Date']
-            sheet_df_arch.append(df.dropna(subset=['Sample ID']))
+        elif df_week.shape[0] < 200:
+            df_week.columns = df_week.iloc[6, :]
+            date_dfs = [df_week.iloc[:, col_num:col_num + 11] for col_num, col in enumerate(df_week.columns) if type(col) == str and 'date' in col.lower()]
+            for df in date_dfs:
+                df.columns = shared_header_1
+            sheet_dfs.extend(date_dfs)
+        else:
+            df_week.columns = df_week.iloc[14, :]
+            date_df = df_week.loc[:, shared_header_2].copy()
+            sheet_dfs.append(date_df)
+        # df_week.columns = df_week.iloc[6, :]
+        # date_dfs = [df_week.iloc[:, col_num:col_num + 11].copy() for col_num, col in enumerate(df_week.columns) if type(col) == str and 'date' in col.strip().lower()]
+        # for df in date_dfs:
+        #     df.columns = shared_header
+        #     df = df[df['Date'] != 'Date']
+        #     sheet_df_arch.append(df.dropna(subset=['Sample ID']))
+        #     continue
     idx_cols = ['Date', 'Time', 'Participant ID', 'Sample ID']
     cam_arch = pd.concat(sheet_df_arch).drop_duplicates(subset=idx_cols)
     cam_arch.to_excel(output_fname, index=False)

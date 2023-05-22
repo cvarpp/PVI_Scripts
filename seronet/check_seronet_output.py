@@ -1,6 +1,6 @@
 import pandas as pd
 import argparse
-import util
+# import util
 import os
 from collections import Counter
 
@@ -152,6 +152,7 @@ if __name__ == '__main__':
     args = argParser.parse_args()
     # input_folder = util.seronet_data + "Batch " + args.batch + os.sep + args.folder + os.sep
     input_folder = args.folder + os.sep
-    output_folder = util.seronet_qc
-    output_path = output_folder + '{}.xlsx'.format(args.batch)
+    # output_folder = util.seronet_qc
+    # output_path = output_folder + '{}.xlsx'.format(args.batch)
+    output_path = '{}.xlsx'.format(args.batch)
     validate_files(input_folder, output_path, args.xlsx)

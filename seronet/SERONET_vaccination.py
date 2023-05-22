@@ -6,10 +6,11 @@ if __name__ == '__main__':
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
+    gaea_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/GAEA/'
+    gaea_data = pd.read_excel(gaea_folder + 'GAEA tracker.xlsx', sheet_name='Summary').dropna(subset=['Participant ID']).set_index('Participant ID')
     priority_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/PRIORITY/'
     prio_data_vax = pd.read_excel(priority_folder + 'Priority tracker.xlsx', sheet_name='Vaccinations').dropna(subset=['Record ID'])
     prio_data_main = pd.read_excel(priority_folder + 'Priority tracker.xlsx', sheet_name='Participants tracker').dropna(subset=['Record ID']).set_index('Record ID')
-    participants = prio_data_vax['Record ID'].to_numpy()
     prio_data = prio_data_vax.join(prio_data_main, on='Record ID', rsuffix='_ignore').set_index('Record ID')
     mars_folder = '~/The Mount Sinai Hospital/Simon Lab - PVI - Personalized Virology Initiative/Clinical Research Study Operations/Umbrella Viral Sample Collection Protocol/MARS/'
     mars_data = pd.read_excel(mars_folder + 'MARS tracker.xlsx', sheet_name='Pt List').dropna(subset=['Participant ID'])
@@ -239,3 +240,51 @@ if __name__ == '__main__':
                 vaccine_stuff['Vaccine Type'].append(boost_type)
                 vaccine_stuff['Vaccine Date'].append(date_boost)
     pd.DataFrame(vaccine_stuff).to_excel(util.seronet_vax + 'prio_vaccines.xlsx', index=False)
+    """
+    GAEA Stuff
+    """
+    for col in columns:
+        vaccine_stuff[col] = []
+    for participant in gaea_data.index.to_numpy():
+        if participant in exclude_ppl:
+            continue
+        try:
+            index_date = gaea_data.loc[participant, 'Baseline Date'].date()
+        except:
+            print("Participant {} ({}) is missing baseline date".format(participant, 'GAEA'))
+            index_date = 'N/A'
+        vaccine = gaea_data.loc[participant, 'Vaccine Type']
+        if str(vaccine).upper()[:1] == 'J' and str(vaccine).upper()[:2] != 'JA':
+            vaccine = 'Johnson & Johnson'
+        date_1 = gaea_data.loc[participant, 'Dose #1 Date']
+        if type(date_1) in [datetime.datetime, pd.Timestamp]:
+            vaccine_stuff['Participant ID'].append(participant)
+            if type(vaccine) == str and vaccine[:2].upper() == 'JO':
+                vaccine_stuff['Timepoint'].append('Dose 1 of 1')
+            else:
+                vaccine_stuff['Timepoint'].append('Dose 1 of 2')
+            vaccine_stuff['Vaccine Type'].append(vaccine)
+            vaccine_stuff['Vaccine Date'].append(date_1)
+        date_2 = gaea_data.loc[participant, 'Dose #2 Date']
+        if type(date_2) in [datetime.datetime, pd.Timestamp]:
+            vaccine_stuff['Participant ID'].append(participant)
+            vaccine_stuff['Timepoint'].append('Dose 2 of 2')
+            vaccine_stuff['Vaccine Type'].append(vaccine)
+            vaccine_stuff['Vaccine Date'].append(date_2)
+        boost_cols = [['3rd Vaccine Date', '3rd Vaccine Type '], ['4th Vaccine Date', '4th Vaccine Type'], ['5th Vaccine Date', '5th Vaccine Type']]
+        timepoint_cols = ['Booster 1', 'Booster 2', 'Booster 3']
+        for i, vals in enumerate(boost_cols):
+            dt, tp = vals
+            date_boost = gaea_data.loc[participant, dt]
+            boost_type = gaea_data.loc[participant, tp]
+            if 'bivalent' in str(boost_type).lower():
+                boost_type = boost_type.split()[0]
+                addendum = ':Bivalent'
+            else:
+                addendum = ''
+            if type(date_boost) in [datetime.datetime, pd.Timestamp]:
+                vaccine_stuff['Participant ID'].append(participant)
+                vaccine_stuff['Timepoint'].append(timepoint_cols[i] + addendum)
+                vaccine_stuff['Vaccine Type'].append(boost_type)
+                vaccine_stuff['Vaccine Date'].append(date_boost)
+    pd.DataFrame(vaccine_stuff).to_excel(util.seronet_vax + 'gaea_vaccines.xlsx', index=False)

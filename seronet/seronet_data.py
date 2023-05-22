@@ -4,7 +4,7 @@ import datetime
 from dateutil.relativedelta import relativedelta
 import util
 import argparse
-from d4_all_data import pull_from_source
+from seronet.d4_all_data import pull_from_source
 
 def filter_windows(unfiltered):
     unfiltered['Date'] = pd.to_datetime(unfiltered['Date'])

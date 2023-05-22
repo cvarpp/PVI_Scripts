@@ -4,9 +4,9 @@ import datetime
 from dateutil.relativedelta import relativedelta
 import argparse
 import util
-from d4_all_data import pull_from_source
-from ecrabs_seronet import make_ecrabs
-from clinical_forms import write_clinical
+from seronet.d4_all_data import pull_from_source
+from seronet.ecrabs_seronet import make_ecrabs
+from seronet.clinical_forms import write_clinical
 import os
 
 def lost_calculate(row):
@@ -71,7 +71,11 @@ if __name__ == '__main__':
     ppl_cols = ['Research_Participant_ID', 'Age', 'Race', 'Ethnicity', 'Sex_At_Birth', 'Sunday_Prior_To_Visit_1']
     baseline_dates = all_data.drop_duplicates(subset='Seronet ID').set_index('Seronet ID').loc[:, 'Date']
     baseline_sundays = baseline_dates - np.mod(baseline_dates.dt.weekday + 1, 7) * datetime.timedelta(days=1)
-    ppl_data = dfs_clin['Baseline'].loc[:, ppl_cols[:-1]].query('Research_Participant_ID in @data_ppl').join(baseline_sundays, on='Research_Participant_ID').rename(columns={'Date': ppl_cols[-1]})
+    ppl_data = (dfs_clin['Baseline']
+                    .loc[:, ppl_cols[:-1]] # column subset
+                    .query('Research_Participant_ID in @data_ppl') # row subset
+                    .join(baseline_sundays, on='Research_Participant_ID') # add date info
+                    .rename(columns={'Date': ppl_cols[-1]})) # rename date column
     output_outer = util.cross_d4 + 'Accrual/'
     output_inner = output_outer + '{}/'.format(datetime.date.today())
     if not os.path.exists(output_inner):
@@ -95,17 +99,19 @@ if __name__ == '__main__':
         '# of PBMC vials': 'Num_PBMC_Vials_For_FNL'
     }
     df_start = all_data.loc[:, keep_cols].rename(columns=col_map).query('Date <= @args.report_end').copy()
-    cohort_key = {'MARS': 'Cancer', 'IRIS': 'IBD', 'TITAN': 'Transplant', 'PRIORITY': 'PRIORITY'}
+    cohort_key = {'MARS': 'Cancer', 'IRIS': 'IBD', 'TITAN': 'Transplant', 'PRIORITY': 'Chronic Conditions', 'GAEA': 'Healthy Control'}
     df_start['Primary_Cohort'] = df_start['Site_Cohort_Name'].apply(lambda val: cohort_key[val])
     df_start['Visit_Date_Duration_From_Visit_1'] = df_start['Days from Index'] - df_start['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
     df_start['Visit_Number'] = df_start.groupby('Research_Participant_ID').cumcount() + 1
     manifests = seronet_key['Aliquots Shipped'].assign(sample_id=lambda df: df['Sample ID'].astype(str))
-    manifests['Sample Type'] = manifests['Aliquot_ID'].str[10]
+    # manifests['Sample Type'] = manifests['Aliquot_ID'].str[10]
     volcols = ['sample_id', 'Volume (mL)']
-    pbmcs = manifests[manifests['Sample Type'] == '2'].loc[:, volcols].groupby('sample_id').sum()
-    sera = manifests[manifests['Sample Type'] == '1'].loc[:, volcols].groupby('sample_id').sum()
+    pbmcs = manifests[manifests['Sample Type'] == 'PBMC'].loc[:, volcols].groupby('sample_id').sum()
+    sera = manifests[manifests['Sample Type'] == 'Serum'].loc[:, volcols].groupby('sample_id').sum()
     df_start['Serum_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: min(sera.loc[val, 'Volume (mL)'], 4.5) if val in sera.index else 0)
     df_start['PBMC_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: pbmcs.loc[val, 'Volume (mL)'] if val in pbmcs.index else 0)
+    # df_start['Serum_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: "Yes" if val in sera.index else "No")
+    # df_start['PBMC_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: "Yes" if val in pbmcs.index else "No")
     df_start['Collected_In_This_Reporting_Period'] = (df_start['Date'] >= args.report_start).apply(lambda val: "Yes" if val else "No")
     cov_info = dfs_clin['COVID'].assign(sample_id=lambda df: df['Sample ID'].astype(str).str.strip().str.upper()).drop_duplicates(subset='sample_id', keep='last').set_index('sample_id')
     cov_map = {'Positive, Test Not Specified': 'Has Reported Infection',
@@ -147,6 +153,7 @@ if __name__ == '__main__':
     df_start['Serum_Volume_For_FNL'] = df_start['Serum_Volume_For_FNL'] * ~vol_filter + df_start['Serum_Shipped_To_FNL'] * vol_filter
     df_start['Serum_Shipped_To_FNL'] = df_start['Serum_Shipped_To_FNL'].apply(yes_no)
     df_start.loc[df_start['Serum_Volume_For_FNL'] == 0, 'Serum_Shipped_To_FNL'] = 'N/A'
+    df_start.loc[df_start['PBMC_Shipped_To_FNL'] > 0, 'Num_PBMC_Vials_For_FNL'] = df_start.loc[df_start['PBMC_Shipped_To_FNL'] > 0, 'PBMC_Shipped_To_FNL']
     df_start['PBMC_Shipped_To_FNL'] = df_start['PBMC_Shipped_To_FNL'].apply(yes_no)
     df_start.loc[df_start['Num_PBMC_Vials_For_FNL'] == 0, 'PBMC_Shipped_To_FNL'] = 'N/A'
 

@@ -2,8 +2,8 @@ import pandas as pd
 import datetime
 import argparse
 import util
-from seronet_data import filter_windows
-from d4_all_data import pull_from_source
+from seronet.seronet_data import filter_windows
+from seronet.d4_all_data import pull_from_source
 
 def process_lots():
     lots = pd.read_excel(util.dscf, sheet_name='Lot # Sheet')
