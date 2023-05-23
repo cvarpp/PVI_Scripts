@@ -2,12 +2,20 @@ import pandas as pd
 import numpy as np
 import util
 
+def try_convert(val):
+    if val == 0.:
+        return 1.
+    try:
+        return float(str(val).strip())
+    except:
+        return np.nan
+
 def clean_auc(df):
     df = df.copy()
     neg_spike = df['Spike endpoint'].astype(str).str.strip().str.upper().str[:2] == "NE"
     neg_auc = df['AUC'] == 0.
     df.loc[neg_spike | neg_auc, 'AUC'] = 1.
-    return df['AUC']
+    return df['AUC'].apply(try_convert).astype(float)
 
 def clean_sample_id(df):
     return df['Sample ID'].astype(str).str.strip().str.upper()
@@ -17,7 +25,8 @@ def clean_research(df):
                       AUC=clean_auc)
               .dropna(subset=['AUC'])
               .query("AUC not in ['-']")
-              .loc[:, ['sample_id', 'Spike endpoint', 'AUC']])
+              .loc[:, ['sample_id', 'Spike endpoint', 'AUC']]
+              .assign(Log2AUC=lambda df: np.log2(df['AUC'])))
 
 def convert_serum(vol):
     try:
@@ -112,7 +121,10 @@ def query_dscf(sid_list=None, no_pbmcs=set()):
 def clean_path(df):
     df = df.copy()
     df['Qualitative'] = df[util.qual].apply(lambda val: "Negative" if str(val).strip().upper()[:2] == "NE" else val)
-    df['Quantitative'] = df.apply(lambda row: 1 if row['Qualitative'] == 'Negative' else row[util.quant], axis=1)
+    df['Quantitative'] = df.apply(lambda row: 1 if row['Qualitative'] == 'Negative' else row[util.quant], axis=1).apply(try_convert).astype(float)
+    df['COV22'] = df['COV22 Results'].apply(lambda val: 1 if str(val).strip().upper()[:2] == 'NE' else val).apply(try_convert).astype(float)
+    df['Log2Quant'] = np.log2(df['Quantitative'])
+    df['Log2COV22'] = np.log2(df['COV22'])
     return df
 
 def query_intake(participants=None):
