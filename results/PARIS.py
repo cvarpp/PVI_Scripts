@@ -27,7 +27,7 @@ def paris_results():
 
     col_order = ['Participant ID', 'Date', 'Sample ID', 'Days to 1st Vaccine Dose',
                 'Days to Boost', 'Days to Last Infection', 'Days to Last Vax', 'Infection Timing',
-                'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Vaccine Type',
+                'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Log2Quant', 'Log2COV22', 'Vaccine Type',
                 'Boost Type', 'Days to Infection 1', 'Days to Infection 2', 'Days to Infection 3',
                 'Infection Pre-Vaccine?', 'Number of SARS-CoV-2 Infections', 'Infection on Study',
                 'First Dose Date', 'Second Dose Date', 'Days to 2nd', 'Boost Date', 'Boost 2 Date',
