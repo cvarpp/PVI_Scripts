@@ -8,7 +8,7 @@ proc_ntbk = proc + 'Processing Notebook.xlsx'
 
 tracking = onedrive + 'Simon Lab - Sample Tracking/'
 shared_samples = tracking + 'Released Samples/Collaborator Samples Tracker.xlsx'
-intake = tracking + 'Sample Intake Log.xlsx'
+intake = tracking + 'Sample Intake Log Historian.xlsx'
 
 pvi = onedrive + 'Simon Lab - PVI - Personalized Virology Initiative/'
 clin_ops = pvi + 'Clinical Research Study Operations/'
@@ -58,7 +58,7 @@ seronet_vax = cross_d4 + 'Vax/'
 
 # Header Heights
 
-header_intake = 6
+header_intake = 0
 
 # Column Names
 
