@@ -67,13 +67,15 @@ if __name__ == '__main__':
       merged_df1 = mast_list_clean.join(plog_df, on=['Study', 'Box #'], lsuffix='_mast', rsuffix='_plog')
       # merged_df1_1 = pd.merge(mast_list_clean, plog_df, on=['Kit Type', 'Box #'])    # (3502, 38) obviously wrong but why?
 
+
       # # test
       # print(mast_list_clean.shape)  # (17935, 9)
       # print(merged_df1.shape)  # (17043, 38)
       # print(merged_df1.drop_duplicates(subset=['Sample ID', 'Box #']).shape)  # (17043, 38)
 
 
-      #### plog + mast_list (merged_df1) & intake
+
+      #### plog + mast_list & intake
       
       # Left join unused_kits & plog_df on 'Study' & 'Box #'
       #plog_df = pd.DataFrame(plog_dict).join(mast_list, on='index').set_index(['Study', 'Box #'])
@@ -91,6 +93,83 @@ if __name__ == '__main__':
 
       # Output Excel 2: Printed but Unused Kits
       unused_kits.dropna(subset='Date Printed').to_excel(util.proc + 'print_log_unused_kits.xlsx', index=False)  # Unused, Printed
+
+
+      ### dscf & proc_ntbk --> merged_df2
+
+      merged_df2 = pd.merge(dscf_lot, proc_lot, on=['Date Used', 'Lot Number'], suffixes=('_dscf', '_proc'))
+      # merged_df2 = pd.merge(dscf_lot, proc_lot, on=['Date Used', 'Lot Number'], lsuffix='_dscf', rsuffix='_proc')
+
+      merged_df2 = merged_df2.dropna(subset=['Date Used'])
+
+
+      # # test
+      # print(merged_df1.columns)
+      # print(merged_df2.columns)
+
+
+
+
+      # Transform df
+      transformed_df2 = (merged_df2.set_index(['Date Used', 'Material'])
+                        .fillna('Unavailable')
+                        .unstack()    # reshape df by moving index to column headers
+                        .resample('1d')
+                        .asfreq()    # fill in missing dates in resampled df
+                        .ffill()    # forward-fill missing dates, with most recent non-missing one
+                        .stack()    # revert df shape, bring column back to index
+                        .reset_index())
+      transformed_df2.to_excel(util.proc + 'print_log_test.xlsx', index=False)
+
+      exit(0)
+
+
+
+      ### Complete blanks in merged_df2
+      transformed_df2 = (merged_df2
+                         .reset_index()
+                         .drop_duplicates(subset=['Date Used', 'Material_dscf'])
+                         .set_index(['Date Used', 'Material_dscf'])
+                         .fillna('Unavailable')
+                         .unstack()
+                         .resample('1d')
+                         .asfreq()
+                         .ffill()
+                         .stack()
+                         .reset_index())
+      transformed_df2.to_excel(util.proc + 'print_log_test.xlsx', index=False)
+
+
+
+
+#     ### merged_df1 & merged_df2
+#     transformed = (merged_df2.set_index(['Date Used', 'Material'])
+#                         .fillna('Unavailable')
+#                         .unstack()    # reshape df by moving index to column headers
+#                         .resample('1d')
+#                         .asfreq()    # fill in missing dates in resampled df
+#                         .ffill()    # forward-fill missing dates, with most recent non-missing one
+#                         .stack()    # revert df shape, bring column back to index
+#                         .reset_index())
+#     transformed.to_excel(util.proc + 'print_log_master.xlsx', index=False)
+
+
+
+
+#     # Transform df
+#     transformed = (merged_df2.set_index(['Date Used', 'Material'])
+#                         .fillna('Unavailable')
+#                         .unstack()    # reshape df by moving index to column headers
+#                         .resample('1d')
+#                         .asfreq()    # fill in missing dates in resampled df
+#                         .ffill()    # forward-fill missing dates, with most recent non-missing one
+#                         .stack()    # revert df shape, bring column back to index
+#                         .reset_index())
+#     transformed.to_excel(util.proc + 'print_log_master.xlsx', index=False)
+
+# Reformat Lots: Date Used, Material, Long-Form Date, Lot Number, EXP Date, Catalog Mumber,Samples Affected/ COMMENTS
+
+
 
 
 
