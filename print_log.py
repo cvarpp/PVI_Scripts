@@ -11,6 +11,7 @@ from helpers import query_dscf, query_intake
 # Printing Log - LOG
 # Data Sample Collection Form - Lot # Sheet, BSL2 Samples, BSL2+ Samples
 # Processing Notebook - Lot #s
+# Intake - Sample Intake Log
 
 
 if __name__ == '__main__':
@@ -93,71 +94,3 @@ if __name__ == '__main__':
 
 
 
-
-
-
-
-
-      # ### dscf & proc_ntbk --> merged_df2
-
-      # merged_df2 = pd.merge(dscf_lot, proc_lot, on=['Date Used', 'Lot Number'], suffixes=('_dscf', '_proc'))
-      # # merged_df2 = pd.merge(dscf_lot, proc_lot, on=['Date Used', 'Lot Number'], lsuffix='_dscf', rsuffix='_proc')
-
-      # merged_df2 = merged_df2.dropna(subset=['Date Used'])
-
-      # print(merged_df2.columns)
-
-
-
-      # ### Fill out merged_df2
-      # transformed_df2 = (merged_df2
-      #                      .reset_index()
-      #                      .drop_duplicates(subset=['Date Used', 'Material_dscf'])  # Remove duplicate entries
-      #                      .set_index(['Date Used', 'Material_dscf'])
-      #                      .fillna('Unavailable')
-      #                      .unstack()
-      #                      .resample('1d')
-      #                      .asfreq()
-      #                      .ffill()
-      #                      .stack()
-      #                      .reset_index())
-      # transformed_df2.to_excel(util.proc + 'print_log_test.xlsx', index=False)
-
-
-
-
-
-
-
-#     ### merged_df1 & merged_df2
-#     transformed = (merged_df2.set_index(['Date Used', 'Material'])
-#                         .fillna('Unavailable')
-#                         .unstack()    # reshape df by moving index to column headers
-#                         .resample('1d')
-#                         .asfreq()    # fill in missing dates in resampled df
-#                         .ffill()    # forward-fill missing dates, with most recent non-missing one
-#                         .stack()    # revert df shape, bring column back to index
-#                         .reset_index())
-#     transformed.to_excel(util.proc + 'print_log_master.xlsx', index=False)
-
-
-
-
-#     # Transform df
-#     transformed = (merged_df2.set_index(['Date Used', 'Material'])
-#                         .fillna('Unavailable')
-#                         .unstack()    # reshape df by moving index to column headers
-#                         .resample('1d')
-#                         .asfreq()    # fill in missing dates in resampled df
-#                         .ffill()    # forward-fill missing dates, with most recent non-missing one
-#                         .stack()    # revert df shape, bring column back to index
-#                         .reset_index())
-#     transformed.to_excel(util.proc + 'print_log_master.xlsx', index=False)
-
-# Reformat Lots: Date Used, Material, Long-Form Date, Lot Number, EXP Date, Catalog Mumber,Samples Affected/ COMMENTS
-
-
-
-
-    
-   
