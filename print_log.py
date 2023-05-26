@@ -7,9 +7,9 @@ from helpers import query_dscf, query_intake
 ### Create Master List indexed by (sample ID, material) with additional columns (catalog #, lot #, expiration)
 # Sample ID Master List - Master Sheet
 # Printing Log - LOG
+# Intake - Sample Intake Log
 # Data Sample Collection Form - Lot # Sheet, BSL2 Samples, BSL2+ Samples
 # Processing Notebook - Lot #s
-# Intake - Sample Intake Log
 
 
 if __name__ == '__main__':
@@ -26,12 +26,12 @@ if __name__ == '__main__':
       dscf_bsl2p = query_dscf()
       dscf_lot = pd.read_excel(util.dscf, sheet_name='Lot # Sheet', header=0).iloc[:, :9]
 
-      proc_lot = pd.read_excel(util.proc_ntbk, sheet_name='Lot #s', header=0)
+      # proc_lot = pd.read_excel(util.proc_ntbk, sheet_name='Lot #s', header=0)
 
       intake = query_intake()
 
 
-      #### plog & mast_list --> merged_df1
+      #### plog & mast_list --> merged_df1 ==>> Box # Not in Range
       
       # Create plog_dict to store 'Box #' & 'index'
       plog_dict = {'Box #': [], 'index': []}
@@ -50,9 +50,10 @@ if __name__ == '__main__':
                   plog_dict['Box #'].append(box_num)
                   plog_dict['index'].append(rname)
 
-      # Output Excel 1: plog with failed conversions (box # not in box range)
+      # Output 1: Printing log box # range issue (failed conversions)
       plog_failed_df = pd.DataFrame(plog_failed_conversion)
       plog_failed_df.to_excel(util.proc + 'print_log_box_num_issue.xlsx', index=False)
+
 
 
       # Create plog_df from plog_dict, join plog, drop 'index', set index ('Study', 'Box #')
@@ -69,14 +70,16 @@ if __name__ == '__main__':
       # # test
       # print(mast_list_clean.shape)  # (17935, 9)
       # print(merged_df1.shape)  # (17043, 38)
+      # print(merged_df1.columns)
       # print(merged_df1.drop_duplicates(subset=['Sample ID', 'Box #']).shape)  # (17043, 38)
 
 
 
-      #### plog + mast_list & intake
+      #### plog & mast_list & intake ==>> Printed Unused Kits
       
       # Left join unused_kits & plog_df on 'Study' & 'Box #'
-      #plog_df = pd.DataFrame(plog_dict).join(mast_list, on='index').set_index(['Study', 'Box #'])
+
+      # plog_df = pd.DataFrame(plog_dict).join(mast_list, on='index').set_index(['Study', 'Box #'])
       plog_df['Date Printed'] = plog_df['Date Printed'].ffill()
 
       # Identify unused kit numbers for re-printing or discard
@@ -89,49 +92,66 @@ if __name__ == '__main__':
       unused_kits = unused_kits.join(plog_df, on=['Study', 'Box #'], rsuffix='_printing')
       unused_kits.drop(columns=['Box Min', 'Box Max'], inplace=True)
 
-      # Output Excel 2: Printed but Unused Kits
-      unused_kits.dropna(subset='Date Printed').to_excel(util.proc + 'print_log_unused_kits.xlsx', index=False)  # Unused, Printed
+      # Output 2: Printed Unused Kits
+      unused_kits.dropna(subset='Date Printed').to_excel(util.proc + 'print_log_unused_kits.xlsx', index=False)
 
-
-      ### dscf & proc_ntbk --> merged_df2
-
-      merged_df2 = pd.merge(dscf_lot, proc_lot, on=['Date Used', 'Lot Number'], suffixes=('_dscf', '_proc'), how='left')
-      merged_df2 = merged_df2.dropna(subset=['Date Used'])
-
-      # test
       # print(dscf_lot.columns)
       # print(dscf_lot.shape)  # (224, 19)
-      # print(proc_lot.columns)
-      # print(proc_lot.shape)  # (31, 7)
-      # print(merged_df1.columns)
-      # print(merged_df1.shape)  # (18032, 38)
-      # print(merged_df2.columns)
-      # print(merged_df2.shape)  # (0, 24) --> left (222, 24)
 
 
-      # Fill blanks in dscf_lot with info from proc_lot
-      merged_df2_alt = merged_df2
-      merged_df2_alt['Lot Number'].fillna(merged_df2_alt['Lot Number'], inplace=True)
-      merged_df2_alt['EXP Date_dscf'].fillna(merged_df2_alt['EXP Date_proc'], inplace=True)
-      merged_df2_alt['Catalog Number_dscf'].fillna(merged_df2_alt['Catalog Number_proc'], inplace=True)
-      # Drop the columns from proc_lot
-      merged_df2_alt.drop(['Lot Number', 'EXP Date_proc', 'Catalog Number_proc'], axis=1, inplace=True)
-      merged_df2_alt.to_excel(util.proc + 'print_log_test_may_fail.xlsx', index=False)
+      ### dscf_lot ==> Reformat Lots
+
+      # Reformat lots on dscf_lot indexed by (Date Used, Material)
+      reformatted_dscf_lot = (dscf_lot.drop_duplicates(['Date Used', 'Material'])
+                              .set_index(['Date Used', 'Material'])
+                              .fillna('Unavailable')
+                              .unstack()    # reshape df by moving index to column headers
+                              .resample('1d')
+                              .asfreq()    # fill in missing dates in resampled df
+                              .ffill()    # forward-fill missing dates, with most recent non-missing one
+                              .stack()    # revert df shape, bring column back to index
+                              .reset_index())
+      
+      # Keep columns: Date Used, Material, Long-Form Date, Lot Number, EXP Date, Catalog Mumber,Samples Affected/ COMMENTS
+      reformatted_columns = ['Date Used', 'Material', 'Long-Form Date', 'Lot Number', 'EXP Date', 'Catalog Number', 'Samples Affected/ COMMENTS']
+      reformatted_dscf_lot = reformatted_dscf_lot[reformatted_columns]
+
+      # Output 3: Reformatted Lots
+      reformatted_dscf_lot.to_excel(util.proc + 'print_log_reformatted_lots.xlsx', index=False)
 
 
-      # # Likely tiny_script applied on merged_df2
-      # transformed_df2 = (merged_df2.set_index(['Date Used', 'Material_dscf'])
-      #                   .fillna('Unavailable')
-      #                   .unstack()    # reshape df by moving index to column headers
-      #                   .resample('1d')
-      #                   .asfreq()    # fill in missing dates in resampled df
-      #                   .ffill()    # forward-fill missing dates, with most recent non-missing one
-      #                   .stack()    # revert df shape, bring column back to index
-      #                   .reset_index())
-      # transformed_df2.to_excel(util.proc + 'print_log_test.xlsx', index=False)
 
 
-# Reformat Lots: Date Used, Material, Long-Form Date, Lot Number, EXP Date, Catalog Mumber,Samples Affected/ COMMENTS
+
+
+
+
+
+      
+      
+      
+      
+      ### Create Master List indexed by (sample ID, material) with columns (catalog #, lot #, expiration)
+
+
+
+
+      # ### dscf & proc_ntbk (no need from proc_ntbk)
+
+      # merged_df2 = pd.merge(dscf_lot, proc_lot, on=['Date Used', 'Lot Number'], suffixes=('_dscf', '_proc'), how='left')
+      # merged_df2 = merged_df2.dropna(subset=['Date Used'])
+
+      # # Fill blanks in dscf_lot with info from proc_lot
+      # merged_df2_alt = merged_df2
+      # merged_df2_alt['Lot Number'].fillna(merged_df2_alt['Lot Number'], inplace=True)
+      # merged_df2_alt['EXP Date_dscf'].fillna(merged_df2_alt['EXP Date_proc'], inplace=True)
+      # merged_df2_alt['Catalog Number_dscf'].fillna(merged_df2_alt['Catalog Number_proc'], inplace=True)
+      # # Drop the columns from proc_lot
+      # merged_df2_alt.drop(['Lot Number', 'EXP Date_proc', 'Catalog Number_proc'], axis=1, inplace=True)
+      # merged_df2_alt.to_excel(util.proc + 'print_log_test_2.xlsx', index=False)
+
+
+
 
 
 
