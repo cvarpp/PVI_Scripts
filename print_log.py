@@ -121,35 +121,9 @@ if __name__ == '__main__':
 
 
 
-
-
-
-
-
-
-      
-      
-      
-      
       ### Create Master List indexed by (sample ID, material) with columns (catalog #, lot #, expiration)
 
-
-
-
-      # ### dscf & proc_ntbk (no need from proc_ntbk)
-
-      # merged_df2 = pd.merge(dscf_lot, proc_lot, on=['Date Used', 'Lot Number'], suffixes=('_dscf', '_proc'), how='left')
-      # merged_df2 = merged_df2.dropna(subset=['Date Used'])
-
-      # # Fill blanks in dscf_lot with info from proc_lot
-      # merged_df2_alt = merged_df2
-      # merged_df2_alt['Lot Number'].fillna(merged_df2_alt['Lot Number'], inplace=True)
-      # merged_df2_alt['EXP Date_dscf'].fillna(merged_df2_alt['EXP Date_proc'], inplace=True)
-      # merged_df2_alt['Catalog Number_dscf'].fillna(merged_df2_alt['Catalog Number_proc'], inplace=True)
-      # # Drop the columns from proc_lot
-      # merged_df2_alt.drop(['Lot Number', 'EXP Date_proc', 'Catalog Number_proc'], axis=1, inplace=True)
-      # merged_df2_alt.to_excel(util.proc + 'print_log_test_2.xlsx', index=False)
-
+      # Tuesday starts from here: figure out which file does sampleID located.
 
 
 
