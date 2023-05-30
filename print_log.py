@@ -9,7 +9,6 @@ from helpers import query_dscf, query_intake
 # Printing Log - LOG
 # Intake - Sample Intake Log
 # Data Sample Collection Form - Lot # Sheet, BSL2 Samples, BSL2+ Samples
-# Processing Notebook - Lot #s
 
 
 if __name__ == '__main__':
@@ -29,7 +28,7 @@ if __name__ == '__main__':
       # proc_lot = pd.read_excel(util.proc_ntbk, sheet_name='Lot #s', header=0)
 
       intake = query_intake()
-
+      
 
       #### plog & mast_list --> merged_df1 ==>> Box # Not in Range
       
@@ -118,13 +117,25 @@ if __name__ == '__main__':
 
       # Output 3: Reformatted Lots
       reformatted_dscf_lot.to_excel(util.proc + 'print_log_reformatted_lots.xlsx', index=False)
-      
 
 
 
       ### Create Master List indexed by (sample ID, material) with columns (catalog #, lot #, expiration)
 
-      # Tuesday starts from here: figure out which file does sampleID located.
+      # btw not all BSL2 & BSL2+ samples are in Sample ID Master List
+
+      dscf_bsl2 = dscf_bsl2[["Date Processing Started", "Project", "Sample ID"]]
+      dscf_bsl2p = dscf_bsl2p[["Date Processing Started", "Project", "Sample ID"]]
+
+      print(dscf_bsl2.shape)  #(10880, 3)
+      print(dscf_bsl2p.shape)  # (10880, 3)
+
+
+      
+
+
+
+
 
 
 
