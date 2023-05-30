@@ -9,6 +9,7 @@ from helpers import query_dscf, query_intake
 # Printing Log - LOG
 # Intake - Sample Intake Log
 # Data Sample Collection Form - Lot # Sheet, BSL2 Samples, BSL2+ Samples
+# Processing Notebook - Lot #s
 
 
 if __name__ == '__main__':
@@ -25,7 +26,7 @@ if __name__ == '__main__':
       dscf_bsl2p = query_dscf()
       dscf_lot = pd.read_excel(util.dscf, sheet_name='Lot # Sheet', header=0).iloc[:, :9]
 
-      # proc_lot = pd.read_excel(util.proc_ntbk, sheet_name='Lot #s', header=0)
+      proc_lot = pd.read_excel(util.proc_ntbk, sheet_name='Lot #s', header=0)
 
       intake = query_intake()
       
@@ -54,11 +55,10 @@ if __name__ == '__main__':
       plog_failed_df.to_excel(util.proc + 'print_log_box_num_issue.xlsx', index=False)
 
 
-
       # Create plog_df from plog_dict, join plog, drop 'index', set index ('Study', 'Box #')
       plog_df = pd.DataFrame(plog_dict).join(plog, on='index').drop('index', axis='columns').set_index(['Study', 'Box #'])
 
-      # Drop NaN from 'Study' in mast_list
+      # Drop NaN from 'Study'
       mast_list_clean = mast_list.dropna(subset=['Study'])
 
       # Merge mast_list_clean & plog_df
@@ -66,7 +66,6 @@ if __name__ == '__main__':
       # merged_df1_1 = pd.merge(mast_list_clean, plog_df, on=['Kit Type', 'Box #'])    # (3502, 38) obviously wrong but why?
 
 
-      # # test
       # print(mast_list_clean.shape)  # (17935, 9)
       # print(merged_df1.shape)  # (17043, 38)
       # print(merged_df1.columns)
@@ -74,7 +73,7 @@ if __name__ == '__main__':
 
 
 
-      #### plog & mast_list & intake ==>> Printed Unused Kits
+      #### plog & mast_list & intake ==>> Printed but Unused Kits
       
       # Left join unused_kits & plog_df on 'Study' & 'Box #'
 
@@ -91,17 +90,17 @@ if __name__ == '__main__':
       unused_kits = unused_kits.join(plog_df, on=['Study', 'Box #'], rsuffix='_printing')
       unused_kits.drop(columns=['Box Min', 'Box Max'], inplace=True)
 
-      # Output 2: Printed Unused Kits
+      # Output 2: Printed but Unused Kits
       unused_kits.dropna(subset='Date Printed').to_excel(util.proc + 'print_log_unused_kits.xlsx', index=False)
 
       # print(dscf_lot.columns)
       # print(dscf_lot.shape)  # (224, 19)
 
 
-      ### dscf_lot ==> Reformat Lots
+      ### dscf_lot & proc_lot ==> Concatenated Lots
 
-      # Reformat lots on dscf_lot indexed by (Date Used, Material)
-      reformatted_dscf_lot = (dscf_lot.drop_duplicates(['Date Used', 'Material'])
+      # Reformat lots on dscf_lot 7 proc_lot, indexed by (Date Used, Material)
+      dscf_lot_reformatted = (dscf_lot.drop_duplicates(['Date Used', 'Material'])
                               .set_index(['Date Used', 'Material'])
                               .fillna('Unavailable')
                               .unstack()    # reshape df by moving index to column headers
@@ -111,24 +110,49 @@ if __name__ == '__main__':
                               .stack()    # revert df shape, bring column back to index
                               .reset_index())
       
-      # Keep columns: Date Used, Material, Long-Form Date, Lot Number, EXP Date, Catalog Mumber,Samples Affected/ COMMENTS
-      reformatted_columns = ['Date Used', 'Material', 'Long-Form Date', 'Lot Number', 'EXP Date', 'Catalog Number', 'Samples Affected/ COMMENTS']
-      reformatted_dscf_lot = reformatted_dscf_lot[reformatted_columns]
+      # Keep columns: Date Used, Material, Long-Form Date, Lot Number, EXP Date, Catalog Mumber, Samples Affected/ COMMENTS
+      selected_columns = ['Date Used', 'Material', 'Lot Number', 'EXP Date', 'Catalog Number', 'Samples Affected/ COMMENTS']
+      dscf_lot_new = dscf_lot_reformatted[selected_columns]
+      proc_lot_new = proc_lot[selected_columns]
 
-      # Output 3: Reformatted Lots
-      reformatted_dscf_lot.to_excel(util.proc + 'print_log_reformatted_lots.xlsx', index=False)
+      # Concatenate dscf_lot & proc_lot
+      # Checkpoint: proc_lot starts later than dscf_lot so overlap should be empty
+      concatenated_lot = pd.concat([dscf_lot_new, proc_lot_new])
+      concatenated_lot.reset_index(drop=True, inplace=True)
+
+      # Output 3: Concatenated Lots from dscf & proc
+      concatenated_lot.to_excel(util.proc + 'print_log_concatenated_lots.xlsx', index=False)
+
+      exit(0)
 
 
 
-      ### Create Master List indexed by (sample ID, material) with columns (catalog #, lot #, expiration)
-
-      # btw not all BSL2 & BSL2+ samples are in Sample ID Master List
+      # Create list indexed by (sample ID, material) with columns (catalog #, lot #, expiration)
 
       dscf_bsl2 = dscf_bsl2[["Date Processing Started", "Project", "Sample ID"]]
       dscf_bsl2p = dscf_bsl2p[["Date Processing Started", "Project", "Sample ID"]]
 
-      print(dscf_bsl2.shape)  #(10880, 3)
-      print(dscf_bsl2p.shape)  # (10880, 3)
+      merged_bsl2 = merged_df1.join(dscf_bsl2, on='Sample ID')
+      merged_bsl2_alter = pd.merge(merged_df1, dscf_bsl2, on='Sample ID')
+      
+      merged_bsl2p = merged_df1.join(dscf_bsl2p, on='Sample ID')
+      merged_bsl2p_alter = pd.merge(merged_df1, dscf_bsl2p, on='Sample ID')
+
+      print(merged_bsl2.shape)
+      print(merged_bsl2_alter.shape)
+      print(merged_bsl2p.shape)
+      print(merged_bsl2p_alter.shape)
+
+      exit(0)
+
+
+
+
+      summary_list = merged_data.set_index(['Sample ID', 'Material'])[['Catalog #', 'Lot #', 'Expiration']]
+
+      # Output 4: List indexed by (sample ID, material) with (catalog #, lot #, expiration)
+      reformatted_dscf_lot.to_excel(util.proc + 'print_log_reformatted_lots.xlsx', index=False)
+
 
 
       
