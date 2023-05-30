@@ -118,6 +118,7 @@ if __name__ == '__main__':
 
       # Output 3: Reformatted Lots
       reformatted_dscf_lot.to_excel(util.proc + 'print_log_reformatted_lots.xlsx', index=False)
+      
 
 
 
