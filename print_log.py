@@ -97,7 +97,7 @@ if __name__ == '__main__':
       # print(dscf_lot.shape)  # (224, 19)
 
 
-      ### dscf_lot & proc_lot ==> Concatenated Lots
+      ### dscf_lot & proc_lot ==> Concatenated Lots per Date
 
       # Reformat lots on dscf_lot 7 proc_lot, indexed by (Date Used, Material)
       dscf_lot_reformatted = (dscf_lot.drop_duplicates(['Date Used', 'Material'])
@@ -116,37 +116,63 @@ if __name__ == '__main__':
       proc_lot_new = proc_lot[selected_columns]
 
       # Concatenate dscf_lot & proc_lot
-      # Checkpoint: proc_lot starts later than dscf_lot so overlap should be empty
       concatenated_lot = pd.concat([dscf_lot_new, proc_lot_new])
       concatenated_lot.reset_index(drop=True, inplace=True)
+      # Checkpoint: proc_lot starts later than dscf_lot so overlap should be empty
 
-      # Output 3: Concatenated Lots from dscf & proc
+      # test (delete if lot_per_date no error)
       concatenated_lot.to_excel(util.proc + 'print_log_concatenated_lots.xlsx', index=False)
+
+      # Lot per day
+      concatenated_lot['Date Used'] = pd.to_datetime(concatenated_lot['Date Used'])
+      concatenated_lot = concatenated_lot.drop_duplicates(['Date Used', 'Material','Lot Number'])
+      concatenated_lot = concatenated_lot.set_index(['Date Used', 'Material'])
+      
+      lot_dates = pd.DataFrame({'Date Used': pd.date_range(concatenated_lot['Date Used'].min(), concatenated_lot['Date Used'].max(), freq='D')})
+      lot_per_day = concatenated_lot.set_index('Date Used').groupby('Material').ffill().resample('D').ffill().loc[all_dates['Date Used']]
+
+      # Output 3: Lot used per day
+      lot_per_day.to_excel(util.proc + 'print_log_lot_per_date.xlsx', index=False)
+
+
+
+      # test
+      print(lot_per_day.shape)
+
 
       exit(0)
 
 
+      # merged_df1 (mast_list + plog) & sample ==> Sample with Date Printed
 
-      # Create list indexed by (sample ID, material) with columns (catalog #, lot #, expiration)
-
+      # Delete later, make df col shorter for easy read use only
       dscf_bsl2 = dscf_bsl2[["Date Processing Started", "Project", "Sample ID"]]
       dscf_bsl2p = dscf_bsl2p[["Date Processing Started", "Project", "Sample ID"]]
 
-      merged_bsl2 = merged_df1.join(dscf_bsl2, on='Sample ID')
-      merged_bsl2_alter = pd.merge(merged_df1, dscf_bsl2, on='Sample ID')
-      
-      merged_bsl2p = merged_df1.join(dscf_bsl2p, on='Sample ID')
-      merged_bsl2p_alter = pd.merge(merged_df1, dscf_bsl2p, on='Sample ID')
+      # Merge merged_df1 with dscf_bsl2
+      merged_bsl2 = merged_df1.join(dscf_bsl2.set_index('Sample ID'), on='Sample ID', rsuffix='_dscf_bsl2')
+      merged_bsl2_alter = pd.merge(merged_df1, dscf_bsl2, on='Sample ID', suffixes=('', '_dscf_bsl2'))
 
-      print(merged_bsl2.shape)
-      print(merged_bsl2_alter.shape)
-      print(merged_bsl2p.shape)
-      print(merged_bsl2p_alter.shape)
+      # Merge merged_df1 with dscf_bsl2p
+      merged_bsl2p = merged_df1.join(dscf_bsl2p.set_index('Sample ID'), on='Sample ID', rsuffix='_dscf_bsl2p')
+      merged_bsl2p_alter = pd.merge(merged_df1, dscf_bsl2p, on='Sample ID', suffixes=('', '_dscf_bsl2p'))
 
-      exit(0)
+      # print(merged_bsl2.columns)  # (18032, 40)
+      # print(merged_bsl2_alter.columns)  # (11680, 40)
+      # print(merged_bsl2.columns)  # (18032, 40)
+      # print(merged_bsl2.columns)  # (11680, 40)
+      ### Discrepancy comes from: samples not in mast_list ???
+
+
+      # Check sample's date, find matched lot
 
 
 
+
+
+
+
+      ### Create list indexed by (sample ID, material) with columns (catalog #, lot #, expiration)
 
       summary_list = merged_data.set_index(['Sample ID', 'Material'])[['Catalog #', 'Lot #', 'Expiration']]
 
