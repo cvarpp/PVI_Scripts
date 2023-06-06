@@ -20,10 +20,7 @@ def paris_results():
     participants = paris_data['Participant ID'].unique()
     paris_data.set_index('Participant ID', inplace=True)
     dems = pd.read_excel(util.projects + 'PARIS/Demographics.xlsx').set_index('Subject ID')
-    sample_info = query_intake(participants=participants)
-    samples = sample_info.index.to_numpy()
-
-    research_results = query_research(sid_list=samples)
+    sample_info = query_intake(participants=participants, include_research=True)
 
     col_order = ['Participant ID', 'Date', 'Sample ID', 'Days to 1st Vaccine Dose',
                 'Days to Boost', 'Days to Last Infection', 'Days to Last Vax', 'Infection Timing',
@@ -43,10 +40,8 @@ def paris_results():
     sample_info['Date'] = sample_info['Date Collected']
     sample_info = (sample_info[~sample_info['Qualitative'].astype(str).str.strip().isin(['-', '']) &
                               ~sample_info['Qualitative'].apply(pd.isna)]
-                              .join(research_results)
                               .join(dems.loc[:, dem_cols], on='participant_id')
                               .join(paris_data.loc[:, shared_cols + date_cols], on='participant_id')
-                              .sort_values(by=['participant_id', 'Date'])
                               .reset_index().copy())
     baseline_data = sample_info.sort_values(by='Date').drop_duplicates(subset='participant_id').set_index('participant_id')
     sample_info['Post-Baseline'] = (sample_info['Date'] - sample_info['participant_id'].apply(lambda val: baseline_data.loc[val, 'Date'])).dt.days
