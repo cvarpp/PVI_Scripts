@@ -81,7 +81,8 @@ def query_dscf(sid_list=None, no_pbmcs=set()):
     bsl2_samples = dscf_info.parse(sheet_name='BSL2 Samples')
     correct_crp = {'CELL COUNTER (Total)': 'Cell Count',
                    '# Aliquots Frozen': '# of aliquots frozen',
-                   'Total Volume of Serum after first spin (ml)': 'Total volume of serum (mL)'}
+                   'Total Volume of Serum after first spin (ml)': 'Total volume of serum (mL)',
+                   'ACD VOLUME': 'CPT/EDTA VOL'}
     crp_samples = dscf_info.parse(sheet_name='CRP').rename(columns=correct_crp)
     crp_samples['# cells per aliquot'] = crp_samples.apply(fallible(lambda row: row['Cell Count'] / row['# of aliquots frozen']), axis=1)
     crp_samples.loc[crp_samples['Total volume of serum after second spin (ml)'].str.upper().str.strip() != 'X', 'Total volume of serum (mL)'] = crp_samples.loc[crp_samples['Total volume of serum after second spin (ml)'].str.upper().str.strip() != 'X', 'Total volume of serum after second spin (ml)']
@@ -89,7 +90,9 @@ def query_dscf(sid_list=None, no_pbmcs=set()):
     correct_new = {'# PBMCs per Aliquot': '# cells per aliquot',
                    '# Aliquots': '# of aliquots frozen',
                    'Total Plasma Vol. (mL)': 'Total volume of plasma (mL)',
-                   'Total Serum Vol. (mL)': 'Total volume of serum (mL)'}
+                   'Total Serum Vol. (mL)': 'Total volume of serum (mL)',
+                   'SST Volume': 'SST VOL',
+                   'Cell Tube Volume (mL)': 'CPT/EDTA VOL'}
     new_samples = pd.read_excel(util.proc + 'Processing Notebook.xlsx', sheet_name='Specimen Dashboard', header=1).rename(columns=correct_new)
     all_samples = (pd.concat([bsl2p_samples, bsl2_samples, crp_samples, new_samples])
                      .assign(sample_id=clean_sample_id)
