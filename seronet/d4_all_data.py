@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
+import argparse
 import util
-from datetime import datetime
 from helpers import query_dscf, query_research
 
 def sufficient(val):
@@ -10,7 +10,7 @@ def sufficient(val):
     except:
         return False
 
-def pull_from_source():
+def pull_from_source(debug=False):
     iris_data = pd.read_excel(util.iris_folder + 'Participant Tracking - IRIS.xlsx', sheet_name='Main Project', header=4).dropna(subset=['Participant ID'])
     titan_data = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Tracker', header=4).rename(columns={'Umbrella Corresponding Participant ID': 'Participant ID'}).dropna(subset=['Participant ID'])
     mars_data = pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name='Pt List').dropna(subset=['Participant ID'])
@@ -263,9 +263,14 @@ def pull_from_source():
                 data['Log2AUC'].append('-')
             data['coll_inits'].append(coll_inits)
     report = pd.DataFrame(data)
-    report.to_excel(util.unfiltered, index=False)
+    if not debug:
+        report.to_excel(util.unfiltered, index=False)
+        print("Report written to {}".format(util.unfiltered))
     print("{} samples characterized.".format(report.shape[0]))
     return report
 
 if __name__ == '__main__':
-    pull_from_source()
+    argParser = argparse.ArgumentParser(description='Annotate SERONET samples with processing data')
+    argParser.add_argument('-d', '--debug', action='store_true')
+    args = argParser.parse_args()
+    pull_from_source(args.debug)

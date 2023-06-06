@@ -44,7 +44,7 @@ def time_diff_wrapper(t_start, t_end, annot):
         time_diff = 'Missing'
     return time_diff
 
-def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_datetime('1/1/2040'), output_fname='tmp'):
+def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_datetime('1/1/2040'), output_fname='tmp', debug=False):
     issues = set()
     first_date = first_date.date()
     last_date = last_date.date()
@@ -368,35 +368,36 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             add_to['Vial Modifiers'].append('')
 
     output = {}
-    writer = pd.ExcelWriter(util.proc_d4 + '{}.xlsx'.format(output_fname))
     for sname, df2b in future_output.items():
         df = pd.DataFrame(df2b)
         output[sname] = df
-        df[df['Date'].apply(lambda val: first_date <= val.date() <= last_date)].to_excel(writer, sheet_name=sname, index=False)
-    writer.save()
-    writer.close()
-    source.to_excel(util.script_output + 'SERONET_In_Window_Data_biospecimen_companion.xlsx', index=False)
-    with open(util.script_output + 'trouble.csv', 'w+') as f:
-        print("Sample ID", file=f)
-        for sample in issues:
-            print(sample, file=f)
+    if not debug:
+        with pd.ExcelWriter(util.proc_d4 + '{}.xlsx'.format(output_fname)) as writer:
+            for sname, df in output.items():
+                df[df['Date'].apply(lambda val: first_date <= val.date() <= last_date)].to_excel(writer, sheet_name=sname, index=False)
+        source.to_excel(util.script_output + 'SERONET_In_Window_Data_biospecimen_companion.xlsx', index=False)
+        with open(util.script_output + 'trouble.csv', 'w+') as f:
+            print("Sample ID", file=f)
+            for sample in issues:
+                print(sample, file=f)
     return output
 
 
 
 if __name__ == '__main__':
-    argParser = argparse.ArgumentParser(description='Make Seronet monthly sample report.')
+    argParser = argparse.ArgumentParser(description='Create processing information sheets for SERONET data submissions.')
     argParser.add_argument('-u', '--update', action='store_true')
     argParser.add_argument('-o', '--output_file', action='store', default='tmp')
     argParser.add_argument('-s', '--start', action='store', type=pd.to_datetime, default=pd.to_datetime('1/1/2021'))
     argParser.add_argument('-e', '--end', action='store', type=pd.to_datetime, default=pd.to_datetime('12/31/2025'))
     argParser.add_argument('-x', '--override', action='store', type=pd.read_excel)
+    argParser.add_argument('-d', '--debug', action='store_true')
     args = argParser.parse_args()
     if args.override is not None:
-        make_ecrabs(args.override, args.start, args.end, args.output_file)
+        make_ecrabs(args.override, args.start, args.end, args.output_file, args.debug)
         exit(0)
     if args.update:
-        source = pull_from_source()
+        source = pull_from_source(args.debug)
     else:
         source = pd.read_excel(util.unfiltered)
-    make_ecrabs(source, args.start, args.end, args.output_file)
+    make_ecrabs(source, args.start, args.end, args.output_file, args.debug)

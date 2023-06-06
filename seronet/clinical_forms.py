@@ -17,7 +17,7 @@ def specimenize(row):
         print(row['Sample ID'], 'has neither serum nor plasma and probably should be dropped!')
         return "OOPS"
 
-def write_clinical(input_df, output_fname):
+def write_clinical(input_df, output_fname, debug=False):
     base_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Date_Duration_From_Index', 'Lost_to_Follow_Up', 'Final_Visit', 'Age', 'Sex_At_Birth', 'Race', 'Ethnicity', 'Height', 'Weight', 'BMI', 'Location', 'Biospecimens_Collected', 'Diabetes', 'Diabetes_Description_Or_ICD10_codes', 'Hypertension', 'Hypertension_Description_Or_ICD10_codes', 'Obesity', 'Obesity_Description_Or_ICD10_codes', 'Cardiovascular_Disease', 'Cardiovascular_Disease_Description_Or_ICD10_codes', 'Chronic_Lung_Disease', 'Chronic_Lung_Disease_Description_Or_ICD10_codes', 'Chronic_Kidney_Disease', 'Chronic_Kidney_Disease_Description_Or_ICD10_codes', 'Chronic_Liver_Disease', 'Chronic_Liver_Disease_Description_Or_ICD10_codes', 'Acute_Liver_Disease', 'Acute_Liver_Disease_Description_Or_ICD10_codes', 'Immunosuppressive_Condition', 'Immunosuppressive_Condition_Description_Or_ICD10_codes', 'Autoimmune_Disorder', 'Autoimmune_Disorder_Description_Or_ICD10_codes', 'Chronic_Neurological_Condition', 'Chronic_Neurological_Condition_Description_Or_ICD10_codes', 'Chronic_Oxygen_Requirement', 'Chronic_Oxygen_Requirement_Description_Or_ICD10_codes', 'Inflammatory_Disease', 'Inflammatory_Disease_Description_Or_ICD10_codes', 'Viral_Infection', 'Viral_Infection_ICD10_codes_Or_Agents', 'Bacterial_Infection', 'Bacterial_Infection_ICD10_codes_Or_Agents', 'Cancer', 'Cancer_Description_Or_ICD10_codes', 'Substance_Abuse_Disorder', 'Substance_Abuse_Disorder_Description_Or_ICD10_codes', 'Organ_Transplant_Recipient', 'Organ_Transplant_Description_Or_ICD10_codes', 'Other_Health_Condition_Description_Or_ICD10_codes', 'ECOG_Status', 'Smoking_Or_Vaping_Status', 'Alcohol_Use', 'Drug_Type', 'Drug_Use', 'Vaccination_Record', 'Pregnancy_Status', 'Comments']
     follow_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Visit_Date_Duration_From_Index', 'Lost_to_Follow_Up', 'Final_Visit', 'Baseline_Visit', 'Number_of_Missed_Scheduled_Visits', 'Unscheduled_Visit', 'Biospecimens_Collected', 'Diabetes', 'Diabetes_Description_Or_ICD10_codes', 'Hypertension', 'Hypertension_Description_Or_ICD10_codes', 'Obesity', 'Obesity_Description_Or_ICD10_codes', 'Cardiovascular_Disease', 'Cardiovascular_Disease_Description_Or_ICD10_codes', 'Chronic_Lung_Disease', 'Chronic_Lung_Disease_Description_Or_ICD10_codes', 'Chronic_Kidney_Disease', 'Chronic_Kidney_Disease_Description_Or_ICD10_codes', 'Chronic_Liver_Disease', 'Chronic_Liver_Disease_Description_Or_ICD10_codes', 'Acute_Liver_Disease', 'Acute_Liver_Disease_Description_Or_ICD10_codes', 'Immunosuppressive_Condition', 'Immunosuppressive_Condition_Description_Or_ICD10_codes', 'Autoimmune_Disorder', 'Autoimmune_Disorder_Description_Or_ICD10_codes', 'Chronic_Neurological_Condition', 'Chronic_Neurological_Condition_Description_Or_ICD10_codes', 'Chronic_Oxygen_Requirement', 'Chronic_Oxygen_Requirement_Description_Or_ICD10_codes', 'Inflammatory_Disease', 'Inflammatory_Disease_Description_Or_ICD10_codes', 'Viral_Infection', 'Viral_Infection_ICD10_codes_Or_Agents', 'Bacterial_Infection', 'Bacterial_Infection_ICD10_codes_Or_Agents', 'Cancer', 'Cancer_Description_Or_ICD10_codes', 'Substance_Abuse_Disorder', 'Substance_Abuse_Disorder_Description_Or_ICD10_codes', 'Organ_Transplant_Recipient', 'Organ_Transplant_Description_Or_ICD10_codes', 'Other_Health_Condition_Description_Or_ICD10_codes', 'ECOG_Status', 'Smoking_Or_Vaping_Status', 'Alcohol_Use', 'Drug_Type', 'Drug_Use', 'Vaccination_Record', 'Pregnancy_Status', 'Comments']
     covid_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'COVID_Status', 'Breakthrough_COVID', 'SARS-CoV-2_Variant', 'PCR_Test_Date_Duration_From_Index', 'Rapid_Antigen_Test_Date_Duration_From_Index', 'Antibody_Test_Date_Duration_From_Index', 'Symptomatic_COVID', 'Recovered_From_COVID', 'Duration_of_Disease', 'Recovery_Date_Duration_From_Index', 'Disease_Severity', 'Level_Of_Care', 'Symptoms', 'Other_Symptoms', 'COVID_complications', 'Long_COVID_symptoms', 'Other_Long_COVID_symptoms', 'COVID_Therapy', 'Comments']
@@ -349,27 +349,28 @@ def write_clinical(input_df, output_fname):
 
     output_folder = util.cross_d4
     output = {}
-    with pd.ExcelWriter(output_folder + '{}.xlsx'.format(output_fname)) as writer:
-        for sname, df2b in future_output.items():
-            try:
-                df = pd.DataFrame(df2b)
-                output[sname] = df
+    for sname, df2b in future_output.items():
+        try:
+            df = pd.DataFrame(df2b)
+            output[sname] = df
+        except:
+            print(sname)
+            for k, vs in df2b.items():
+                print(k, len(vs))
+            print()
+    if not debug:
+        with pd.ExcelWriter(output_folder + '{}.xlsx'.format(output_fname)) as writer:
+            for sname, df in output.items():
                 df.to_excel(writer, sheet_name=sname, index=False, na_rep='N/A')
-            except:
-                print(sname)
-                for k, vs in df2b.items():
-                    print(k, len(vs))
-                print()
-    writer.save()
-    writer.close()
     return output
 
 
 if __name__ == '__main__':
     
-    argParser = argparse.ArgumentParser(description='Make clinical forms. input_df should be a fully specified filepath to a workbook containing a "Biospecimen" tab corresponding to this data submission.')
+    argParser = argparse.ArgumentParser(description='Make clinical forms. input_df should be a fully specified filepath to a workbook containing a "Biospecimen" tab corresponding to the correct data submission.')
     argParser.add_argument('-i', '--input_df', action='store', required=True, type=lambda wb_path: pd.read_excel(wb_path, sheet_name='Biospecimen'))
     argParser.add_argument('-o', '--output_file', action='store', required=True)
+    argParser.add_argument('-d', '--debug', action='store_true')
     args = argParser.parse_args()
 
-    write_clinical(args.input_df, args.output_file)
+    write_clinical(args.input_df, args.output_file, args.debug)
