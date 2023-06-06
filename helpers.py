@@ -3,6 +3,10 @@ import numpy as np
 import util
 
 def try_convert(val):
+    '''
+    Converts number values to floating point and converts 0s to 1s.
+    Prepares data for log-transformation. Returns np.nan when conversion fails.
+    '''
     if val == 0.:
         return 1.
     try:
@@ -11,6 +15,9 @@ def try_convert(val):
         return np.nan
 
 def clean_auc(df):
+    '''
+    Cleans AUC values in a dataframe, converting any negative values to 1.
+    '''
     df = df.copy()
     neg_spike = df['Spike endpoint'].astype(str).str.strip().str.upper().str[:2] == "NE"
     neg_auc = df['AUC'] == 0.
@@ -18,9 +25,18 @@ def clean_auc(df):
     return df['AUC'].apply(try_convert).astype(float)
 
 def clean_sample_id(df):
+    '''
+    Converts sample IDs to strings, stripping leading and trailing spaces as well as
+    converting all alphabetic characters to uppercase.
+    '''
     return df['Sample ID'].astype(str).str.strip().str.upper()
 
 def clean_research(df):
+    '''
+    Cleans AUC and sample_id columns of common issues and drops rows missing AUC.
+
+    Meant to be passed to the pandas `pipe` method
+    '''
     return (df.assign(sample_id=clean_sample_id,
                       AUC=clean_auc)
               .dropna(subset=['AUC'])
@@ -29,6 +45,11 @@ def clean_research(df):
               .assign(Log2AUC=lambda df: np.log2(df['AUC'])))
 
 def convert_serum(vol):
+    '''
+    Cleans serum values of known issues (inconsistent units and reporting of those units).
+
+    Returns values in mL and assumes unitless values are in mL.
+    '''
     try:
         serum_volume = float(str(vol).strip().strip("mlML ").split()[0])
     except:
@@ -67,6 +88,11 @@ def clean_cells(df, no_pbmcs):
     return df
 
 def fallible(f, default=np.nan):
+    '''
+    A wrapper around a function which returns a specified default value in case of error.
+    
+    Common use: `df['Float Version of C1'] = df['C1'].apply(fallible(float))`
+    '''
     def tmp(val):
         try:
             return f(val)
@@ -75,6 +101,14 @@ def fallible(f, default=np.nan):
     return tmp
 
 def query_dscf(sid_list=None, no_pbmcs=set()):
+    '''
+    Retrieve processing data (volumes, cell counts, and times) for all samples.
+    Aggregates across 3 separate files and multiple tabs.
+
+    `sid_list` retrieves a specified subset of sample IDs
+
+    `no_pbmcs` will override initially reported PBMC counts to reflect used sample IDs
+    '''
     correct_2p = {'Comments': 'COMMENTS'}
     dscf_info = pd.ExcelFile(util.dscf)
     bsl2p_samples = dscf_info.parse(sheet_name='BSL2+ Samples', header=1).rename(columns=correct_2p)
@@ -121,16 +155,13 @@ def query_dscf(sid_list=None, no_pbmcs=set()):
     sample_info = samples.rename(columns=col_mapper).set_index('sample_id')
     return sample_info.copy()
 
-def clean_path(df):
-    df = df.copy()
-    df['Qualitative'] = df[util.qual].apply(lambda val: "Negative" if str(val).strip().upper()[:2] == "NE" else val)
-    df['Quantitative'] = df.apply(lambda row: 1 if row['Qualitative'] == 'Negative' else row[util.quant], axis=1).apply(try_convert).astype(float)
-    df['COV22'] = df['COV22 Results'].apply(lambda val: 1 if str(val).strip().upper()[:2] == 'NE' else val).apply(try_convert).astype(float)
-    df['Log2Quant'] = np.log2(df['Quantitative'])
-    df['Log2COV22'] = np.log2(df['COV22'])
-    return df
-
 def query_research(sid_list=None):
+    '''
+    Accesses research results from Krammer lab ELISA testing.
+    Prioritizes the most recent results for any re-testing.
+
+    The optional parameter `sid_list` filters results to a given subset of samples.
+    '''
     research_source = pd.ExcelFile(util.research)
     research_samples_1 = research_source.parse(sheet_name='Inputs').pipe(clean_research)
     research_samples_2 = research_source.parse(sheet_name='Archive').pipe(clean_research)
@@ -141,7 +172,30 @@ def query_research(sid_list=None):
         research_results = all_research_results
     return research_results.set_index('sample_id').copy()
 
+def clean_path(df):
+    '''
+    Cleans the various antibody results returned from the clinical micro lab and adds
+    log-transformed values for the continuous values.
+
+    Meant to be passed to the pandas `pipe` method.
+    '''
+    df = df.copy()
+    df['Qualitative'] = df[util.qual].apply(lambda val: "Negative" if str(val).strip().upper()[:2] == "NE" else val)
+    df['Quantitative'] = df.apply(lambda row: 1 if row['Qualitative'] == 'Negative' else row[util.quant], axis=1).apply(try_convert).astype(float)
+    df['COV22'] = df['COV22 Results'].apply(lambda val: 1 if str(val).strip().upper()[:2] == 'NE' else val).apply(try_convert).astype(float)
+    df['Log2Quant'] = np.log2(df['Quantitative'])
+    df['Log2COV22'] = np.log2(df['COV22'])
+    return df
+
 def query_intake(participants=None, include_research=False):
+    '''
+    Queries the intake log, optionally limited to a subset of participants.
+
+    `participants` is a list of participant IDs to filter on
+
+    `include_research` will join the resulting dataframe with the results from `query_research`
+    for convenience
+    '''
     drop_cols = ['Date Processed', 'Tubes Pulled?', 'Process Location', 'Box #', 'Specimen Type Sent to Patho', 'Date Given to Patho', 'Delivered by', 'Received by', 'Results received', 'RT-QPCR Result NS (Clinical)', 'Viability', 'Notes', 'Blood Collector Initials', 'New or Follow-up?', 'Participant ID', 'Sample ID', 'Ab Detection S/P Result (Clinical) (Titer or Neg)', 'Ab Concentration (Units - AU/mL)']
     intake_source = pd.ExcelFile(util.intake)
     intake = intake_source.parse(sheet_name='Sample Intake Log', header=util.header_intake)
@@ -170,9 +224,20 @@ def try_datediff(start_date, end_date):
         return np.nan
 
 def coerce_date(val):
+    '''
+    A shorter wrapper for `apply`ing to create typed date columns from
+    potentially messy data.
+    '''
     return pd.to_datetime(val, errors='coerce').date()
 
 def permissive_datemax(date_list, comp_date):
+    '''
+    Returns the last date before a given `comp_date` in `date_list`.
+
+    Ignores errors quite freely, and defaults to 1/1/1950.
+
+    Specifically useful for repeated COVID infections and vaccinations.
+    '''
     placeholder = pd.to_datetime('1.1.1950').date()
     max_date = placeholder
     for date_ in date_list:
@@ -183,6 +248,9 @@ def permissive_datemax(date_list, comp_date):
         return max_date
 
 def map_dates(df, date_cols):
+    '''
+    Converts a set of date columns to the proper type in one function call.
+    '''
     df = df.copy()
     for col in date_cols:
         df[col] = df[col].apply(coerce_date)
