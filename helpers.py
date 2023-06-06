@@ -130,25 +130,6 @@ def clean_path(df):
     df['Log2COV22'] = np.log2(df['COV22'])
     return df
 
-def query_intake(participants=None):
-    drop_cols = ['Date Processed', 'Tubes Pulled?', 'Process Location', 'Box #', 'Specimen Type Sent to Patho', 'Date Given to Patho', 'Delivered by', 'Received by', 'Results received', 'RT-QPCR Result NS (Clinical)', 'Viability', 'Notes', 'Blood Collector Initials', 'New or Follow-up?', 'Participant ID', 'Sample ID', 'Ab Detection S/P Result (Clinical) (Titer or Neg)', 'Ab Concentration (Units - AU/mL)']
-    intake_source = pd.ExcelFile(util.intake)
-    intake = intake_source.parse(sheet_name='Sample Intake Log', header=util.header_intake)
-    date_cols = ['Date Collected']
-    all_samples = (intake.dropna(subset=['Participant ID'])
-                        .assign(participant_id=lambda df: df['Participant ID'].str.strip().str.upper(),
-                                sample_id=clean_sample_id)
-                        .query('sample_id.str.len() == 5')
-                        .pipe(clean_path)
-                        .pipe(map_dates, date_cols)
-                        .set_index('sample_id')
-                        .drop(drop_cols, axis=1))
-    if participants is not None:
-        samples = all_samples.query('participant_id in @participants').copy()
-    else:
-        samples = all_samples
-    return samples
-
 def query_research(sid_list=None):
     research_source = pd.ExcelFile(util.research)
     research_samples_1 = research_source.parse(sheet_name='Inputs').pipe(clean_research)
@@ -160,6 +141,27 @@ def query_research(sid_list=None):
         research_results = all_research_results
     return research_results.set_index('sample_id').copy()
 
+def query_intake(participants=None, include_research=False):
+    drop_cols = ['Date Processed', 'Tubes Pulled?', 'Process Location', 'Box #', 'Specimen Type Sent to Patho', 'Date Given to Patho', 'Delivered by', 'Received by', 'Results received', 'RT-QPCR Result NS (Clinical)', 'Viability', 'Notes', 'Blood Collector Initials', 'New or Follow-up?', 'Participant ID', 'Sample ID', 'Ab Detection S/P Result (Clinical) (Titer or Neg)', 'Ab Concentration (Units - AU/mL)']
+    intake_source = pd.ExcelFile(util.intake)
+    intake = intake_source.parse(sheet_name='Sample Intake Log', header=util.header_intake)
+    date_cols = ['Date Collected']
+    all_samples = (intake.dropna(subset=['Participant ID'])
+                        .assign(participant_id=lambda df: df['Participant ID'].str.strip().str.upper(),
+                                sample_id=clean_sample_id)
+                        .query('sample_id.str.len() == 5')
+                        .pipe(clean_path)
+                        .pipe(map_dates, date_cols)
+                        .set_index('sample_id')
+                        .drop(drop_cols, axis=1)
+                        .sort_values(by=['participant_id', 'Date Collected']))
+    if participants is not None:
+        samples = all_samples.query('participant_id in @participants').copy()
+    else:
+        samples = all_samples
+    if include_research:
+        samples = samples.join(query_research())
+    return samples
 
 def try_datediff(start_date, end_date):
     try:
