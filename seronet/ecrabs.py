@@ -2,7 +2,6 @@ import pandas as pd
 import datetime
 import argparse
 import util
-from seronet.seronet_data import filter_windows
 from seronet.d4_all_data import pull_from_source
 
 def process_lots():
@@ -388,27 +387,16 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Make Seronet monthly sample report.')
     argParser.add_argument('-u', '--update', action='store_true')
-    argParser.add_argument('-f', '--filter', action='store_true')
     argParser.add_argument('-o', '--output_file', action='store', default='tmp')
     argParser.add_argument('-s', '--start', action='store', type=pd.to_datetime, default=pd.to_datetime('1/1/2021'))
     argParser.add_argument('-e', '--end', action='store', type=pd.to_datetime, default=pd.to_datetime('12/31/2025'))
-    argParser.add_argument('-a', '--all', action='store_true')
     argParser.add_argument('-x', '--override', action='store', type=pd.read_excel)
     args = argParser.parse_args()
     if args.override is not None:
         make_ecrabs(args.override, args.start, args.end, args.output_file)
         exit(0)
     if args.update:
-        if args.all:
-            source = pull_from_source()
-        else:
-            source = filter_windows(pull_from_source())
+        source = pull_from_source()
     else:
-        if args.filter:
-            source = filter_windows(pd.read_excel(util.unfiltered))
-        else:
-            if args.all:
-                source = pd.read_excel(util.unfiltered)
-            else:
-                source = pd.read_excel(util.filtered)
+        source = pd.read_excel(util.unfiltered)
     make_ecrabs(source, args.start, args.end, args.output_file)

@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 import argparse
 import util
 from seronet.d4_all_data import pull_from_source
-from seronet.ecrabs_seronet import make_ecrabs
+from seronet.ecrabs import make_ecrabs
 from seronet.clinical_forms import write_clinical
 import os
 
