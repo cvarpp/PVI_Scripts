@@ -107,8 +107,8 @@ def crp_results():
     return sample_info.assign(last_event=lambda df: df.apply(find_last_event, axis=1)).loc[:, col_order].assign(total_pbmcs=lambda df: df['PBMC concentration per mL (x10^6)'] * df['# of PBMC vials'])
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(description='CRP Report')
-    argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="Prefix for the output file (current date appended")
+    argparser = argparse.ArgumentParser(description='Generate report for all CRP samples')
+    argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="Prefix for the output file (in addition to current date)")
     argparser.add_argument('-d', '--debug', action='store_true', help="Print to the command line but do not write to file")
     args = argparser.parse_args()
 

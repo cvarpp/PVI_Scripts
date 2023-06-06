@@ -1,17 +1,15 @@
 import pandas as pd
 import numpy as np
+from bisect import bisect_left
+import argparse
 import util
 from helpers import query_dscf, query_research, query_intake, clean_sample_id, try_datediff
-from bisect import bisect_left
 
 def lookup_query(row, source, latest_date, coi):
     doi = row['Date Collected']
     if doi > latest_date:
         doi = latest_date
     return source.loc[(doi, row['participant_id']), coi]
-    
-
-
 
 def fallible(row, date_lkp):
     try:
@@ -23,7 +21,7 @@ def fallible(row, date_lkp):
         exit(1)
     return output
 
-if __name__ == '__main__':
+def mars_report(args):
     mars_data = pd.read_excel(util.mars_folder + 'MARS for D4 Long.xlsx', sheet_name=None)
     ppl_info = mars_data['Baseline Info']
     exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
@@ -34,11 +32,11 @@ if __name__ == '__main__':
     tcell_data = pd.read_excel(util.proc + 'T Cell Experiments.xlsx', sheet_name=None)
     tcell_samples = tcell_data['Data'].set_index('Name').assign(sample_id=clean_sample_id)
     tcell_samples.loc[tcell_samples['IU/mL'] == '> 10¶', 'IU/mL'] = 20
-    tcell_ids = set(tcell_samples['sample_id'].unique())
+    # tcell_ids = set(tcell_samples['sample_id'].unique())
     tcell_wide = tcell_samples.pivot_table(values="IU/mL", index='sample_id', columns="Peptide \npreparation")
     for col in tcell_wide.columns:
         tcell_wide.loc[tcell_wide[col] == 20, col] = '>10'
-    tcell_results = tcell_data['IU.mL']
+    # tcell_results = tcell_data['IU.mL']
     paired_data = pd.read_excel(util.project_ws + 'Morgan/T Cell Experiments/MARS Heparin Tube Collection.xlsx', sheet_name=None)
     paired_df = paired_data['Pre,Post Biv Boost']
     paired_ppl = set(paired_df['Participant ID'].str.strip().to_numpy())
@@ -112,9 +110,14 @@ if __name__ == '__main__':
     source_df['Most Recent Infection Date'] = source_df.apply(lambda row: cov_date_lkp[row['participant_id']][row['COVID Count Pre-Sample'] - 1], axis=1)
     source_df['Most Recent Infection Test'] = source_df.apply(lambda row: cov_test_lkp[row['participant_id']][row['COVID Count Pre-Sample'] - 1], axis=1)
     source_df['Days to Most Recent Infection'] = source_df.apply(lambda row: try_datediff(row['Most Recent Infection Date'], row['Date Collected']), axis=1)
-    vax_dfs = {}
-    ab_cols = ['Qualitative', 'Quantitative'] + research_results.columns.to_list()
+    tcell_cols = tcell_wide.columns.to_list()
+    ab_cols = ['Qualitative', 'Quantitative', 'COV22'] + research_results.columns.to_list()
+    output_tcell_wide_cols = ['Date Collected', 'participant_id'] + tcell_cols + ab_cols + dem_cols
+    output_tcell_wide = source_df.loc[:, output_tcell_wide_cols].dropna(subset=tcell_cols)
+    output_tcell_wide_paired = output_tcell_wide[output_tcell_wide['participant_id'].isin(paired_ppl)].sort_values(by=['participant_id', 'Date Collected'])
+    output_tcell_long = tcell_samples.loc[:, ['IU/mL', 'Tr #', 'Peptide \npreparation', 'sample_id']].join(output_tcell_wide.drop(tcell_cols, axis='columns'), on='sample_id', how='inner')
     vax_df_cols = ['Date Collected', 'participant_id'] + ab_cols + ['Days to Most Recent Vaccine', 'Vax Count Pre-Sample', 'COVID Count Pre-Sample', 'Most Recent Vaccine Date', 'Most Recent Vaccine Type', 'Most Recent Vaccine Dose', 'Most Recent Infection Date', 'Most Recent Infection Test', 'Days to Most Recent Infection', 'Days to Dose 1', 'Days to Final Primary Dose', 'Days to Dose 3'] + dem_cols + ['Cancer', 'Chemotherapy']
+    vax_dfs = {}
     for dose_type in source_df['Most Recent Vaccine Dose'].unique():
         df = source_df[(source_df['Most Recent Vaccine Dose'] == dose_type)].copy()
         if dose_type == 'Unvaccinated':
@@ -123,16 +126,25 @@ if __name__ == '__main__':
             df['Clean'] = df.apply(lambda row: pd.isna(row['Most Recent Infection Date']) or (row['Most Recent Vaccine Date'] > row['Most Recent Infection Date']), axis=1)
         vax_dfs[dose_type] = df.loc[:, vax_df_cols[:7] + ['Clean'] + vax_df_cols[7:]]
     abs_long = source_df.loc[:, vax_df_cols]
-    tcell_cols = tcell_wide.columns.to_list()
-    output_tcell_wide_cols = ['Date Collected', 'participant_id'] + tcell_cols + ab_cols + dem_cols
-    output_tcell_wide = source_df.loc[:, output_tcell_wide_cols].dropna(subset=tcell_cols)
-    output_tcell_wide_paired = output_tcell_wide[output_tcell_wide['participant_id'].isin(paired_ppl)].sort_values(by=['participant_id', 'Date Collected'])
-    output_tcell_long = tcell_samples.loc[:, ['IU/mL', 'Tr #', 'Peptide \npreparation', 'sample_id']].join(output_tcell_wide.drop(tcell_cols, axis='columns'), on='sample_id', how='inner')
-    with pd.ExcelWriter(util.mars_folder + 'MARS Central Info.xlsx') as writer:
-        source_df.to_excel(writer, sheet_name='Source')
-        abs_long.to_excel(writer, sheet_name='Long')
-        output_tcell_wide.to_excel(writer, sheet_name='TCell Wide')
-        output_tcell_wide_paired.to_excel(writer, sheet_name='TCell Wide Paired')
-        for dose_type in vax_dfs.keys():
-            vax_dfs[dose_type].to_excel(writer, sheet_name=dose_type.replace(':', '_'))
-        output_tcell_long.to_excel(writer, 'TCell Long')
+    if not args.debug:
+        with pd.ExcelWriter(util.mars_folder + 'MARS Central Info.xlsx') as writer:
+            source_df.to_excel(writer, sheet_name='Source')
+            abs_long.to_excel(writer, sheet_name='Long')
+            output_tcell_wide.to_excel(writer, sheet_name='TCell Wide')
+            output_tcell_wide_paired.to_excel(writer, sheet_name='TCell Wide Paired')
+            for dose_type in vax_dfs.keys():
+                vax_dfs[dose_type].to_excel(writer, sheet_name=dose_type.replace(':', '_'))
+            output_tcell_long.to_excel(writer, 'TCell Long')
+    return source_df
+
+if __name__ == '__main__':
+    argparser = argparse.ArgumentParser(description='Generate report for all MARS samples')
+    argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="Prefix for the output file (in addition to current date)")
+    argparser.add_argument('-d', '--debug', action='store_true', help="Print to the command line but do not write to file")
+    args = argparser.parse_args()
+
+    source_df = mars_report(args)
+    print("{} samples from {} participants.".format(
+        source_df.shape[0],
+        source_df['participant_id'].unique().size
+    ))

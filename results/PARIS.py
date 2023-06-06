@@ -68,7 +68,7 @@ def paris_results():
     return sample_info.loc[:, col_order]
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(description='Paris reporting generation')
+    argparser = argparse.ArgumentParser(description='Generate report for all PARIS samples')
     argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="Prefix for the output file (current date appended")
     argparser.add_argument('-d', '--debug', action='store_true', help="Print to the command line but do not write to file")
     args = argparser.parse_args()
