@@ -92,7 +92,7 @@ def pull_from_source(debug=False):
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
     samplesClean = samples.dropna(subset=['Participant ID'])
-    cutoff_date = pd.to_datetime('2023-01-01').date()
+    cutoff_date = pd.to_datetime('2022-11-20').date()
     participant_samples = {participant: [] for participant in participants}
     submitted_key = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Source').drop_duplicates(subset=['Participant ID']).set_index('Participant ID')
     sample_exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Sample Exclusions')
