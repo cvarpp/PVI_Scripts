@@ -30,12 +30,12 @@ def timp_check(name):
     return mit or mars or iris or titan or prio
 
 if __name__ == '__main__':
-    argParser = argparse.ArgumentParser(description='Make Seronet monthly sample report.')
+    argParser = argparse.ArgumentParser(description='Aggregate inventory of each sample type for FP upload')
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=78)
     args = argParser.parse_args()
     home = '~/The Mount Sinai Hospital/'
     processing = home + 'Simon Lab - Processing Team/'
-    inventory_boxes = pd.read_excel(processing + 'ACTIVE_FreezerPro Import Sheet (use this!!).xlsx', sheet_name=None)
+    inventory_boxes = pd.read_excel(processing + 'New Import Sheet.xlsx', sheet_name=None)
     sample_types = ['Plasma', 'Serum', 'Pellet', 'Saliva', 'PBMC', 'HT', '4.5 mL Tube', 'All']
     data = {'Name': [], 'Sample ID': [], 'Sample Type': [],'Freezer': [],'Level1': [],'Level2': [],'Level3': [],'Box': [],'Position': [], 'ALIQUOT': []}
     samples_data = {st: deepcopy(data) for st in sample_types if st != 'HT'}
