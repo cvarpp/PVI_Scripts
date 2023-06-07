@@ -26,10 +26,8 @@ if __name__ == '__main__':
     iris_data = pd.read_excel(iris_folder + 'Participant Tracking - IRIS.xlsx', sheet_name='Main Project', header=4).dropna(subset=['Participant ID'])
     iris_data['Participant ID'] = iris_data['Participant ID'].apply(lambda val: val.strip().upper())
     iris_data.set_index('Participant ID', inplace=True)
-    samples = pd.read_excel('~/The Mount Sinai Hospital/Simon Lab - Sample Tracking/Sample Intake Log.xlsx', sheet_name='Sample Intake Log', header=util.header_intake, dtype=str)
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
-    samplesClean = samples.dropna(subset=['Participant ID'])
     vaccine_stuff = {}
     columns = ['Participant ID', 'Timepoint', 'Vaccine Type', 'Vaccine Date']
     exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
