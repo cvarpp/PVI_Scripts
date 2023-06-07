@@ -4,26 +4,25 @@ import util
 from helpers import query_dscf, query_intake
 
 
-### Create Master List indexed by (sample ID, material) with additional columns (catalog #, lot #, expiration)
 # Sample ID Master List - Master Sheet
 # Printing Log - LOG
 # Intake - Sample Intake Log
-# Data Sample Collection Form - Lot # Sheet, BSL2 Samples, BSL2+ Samples
+# Data Sample Collection Form - Lot # Sheet, all samples
 # Processing Notebook - Lot #s
 
 
 if __name__ == '__main__':
 
-      # Rename mast_list: Location - Study ID, Study ID - Sample ID
+      # Rename mast_list: Location - Kit Type, Study ID - Sample ID; plog: Study - Kit Type
       mast_list = (pd.read_excel(util.tracking + "Sample ID Master List.xlsx", sheet_name='Master Sheet', header=0)
-                   .rename(columns={'Location': 'Study', 'Study ID': 'Sample ID'}))
+                   .rename(columns={'Location': 'Kit Type', 'Study ID': 'Sample ID'}))
     
       plog = (pd.read_excel(util.print_log, sheet_name='LOG', header=5)
-              .rename(columns={'Box numbers': 'Box Min', 'Unnamed: 4': 'Box Max'})
+              .rename(columns={'Box numbers':'Box Min', 'Unnamed: 4':'Box Max', 'Study':'Kit Type'})
               .drop(0))
-    
-      dscf_bsl2 = query_dscf()
-      dscf_bsl2p = query_dscf()
+      
+      all_samples = query_dscf()
+
       dscf_lot = pd.read_excel(util.dscf, sheet_name='Lot # Sheet', header=0).iloc[:, :9]
 
       proc_lot = pd.read_excel(util.proc_ntbk, sheet_name='Lot #s', header=0)
@@ -55,16 +54,15 @@ if __name__ == '__main__':
       plog_failed_df.to_excel(util.proc + 'print_log_box_num_issue.xlsx', index=False)
 
 
-      # Create plog_df from plog_dict, join plog, drop 'index', set index ('Study', 'Box #')
-      plog_df = pd.DataFrame(plog_dict).join(plog, on='index').drop('index', axis='columns').set_index(['Study', 'Box #'])
+      # Create plog_df from plog_dict, join plog, drop 'index', set index ('Kit Type', 'Box #')
+      plog_df = pd.DataFrame(plog_dict).join(plog, on='index').drop('index', axis='columns').set_index(['Kit Type', 'Box #'])
 
-      # Drop NaN from 'Study'
-      mast_list_clean = mast_list.dropna(subset=['Study'])
+      # Drop NaN from 'Kit Type'
+      mast_list_clean = mast_list.dropna(subset=['Kit Type'])
 
       # Merge mast_list_clean & plog_df
-      merged_df1 = mast_list_clean.join(plog_df, on=['Study', 'Box #'], lsuffix='_mast', rsuffix='_plog')
+      merged_df1 = mast_list_clean.join(plog_df, on=['Kit Type', 'Box #'], lsuffix='_mast', rsuffix='_plog')
       # merged_df1_1 = pd.merge(mast_list_clean, plog_df, on=['Kit Type', 'Box #'])    # (3502, 38) obviously wrong but why?
-
 
       # print(mast_list_clean.shape)  # (17935, 9)
       # print(merged_df1.shape)  # (17043, 38)
@@ -72,12 +70,11 @@ if __name__ == '__main__':
       # print(merged_df1.drop_duplicates(subset=['Sample ID', 'Box #']).shape)  # (17043, 38)
 
 
-
-      #### plog & mast_list & intake ==>> Printed but Unused Kits
+      #### plog & mast_list & intake ==>> Printed Unused Kits
       
-      # Left join unused_kits & plog_df on 'Study' & 'Box #'
+      # Left join unused_kits & plog_df on 'Kit Type' & 'Box #'
 
-      # plog_df = pd.DataFrame(plog_dict).join(mast_list, on='index').set_index(['Study', 'Box #'])
+      # plog_df = pd.DataFrame(plog_dict).join(mast_list, on='index').set_index(['Kit Type', 'Box #'])
       plog_df['Date Printed'] = plog_df['Date Printed'].ffill()
 
       # Identify unused kit numbers for re-printing or discard
@@ -87,7 +84,7 @@ if __name__ == '__main__':
       # unused_kits['Printed'] = False
 
       # Add annotations for discrepant sample IDs
-      unused_kits = unused_kits.join(plog_df, on=['Study', 'Box #'], rsuffix='_printing')
+      unused_kits = unused_kits.join(plog_df, on=['Kit Type', 'Box #'], rsuffix='_printing')
       unused_kits.drop(columns=['Box Min', 'Box Max'], inplace=True)
 
       # Output 2: Printed but Unused Kits
@@ -101,6 +98,7 @@ if __name__ == '__main__':
 
       # Reformat lots on dscf_lot 7 proc_lot, indexed by (Date Used, Material)
       dscf_lot_reformatted = (dscf_lot.drop_duplicates(['Date Used', 'Material'])
+                              .dropna(subset=['Date Used'])
                               .set_index(['Date Used', 'Material'])
                               .fillna('Unavailable')
                               .unstack()    # reshape df by moving index to column headers
@@ -109,35 +107,59 @@ if __name__ == '__main__':
                               .ffill()    # forward-fill missing dates, with most recent non-missing one
                               .stack()    # revert df shape, bring column back to index
                               .reset_index())
+      dscf_lot_reformatted['Material'] = dscf_lot_reformatted['Material'].apply(lambda x: x.strip().upper().title())
+
+      # proc_lot_reformatted = (proc_lot.drop_duplicates(['Date Used', 'Material'])
+      #                         .set_index(['Date Used', 'Material']).fillna('Unavailable').unstack().resample('1d')
+      #                         .asfreq().ffill().stack().reset_index())
+      # proc_lot_reformatted['Material'] = proc_lot_reformatted['Material'].apply(lambda x: x.strip().upper().title())
+
+      proc_lot_reformatted = (proc_lot.drop_duplicates(['Date Used', 'Material'])
+                              .dropna(subset=['Date Used'])
+                              .set_index(['Date Used', 'Material']).fillna('Unavailable')
+                              .unstack().resample('1d').asfreq().ffill().stack().reset_index())
+      proc_lot_reformatted['Material'] = proc_lot_reformatted['Material'].apply(lambda x: x.strip().upper().title())
+
+
       
       # Keep columns: Date Used, Material, Long-Form Date, Lot Number, EXP Date, Catalog Mumber, Samples Affected/ COMMENTS
       selected_columns = ['Date Used', 'Material', 'Lot Number', 'EXP Date', 'Catalog Number', 'Samples Affected/ COMMENTS']
       dscf_lot_new = dscf_lot_reformatted[selected_columns]
-      proc_lot_new = proc_lot[selected_columns]
+      proc_lot_new = proc_lot_reformatted[selected_columns]
 
       # Concatenate dscf_lot & proc_lot
       concatenated_lot = pd.concat([dscf_lot_new, proc_lot_new])
       concatenated_lot.reset_index(drop=True, inplace=True)
-      # Checkpoint: proc_lot starts later than dscf_lot so overlap should be empty
 
-      # test (delete if lot_per_date no error)
+      # # Checkpoint: proc_lot starts later than dscf_lot so overlap should be empty
+      # overlap = pd.merge(dscf_lot_new, proc_lot_new, how='inner')
+      # if overlap.empty:
+      #       print("No overlap between dscf_lot and proc_lot.")
+      # else:
+      #       print("Overlap detected between dscf_lot and proc_lot. Need check.")
+      # overlap.to_excel(util.proc + 'print_log_test_overlap.xlsx', index=False)
+
+      # test (delete if lot_per_day no error)
       concatenated_lot.to_excel(util.proc + 'print_log_concatenated_lots.xlsx', index=False)
+
+      exit(0)
+
 
       # Lot per day
       concatenated_lot['Date Used'] = pd.to_datetime(concatenated_lot['Date Used'])
-      concatenated_lot = concatenated_lot.drop_duplicates(['Date Used', 'Material','Lot Number'])
-      concatenated_lot = concatenated_lot.set_index(['Date Used', 'Material'])
+      concatenated_lot = concatenated_lot.drop_duplicates()
+      concatenated_lot.set_index(['Date Used', 'Material'], inplace=True)
       
       lot_dates = pd.DataFrame({'Date Used': pd.date_range(concatenated_lot['Date Used'].min(), concatenated_lot['Date Used'].max(), freq='D')})
-      lot_per_day = concatenated_lot.set_index('Date Used').groupby('Material').ffill().resample('D').ffill().loc[all_dates['Date Used']]
+      lot_per_day = concatenated_lot.set_index('Date Used').groupby('Material').ffill().resample('D').ffill().loc[lot_dates['Date Used']]
 
       # Output 3: Lot used per day
       lot_per_day.to_excel(util.proc + 'print_log_lot_per_date.xlsx', index=False)
 
-
-
       # test
       print(lot_per_day.shape)
+
+      print(all_samples.columns)
 
 
       exit(0)
