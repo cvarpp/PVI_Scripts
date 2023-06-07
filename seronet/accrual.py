@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 import argparse
 import util
 from seronet.d4_all_data import pull_from_source
-from seronet.ecrabs_seronet import make_ecrabs
+from seronet.ecrabs import make_ecrabs
 from seronet.clinical_forms import write_clinical
 import os
 
@@ -46,17 +46,12 @@ def yes_no(val):
     else:
         return 'No'
 
-if __name__ == '__main__':
-    argParser = argparse.ArgumentParser(description='Make files for monthly data submission.')
-    argParser.add_argument('-u', '--update', action='store_true')
-    argParser.add_argument('-s', '--report_start', action='store', required=True, type=pd.to_datetime)
-    argParser.add_argument('-e', '--report_end', action='store', required=True, type=pd.to_datetime)
-    args = argParser.parse_args()
+def accrue(args):
     intermediate = 'monthly_report'
     if args.update:
-        all_data = pull_from_source().query('Date <= @args.report_end').copy()
-        ecrabs = make_ecrabs(all_data, output_fname=intermediate)
-        dfs_clin = write_clinical(pd.DataFrame(ecrabs['Biospecimen']), 'monthly_tmp')
+        all_data = pull_from_source(args.debug).query('Date <= @args.report_end').copy()
+        ecrabs = make_ecrabs(all_data, output_fname=intermediate, debug=args.debug)
+        dfs_clin = write_clinical(pd.DataFrame(ecrabs['Biospecimen']), 'monthly_tmp', debug=args.debug)
     else:
         all_data = pd.read_excel(util.unfiltered, keep_default_na=False).query('Date <= @args.report_end').copy()
         dfs_clin = pd.read_excel(util.cross_d4 + 'monthly_tmp.xlsx', sheet_name = None, keep_default_na=False)
@@ -78,9 +73,7 @@ if __name__ == '__main__':
                     .rename(columns={'Date': ppl_cols[-1]})) # rename date column
     output_outer = util.cross_d4 + 'Accrual/'
     output_inner = output_outer + '{}/'.format(datetime.date.today())
-    if not os.path.exists(output_inner):
-        os.makedirs(output_inner)
-    ppl_data.to_excel(output_inner + 'Accrual_Participant_Info.xlsx', index=False, na_rep='N/A')
+
     vax_cols = ['Research_Participant_ID', 'Visit_Number', 'Vaccination_Status', 'SARS-CoV-2_Vaccine_Type', 'SARS-CoV-2_Vaccination_Date_Duration_From_Visit1']
     orig_date = 'SARS-CoV-2_Vaccination_Date_Duration_From_Index'
     vax_data = dfs_clin['Vax'].loc[:, vax_cols[:-1] + [orig_date]].query('Research_Participant_ID in @data_ppl').copy()
@@ -88,7 +81,7 @@ if __name__ == '__main__':
     index_to_baseline = all_data.drop_duplicates(subset='Seronet ID').set_index('Seronet ID').loc[:, 'Days from Index']
     vax_data[vax_cols[-1]] = vax_data[orig_date].apply(lambda val: 0 if val == 'N/A' else val) - vax_data['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
     vax_data.loc[(vax_data[orig_date] == 'N/A'), vax_cols[-1]] = 'N/A'
-    vax_data.drop(orig_date, axis=1).to_excel(output_inner + 'Accrual_Vaccination_Status.xlsx', index=False, na_rep='N/A')
+
     sample_cols = ['Site_Cohort_Name', 'Primary_Cohort', 'Research_Participant_ID', 'Visit_Number', 'Visit_Date_Duration_From_Visit_1', 'SARS_CoV_2_Infection_Status', 'Serum_Shipped_To_FNL', 'Serum_Volume_For_FNL', 'PBMC_Shipped_To_FNL', 'Num_PBMC_Vials_For_FNL', 'PBMC_Concentration', 'Unscheduled_Visit', 'Unscheduled_Visit_Purpose', 'Lost_To_FollowUp', 'Final_Visit', 'Collected_In_This_Reporting_Period']
     keep_cols = ['Seronet ID', 'Cohort', 'Days from Index', 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'Sample ID', 'Date']
     col_map = {
@@ -157,4 +150,18 @@ if __name__ == '__main__':
     df_start['PBMC_Shipped_To_FNL'] = df_start['PBMC_Shipped_To_FNL'].apply(yes_no)
     df_start.loc[df_start['Num_PBMC_Vials_For_FNL'] == 0, 'PBMC_Shipped_To_FNL'] = 'N/A'
 
-    df_start.loc[:, sample_cols].to_excel(output_inner + 'Accrual_Visit_Info.xlsx', index=False, na_rep='N/A')
+    if not args.debug:
+        if not os.path.exists(output_inner):
+            os.makedirs(output_inner)
+        ppl_data.to_excel(output_inner + 'Accrual_Participant_Info.xlsx', index=False, na_rep='N/A')
+        vax_data.drop(orig_date, axis=1).to_excel(output_inner + 'Accrual_Vaccination_Status.xlsx', index=False, na_rep='N/A')
+        df_start.loc[:, sample_cols].to_excel(output_inner + 'Accrual_Visit_Info.xlsx', index=False, na_rep='N/A')
+
+if __name__ == '__main__':
+    argParser = argparse.ArgumentParser(description='Make files for monthly data submission.')
+    argParser.add_argument('-u', '--update', action='store_true')
+    argParser.add_argument('-s', '--report_start', action='store', required=True, type=pd.to_datetime)
+    argParser.add_argument('-e', '--report_end', action='store', required=True, type=pd.to_datetime)
+    argParser.add_argument('-d', '--debug', action='store_true')
+    args = argParser.parse_args()
+    accrue(args)

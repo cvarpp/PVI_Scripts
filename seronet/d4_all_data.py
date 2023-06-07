@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
+import argparse
 import util
-from datetime import datetime
 from helpers import query_dscf, query_research
 
 def sufficient(val):
@@ -10,7 +10,7 @@ def sufficient(val):
     except:
         return False
 
-def pull_from_source():
+def pull_from_source(debug=False):
     iris_data = pd.read_excel(util.iris_folder + 'Participant Tracking - IRIS.xlsx', sheet_name='Main Project', header=4).dropna(subset=['Participant ID'])
     titan_data = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Tracker', header=4).rename(columns={'Umbrella Corresponding Participant ID': 'Participant ID'}).dropna(subset=['Participant ID'])
     mars_data = pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name='Pt List').dropna(subset=['Participant ID'])
@@ -92,7 +92,7 @@ def pull_from_source():
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     visit_type = "Visit Type / Samples Needed"
     samplesClean = samples.dropna(subset=['Participant ID'])
-    cutoff_date = pd.to_datetime('2023-01-01').date()
+    cutoff_date = pd.to_datetime('2022-11-20').date()
     participant_samples = {participant: [] for participant in participants}
     submitted_key = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Source').drop_duplicates(subset=['Participant ID']).set_index('Participant ID')
     sample_exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Sample Exclusions')
@@ -135,7 +135,8 @@ def pull_from_source():
     all_samples = query_dscf(sid_list=samples_of_interest, no_pbmcs=no_pbmcs)
     all_samples['coll_time'] = all_samples.apply(lambda row: collection_log.loc[row.name, 'Time Collected'] if row.name in collection_log.index else row['Time Collected'], axis=1)
     serum_or_cells = all_samples['Volume of Serum Collected (mL)'].apply(sufficient) | all_samples['PBMC concentration per mL (x10^6)'].apply(sufficient)
-    all_samples[~serum_or_cells].to_excel(util.script_output + 'missing_info.xlsx', index=False)
+    if not debug:
+        all_samples[~serum_or_cells].to_excel(util.script_output + 'missing_info.xlsx', index=False)
     sample_info = all_samples[serum_or_cells].copy()
     sample_info.loc[sample_info['Volume of Serum Collected (mL)'] > 4.5, 'Volume of Serum Collected (mL)'] = 4.5
 
@@ -263,9 +264,14 @@ def pull_from_source():
                 data['Log2AUC'].append('-')
             data['coll_inits'].append(coll_inits)
     report = pd.DataFrame(data)
-    report.to_excel(util.unfiltered, index=False)
+    if not debug:
+        report.to_excel(util.unfiltered, index=False)
+        print("Report written to {}".format(util.unfiltered))
     print("{} samples characterized.".format(report.shape[0]))
     return report
 
 if __name__ == '__main__':
-    pull_from_source()
+    argParser = argparse.ArgumentParser(description='Annotate SERONET samples with processing data')
+    argParser.add_argument('-d', '--debug', action='store_true')
+    args = argParser.parse_args()
+    pull_from_source(args.debug)

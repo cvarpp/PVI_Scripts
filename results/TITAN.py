@@ -148,49 +148,54 @@ def titanify(df):
                 .reindex(tp_order, axis=1))
     df_pre = df[df['Boost Timepoint'] == "Pre-Dose 4"]
     df_post = df[df['Boost Timepoint'] != "Pre-Dose 4"]
+    if not args.debug:
+        with pd.ExcelWriter(output_fname) as writer:
+            df.to_excel(writer, sheet_name='Source')
+            df_long.to_excel(writer, sheet_name='Long-Form')
+            df_wide.to_excel(writer, sheet_name='Wide-Form')
+            df_wide_annot.to_excel(writer, sheet_name='Wide-Form Annotated')
+            tp_sample_ids.to_excel(writer, sheet_name='Wide-Form Sample ID Key')
+            df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'Transplant'] == 'K', axis=1)].to_excel(writer, sheet_name='Wide Kidney')
+            df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'Transplant'] == 'L', axis=1)].to_excel(writer, sheet_name='Wide Liver')
+            df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'Transplant'] in "OM", axis=1)].to_excel(writer, sheet_name='Wide Other+Multi')
+            df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'HIV'] == 'H', axis=1)].to_excel(writer, sheet_name='Wide HIV pos')
+            df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'HIV'] != 'H', axis=1)].to_excel(writer, sheet_name='Wide HIV neg')
+            (df_pre[(df_pre['Timepoint'] != 'None')]
+                .drop_duplicates(subset=['Full ID', 'Timepoint'], keep='last')
+                .pivot_table(values='AUC', index='Full ID', columns='Timepoint')
+                .reindex(tp_order, axis=1).to_excel(writer, sheet_name='Wide 3rd Dose'))
+            (df[(df['Boost Timepoint'] != 'None')]
+                .drop_duplicates(subset=['Full ID', 'Boost Timepoint'], keep='last')
+                .pivot_table(values='AUC', index='Full ID', columns='Boost Timepoint')
+                .reindex(tp_order_boost, axis=1).to_excel(writer, sheet_name='Wide 4th Dose'))
+            df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'AM'] == 'Yes', axis=1)].to_excel(writer, sheet_name='Wide AM')
+            df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'AM'] == 'No', axis=1)].to_excel(writer, sheet_name='Wide No AM')
+            df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'Prednisone'] == 'Yes', axis=1)].to_excel(writer, sheet_name='Wide Prednisone')
+            df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'Prednisone'] == 'No', axis=1)].to_excel(writer, sheet_name='Wide No Prednisone')
 
-    with pd.ExcelWriter(output_fname) as writer:
-        df.to_excel(writer, sheet_name='Source')
-        df_long.to_excel(writer, sheet_name='Long-Form')
-        df_wide.to_excel(writer, sheet_name='Wide-Form')
-        df_wide_annot.to_excel(writer, sheet_name='Wide-Form Annotated')
-        tp_sample_ids.to_excel(writer, sheet_name='Wide-Form Sample ID Key')
-        df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'Transplant'] == 'K', axis=1)].to_excel(writer, sheet_name='Wide Kidney')
-        df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'Transplant'] == 'L', axis=1)].to_excel(writer, sheet_name='Wide Liver')
-        df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'Transplant'] in "OM", axis=1)].to_excel(writer, sheet_name='Wide Other+Multi')
-        df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'HIV'] == 'H', axis=1)].to_excel(writer, sheet_name='Wide HIV pos')
-        df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'HIV'] != 'H', axis=1)].to_excel(writer, sheet_name='Wide HIV neg')
-        (df_pre[(df_pre['Timepoint'] != 'None')]
-            .drop_duplicates(subset=['Full ID', 'Timepoint'], keep='last')
-            .pivot_table(values='AUC', index='Full ID', columns='Timepoint')
-            .reindex(tp_order, axis=1).to_excel(writer, sheet_name='Wide 3rd Dose'))
-        (df[(df['Boost Timepoint'] != 'None')]
-            .drop_duplicates(subset=['Full ID', 'Boost Timepoint'], keep='last')
-            .pivot_table(values='AUC', index='Full ID', columns='Boost Timepoint')
-            .reindex(tp_order_boost, axis=1).to_excel(writer, sheet_name='Wide 4th Dose'))
-        df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'AM'] == 'Yes', axis=1)].to_excel(writer, sheet_name='Wide AM')
-        df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'AM'] == 'No', axis=1)].to_excel(writer, sheet_name='Wide No AM')
-        df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'Prednisone'] == 'Yes', axis=1)].to_excel(writer, sheet_name='Wide Prednisone')
-        df_wide[df_wide.apply(lambda row: ppl_key.loc[row.name, 'Prednisone'] == 'No', axis=1)].to_excel(writer, sheet_name='Wide No Prednisone')
-
-        df_long[df_long['Transplant'] == 'K'].to_excel(writer, sheet_name='Kidney')
-        df_long[df_long['Transplant'] == 'L'].to_excel(writer, sheet_name='Liver')
-        df_long[df_long['Transplant'].apply(lambda val: val in "OM")].to_excel(writer, sheet_name='Other+Multi')
-        df_long[df_long['HIV'] == 'H'].to_excel(writer, sheet_name='HIV pos')
-        df_long[df_long['HIV'] != 'H'].to_excel(writer, sheet_name='HIV neg')
-        df_pre.to_excel(writer, sheet_name='3rd Dose')
-        df_post.to_excel(writer, sheet_name='4th Dose')
-        df_long[df_long['AM'] == 'Yes'].to_excel(writer, sheet_name='AM')
-        df_long[df_long['AM'] == 'No'].to_excel(writer, sheet_name='No AM')
-        df_long[df_long['Prednisone'] == 'Yes'].to_excel(writer, sheet_name='Prednisone')
-        df_long[df_long['Prednisone'] == 'No'].to_excel(writer, sheet_name='No Prednisone')
-    print("Data written to {}".format(output_fname))
+            df_long[df_long['Transplant'] == 'K'].to_excel(writer, sheet_name='Kidney')
+            df_long[df_long['Transplant'] == 'L'].to_excel(writer, sheet_name='Liver')
+            df_long[df_long['Transplant'].apply(lambda val: val in "OM")].to_excel(writer, sheet_name='Other+Multi')
+            df_long[df_long['HIV'] == 'H'].to_excel(writer, sheet_name='HIV pos')
+            df_long[df_long['HIV'] != 'H'].to_excel(writer, sheet_name='HIV neg')
+            df_pre.to_excel(writer, sheet_name='3rd Dose')
+            df_post.to_excel(writer, sheet_name='4th Dose')
+            df_long[df_long['AM'] == 'Yes'].to_excel(writer, sheet_name='AM')
+            df_long[df_long['AM'] == 'No'].to_excel(writer, sheet_name='No AM')
+            df_long[df_long['Prednisone'] == 'Yes'].to_excel(writer, sheet_name='Prednisone')
+            df_long[df_long['Prednisone'] == 'No'].to_excel(writer, sheet_name='No Prednisone')
+        print("Data written to {}".format(output_fname))
+    print("{} samples from {} participants.".format(
+        df_long.shape[0],
+        df_long['participant_id'].unique().size
+    ))
 
 if __name__ == '__main__':
-    argParser = argparse.ArgumentParser(description='Annotate and split TITAN samples')
-    argParser.add_argument('-u', '--update', action='store_true')
+    argParser = argparse.ArgumentParser(description='Generate report for TITAN samples')
+    argParser.add_argument('-c', '--use_cache', action='store_true', help='Use cached results instead of pulling from source sheets')
+    argParser.add_argument('-d', '--debug', action='store_true', help="Print to the command line but do not write to file")
     args = argParser.parse_args()
-    if args.update:
+    if not args.use_cache:
         titanify(pull_data())
     else:
         titanify(pd.read_excel(util.script_folder + 'data/titan_intermediate.xlsx', index_col='sample_id'))
