@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
       ### dscf_lot & proc_lot ==> Concatenated Lots per Date
 
-      # Reformat lots on dscf_lot 7 proc_lot, indexed by (Date Used, Material)
+      # Reformat lots on dscf_lot & proc_lot
       dscf_lot_reformatted = (dscf_lot.drop_duplicates(['Date Used', 'Material'])
                               .dropna(subset=['Date Used'])
                               .set_index(['Date Used', 'Material'])
@@ -109,17 +109,12 @@ if __name__ == '__main__':
                               .reset_index())
       dscf_lot_reformatted['Material'] = dscf_lot_reformatted['Material'].apply(lambda x: x.strip().upper().title())
 
-      # proc_lot_reformatted = (proc_lot.drop_duplicates(['Date Used', 'Material'])
-      #                         .set_index(['Date Used', 'Material']).fillna('Unavailable').unstack().resample('1d')
-      #                         .asfreq().ffill().stack().reset_index())
-      # proc_lot_reformatted['Material'] = proc_lot_reformatted['Material'].apply(lambda x: x.strip().upper().title())
 
       proc_lot_reformatted = (proc_lot.drop_duplicates(['Date Used', 'Material'])
                               .dropna(subset=['Date Used'])
                               .set_index(['Date Used', 'Material']).fillna('Unavailable')
                               .unstack().resample('1d').asfreq().ffill().stack().reset_index())
       proc_lot_reformatted['Material'] = proc_lot_reformatted['Material'].apply(lambda x: x.strip().upper().title())
-
 
       
       # Keep columns: Date Used, Material, Long-Form Date, Lot Number, EXP Date, Catalog Mumber, Samples Affected/ COMMENTS
@@ -142,10 +137,15 @@ if __name__ == '__main__':
       # test (delete if lot_per_day no error)
       concatenated_lot.to_excel(util.proc + 'print_log_concatenated_lots.xlsx', index=False)
 
-      exit(0)
-
 
       # Lot per day
+
+
+      # print(concatenated_lot.columns)
+      # Index(['Date Used', 'Material', 'Lot Number', 'EXP Date', 'Catalog Number','Samples Affected/ COMMENTS'],
+      # dtype='object')
+
+
       concatenated_lot['Date Used'] = pd.to_datetime(concatenated_lot['Date Used'])
       concatenated_lot = concatenated_lot.drop_duplicates()
       concatenated_lot.set_index(['Date Used', 'Material'], inplace=True)
@@ -153,45 +153,27 @@ if __name__ == '__main__':
       lot_dates = pd.DataFrame({'Date Used': pd.date_range(concatenated_lot['Date Used'].min(), concatenated_lot['Date Used'].max(), freq='D')})
       lot_per_day = concatenated_lot.set_index('Date Used').groupby('Material').ffill().resample('D').ffill().loc[lot_dates['Date Used']]
 
+
+
+
+
       # Output 3: Lot used per day
-      lot_per_day.to_excel(util.proc + 'print_log_lot_per_date.xlsx', index=False)
+      lot_per_day.to_excel(util.proc + 'print_log_lot_per_day.xlsx', index=False)
 
       # test
       print(lot_per_day.shape)
-
       print(all_samples.columns)
 
 
       exit(0)
 
 
-      # merged_df1 (mast_list + plog) & sample ==> Sample with Date Printed
+      # all_samples & lot_per_day ==> Sample with Lot
 
-      # Delete later, make df col shorter for easy read use only
-      dscf_bsl2 = dscf_bsl2[["Date Processing Started", "Project", "Sample ID"]]
-      dscf_bsl2p = dscf_bsl2p[["Date Processing Started", "Project", "Sample ID"]]
-
-      # Merge merged_df1 with dscf_bsl2
-      merged_bsl2 = merged_df1.join(dscf_bsl2.set_index('Sample ID'), on='Sample ID', rsuffix='_dscf_bsl2')
-      merged_bsl2_alter = pd.merge(merged_df1, dscf_bsl2, on='Sample ID', suffixes=('', '_dscf_bsl2'))
-
-      # Merge merged_df1 with dscf_bsl2p
-      merged_bsl2p = merged_df1.join(dscf_bsl2p.set_index('Sample ID'), on='Sample ID', rsuffix='_dscf_bsl2p')
-      merged_bsl2p_alter = pd.merge(merged_df1, dscf_bsl2p, on='Sample ID', suffixes=('', '_dscf_bsl2p'))
-
-      # print(merged_bsl2.columns)  # (18032, 40)
-      # print(merged_bsl2_alter.columns)  # (11680, 40)
-      # print(merged_bsl2.columns)  # (18032, 40)
-      # print(merged_bsl2.columns)  # (11680, 40)
-      ### Discrepancy comes from: samples not in mast_list ???
 
 
       # Check sample's date, find matched lot
-
-
-
-
-
+      ### Discrepancy comes from: samples not in mast_list ???
 
 
       ### Create list indexed by (sample ID, material) with columns (catalog #, lot #, expiration)
