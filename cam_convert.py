@@ -9,11 +9,18 @@ import pandas as pd
 import util
 import datetime
 import argparse
+from helpers import clean_sample_id
 
 def clean_date(s):
-    return pd.to_datetime(s.apply(lambda val: val if isinstance(val, datetime.datetime) else '1/1/1900')).dt.date
+    '''
+    Converts a series of strings to datetime.date objects
+    '''
+    return pd.to_datetime(s, errors='coerce').dt.date
 
 def pull_archive(output_fname=util.clin_ops + 'CAM Archive/Archive Long.xlsx'):
+    '''
+    Pulls all CAM Archive data into a single dataframe
+    '''
     cam_archive = pd.read_excel(util.clin_ops + 'CAM Archive/CAM Archive.xlsx', sheet_name=None, header=None)
 
     sheet_df_arch = []
@@ -52,16 +59,13 @@ def pull_archive(output_fname=util.clin_ops + 'CAM Archive/Archive Long.xlsx'):
     cam_arch.to_excel(output_fname, index=False)
     return cam_arch
 
-if __name__ == '__main__':
-    argParser = argparse.ArgumentParser(description='Make Seronet monthly sample report.')
-    argParser.add_argument('-u', '--update', action='store_true')
-    args = argParser.parse_args()
+def transform_cam(update=False, debug=False):
+
     long_archive = util.clin_ops + 'CAM Archive/Archive Long.xlsx'
-    if args.update:
+    if update:
         cam_arch = pull_archive(output_fname=long_archive)
     else:
         cam_arch = pd.read_excel(long_archive)
-
     cam_active = pd.read_excel(util.clin_ops + 'CAM Clinic Schedule.xlsx', sheet_name=None, header=None)
     shared_header_1 = ['Date', 'Time', 'Time collected', 'Patient Name', 'Study',
         'Visit Type / Samples Needed', 'New or Follow-up?', 'Participant ID',
@@ -91,11 +95,20 @@ if __name__ == '__main__':
     cam_both = (pd.concat([cam_act, cam_arch]).drop_duplicates(subset=idx_cols)
                     .query('`Participant ID` not in @exclude')
                     .assign(Date = lambda df: clean_date(df['Date']),
-                            idx=lambda df: df.loc[:, idx_cols].astype(str).sum(axis=1))
+                            idx=lambda df: df.loc[:, idx_cols].astype(str).sum(axis=1),
+                            sample_id=clean_sample_id)
                     .sort_values(by='Date', ascending=False)
                     .set_index('idx'))
 
     output_fname = util.clin_ops + "Long-Form CAM Schedule.xlsx"
-    cam_both.to_excel(output_fname, index=False)
+    if not debug:
+        cam_both.to_excel(output_fname, index=False)
+        print("Long-Form CAM Schedule written to", output_fname)
+    return cam_both
 
-    print("Long-Form CAM Schedule written to", output_fname)
+if __name__ == '__main__':
+    argParser = argparse.ArgumentParser(description='Make Seronet monthly sample report.')
+    argParser.add_argument('-u', '--update', action='store_true')
+    argParser.add_argument('-d', '--debug', action='store_true')
+    args = argParser.parse_args()
+    cam_both = transform_cam(args.update, args.debug)
