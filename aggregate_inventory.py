@@ -14,14 +14,21 @@ from helpers import clean_sample_id
 
 
 def pos_convert(idx):
+    '''Converts a 0-80 index to a box position'''
     return str((idx // 9) + 1) + "/" + "ABCDEFGHI"[idx % 9]
 
-def filter_box(box_name, box_df=None):
+def filter_box(box_name, uploaded, args, box_df=None):
+    '''
+    Returns True if the box is not in the uploaded list and has a valid number of samples
+    '''
     if box_df is None:
         return False
     return (box_name not in uploaded) and ((args.min_count <= box_df.set_index('Name').loc[box_name, 'Tube Count'] <= 81) or (box_name in full_des))
 
 def timp_check(name):
+    '''
+    Returns True if the box is for a SERONET study
+    '''
     mit = "MIT" in name.upper()
     mars = "MARS" in name.upper()
     iris = "IRIS" in name.upper()
@@ -162,16 +169,16 @@ if __name__ == '__main__':
         box_data['Tube Count'].append(tube_count)
     box_df = pd.DataFrame(box_data)
     pd.DataFrame(samples_data['All']).to_excel(processing + 'inventory_in_progress.xlsx')
-    uploading_boxes = box_df[box_df['Name'].apply(lambda val: filter_box(val, box_df=box_df))]
+    uploading_boxes = box_df[box_df['Name'].apply(lambda val: filter_box(val, uploaded, args, box_df=box_df))]
     with pd.ExcelWriter(processing + 'aggregate_inventory_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))) as writer:
         for sample_type, data in samples_data.items():
             if sample_type != 'All':
                 df = pd.DataFrame(data)
-                df = df[df['Box'].apply(lambda val: filter_box(val, box_df=box_df))]
+                df = df[df['Box'].apply(lambda val: filter_box(val, uploaded, args, box_df=box_df))]
                 df.to_excel(writer, sheet_name='{}'.format(sample_type), index=False)
         box_df.to_excel(writer, sheet_name='Box Counts')
         uploading_boxes.to_excel(writer, sheet_name='Uploaded Box Counts')
-    for _, row in box_df[~box_df['Name'].apply(lambda val: filter_box(val, box_df=box_df))].iterrows():
+    for _, row in box_df[~box_df['Name'].apply(lambda val: filter_box(val, uploaded, args, box_df=box_df))].iterrows():
         print(row['Name'], 'with', row['Tube Count'], "tubes is partially inventoried and not being uploaded")
     if uploading_boxes.shape[0] > 0:
         print("Boxes to upload today:")
