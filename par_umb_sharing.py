@@ -63,16 +63,17 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-d', '--debug', action='store_true')
     argparser.add_argument('-c', '--use_cache', action='store_true')
+    argparser.add_argument('-r', '--recency', type=int, default=60, help='Number of days in the past to consider recent')
     args = argparser.parse_args()
 
     report = make_report(args.use_cache)
-    last_60_days = date.today() - datetime.timedelta(days=60)
-    old_report = report[report['Date'] < last_60_days]
-    report_filtered = report[report['Date'] >= last_60_days]
+    recency_cutoff = date.today() - datetime.timedelta(days=args.recency)
+    old_report = report[report['Date'] < recency_cutoff]
+    report_filtered = report[report['Date'] >= recency_cutoff]
     output_filename = util.sharing + 'result_reporting_test_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
     if not args.debug:
         with pd.ExcelWriter(output_filename) as writer:
             report_filtered.to_excel(writer, sheet_name='Needs Results - Recent', index=False)
             old_report.to_excel(writer, sheet_name='Needs Results - Old(60d+)', index=False)
         print("Report written to {}".format(output_filename))
-    print(report.shape[0], old_report.shape[0], report_filtered.shape[0])
+    print("Total to report:", report.shape[0], "Older count:", old_report.shape[0], "Recent Results to Share:", report_filtered.shape[0])
