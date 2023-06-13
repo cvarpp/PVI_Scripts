@@ -16,7 +16,7 @@ def make_report(use_cache=False):
     umbrella_info = pd.read_excel(util.umbrella_tracker, sheet_name='Summary', header=0)
     was_shared_col = 'Clinical Ab Result Shared?'
 
-    samples = query_intake(use_cache=use_cache)
+    samples = query_intake(use_cache=use_cache, include_research=True)
     share_filter = samples[was_shared_col].apply(not_shared)
     old_result_filter = ~samples['Qualitative'].apply(pd.isna)
     new_result_filter = ~samples['COV22'].apply(pd.isna)
@@ -29,7 +29,7 @@ def make_report(use_cache=False):
                 .assign(pid=lambda df: df['Subject ID'].str.strip())
                 .drop_duplicates(subset='pid').set_index('pid'))
 
-    keep_cols = ['participant_id', 'sample_id', 'Date Collected', util.visit_type, 'Email', 'Qualitative', 'Quantitative', 'COV22']
+    keep_cols = ['participant_id', 'sample_id', 'Date Collected', util.visit_type, 'Email', 'Qualitative', 'Quantitative', 'COV22', 'Spike endpoint', 'AUC']
     report = samplesClean.join(emails, on='participant_id').reset_index().loc[:, keep_cols]
     return report
 
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     if not args.debug:
         with pd.ExcelWriter(output_filename) as writer:
             report_new_emails.to_excel(writer, sheet_name='Results to Share', index=False)
-            report_new_no_emails.to_excel(writer, sheet_name='Recent Unshared Results - Email Missing', index=False)
+            report_new_no_emails.to_excel(writer, sheet_name='Recent Unshared - Email Missing', index=False)
             report_old.to_excel(writer, sheet_name='Older Unshared Results', index=False)
         print("Report written to {}".format(output_filename))
     print("Total to report:", report.shape[0], "Older count:", report_old.shape[0], "Recent Results to Share:", report_new_emails.shape[0], "Recent Results Missing Email:", report_new_no_emails.shape[0])
