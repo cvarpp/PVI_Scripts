@@ -134,38 +134,28 @@ if __name__ == '__main__':
             print("Overlap detected between dscf_lot and proc_lot. Need check.")
             overlap.to_excel(util.proc + 'print_log_overlap.xlsx', index=False)
 
-      # Drop duplicates & Set index 
+      # Drop duplicates & Set index (Date Used, Material)
       concatenated_lot = concatenated_lot.drop_duplicates()
-      concatenated_lot.set_index(['Date Used', 'Material'], inplace=True)
 
-      concatenated_lot.reset_index(inplace=True)
-
-
+      # Output 3: Concatenated Lots
       concatenated_lot.to_excel(util.proc + 'print_log_concatenated_lots.xlsx', index=False)
-
-
-      exit(0)
-
-
-      # Lot per day
-
       # Index(['Date Used', 'Material', 'Lot Number', 'EXP Date', 'Catalog Number','Samples Affected/ COMMENTS'], dtype='object')
 
 
-      concatenated_lot['Date Used'] = pd.to_datetime(concatenated_lot['Date Used'])
-      concatenated_lot = concatenated_lot.drop_duplicates()
-      concatenated_lot.set_index(['Date Used', 'Material'], inplace=True)
-      
 
+
+
+
+      # Lot per day
+      
+      #concatenated_lot['Date Used'] = pd.to_datetime(concatenated_lot['Date Used'])
+      concatenated_lot.set_index(['Date Used', 'Material'], inplace=True)
+      concatenated_lot.reset_index(inplace=True)
 
       lot_dates = pd.DataFrame({'Date Used': pd.date_range(concatenated_lot['Date Used'].min(), concatenated_lot['Date Used'].max(), freq='D')})
       lot_per_day = concatenated_lot.set_index('Date Used').groupby('Material').ffill().resample('D').ffill().loc[lot_dates['Date Used']]
 
-
-
-
-
-      # Output 3: Lot used per day
+      # Output 4: Lot used per day
       lot_per_day.to_excel(util.proc + 'print_log_lot_per_day.xlsx', index=False)
 
       # test
@@ -173,35 +163,15 @@ if __name__ == '__main__':
       print(all_samples.columns)
 
 
-      exit(0)
-
-
-      # all_samples & lot_per_day ==> Sample with Lot
-
-
+      ### all_samples & lot_per_day ==> Sample with Lot info
 
       # Check sample's date, find matched lot
       ### Discrepancy comes from: samples not in mast_list ???
-
 
       ### Create list indexed by (sample ID, material) with columns (catalog #, lot #, expiration)
 
       summary_list = merged_data.set_index(['Sample ID', 'Material'])[['Catalog #', 'Lot #', 'Expiration']]
 
-      # Output 4: List indexed by (sample ID, material) with (catalog #, lot #, expiration)
+      # Output 5: List indexed by (sample ID, material) with (catalog #, lot #, expiration)
       summary_list.to_excel(util.proc + 'print_log_reformatted_lots.xlsx', index=False)
-
-
-
-      
-
-
-
-
-
-
-
-
-
-
 
