@@ -18,8 +18,9 @@ def make_report(use_cache=False):
 
     samples = query_intake(use_cache=use_cache)
     share_filter = samples[was_shared_col].apply(not_shared)
-    result_filter = (samples['Qualitative'] != '') & ~samples['Qualitative'].apply(pd.isna)
-    samplesClean = samples[share_filter & result_filter].copy()
+    old_result_filter = ~samples['Qualitative'].apply(pd.isna)
+    new_result_filter = ~samples['COV22'].apply(pd.isna)
+    samplesClean = samples[share_filter & (old_result_filter | new_result_filter)].copy()
     samplesCleanAll = samplesClean.copy()
     older_results = []
     pemail = paris_info[['Subject ID', 'E-mail']].rename(columns={'E-mail': 'Email'})
@@ -28,35 +29,8 @@ def make_report(use_cache=False):
                 .assign(pid=lambda df: df['Subject ID'].str.strip())
                 .drop_duplicates(subset='pid').set_index('pid'))
 
-    participants = samplesClean['participant_id'].unique()
-    participant_results = {participant: [] for participant in participants}
-    for sid, sample in samplesClean.iterrows():
-        participant = sample['participant_id']
-        if pd.isna(sample[was_shared_col]) or sample[was_shared_col] == "No":
-            if str(sample['Qualitative']).strip().upper()[:2] == "NE":
-                sample['Qualitative'] = "Negative"
-                sample['Quantitative'] = "Negative"
-            try:
-                participant_results[participant].append((pd.to_datetime(sample['Date Collected']).date(), sid, sample[util.visit_type], sample['Qualitative'], sample['Quantitative']))
-            except:
-                print("Sample", sid, "improperly recorded as collected on", sample['Date Collected'])
-                print("Not included in result sharing")
-    data = {'Participant ID': [], 'Sample ID': [], 'Date': [], 'Email': [], 'Visit Type': [], 'Qualitative': [], 'Quantitative': []}
-    for participant, results in participant_results.items():
-        for result in results:
-            date_collected, sample_id, util.visit_type, result_stat, result_value = result
-            data['Participant ID'].append(participant)
-            data['Sample ID'].append(sample_id)
-            data['Date'].append(date_collected)
-            data['Visit Type'].append(util.visit_type)
-            data['Qualitative'].append(result_stat)
-            data['Quantitative'].append(result_value)
-            if participant in emails.index:
-                email = emails.loc[participant, 'Email']
-            else:
-                email = ''
-            data['Email'].append(email)
-    report = pd.DataFrame(data)
+    keep_cols = ['participant_id', 'sample_id', 'Date Collected', util.visit_type, 'Email', 'Qualitative', 'Quantitative', 'COV22']
+    report = samplesClean.join(emails, on='participant_id').reset_index().loc[:, keep_cols]
     return report
 
 if __name__ == '__main__':
@@ -68,12 +42,17 @@ if __name__ == '__main__':
 
     report = make_report(args.use_cache)
     recency_cutoff = date.today() - datetime.timedelta(days=args.recency)
-    old_report = report[report['Date'] < recency_cutoff]
-    report_filtered = report[report['Date'] >= recency_cutoff]
+    report_old = report[report['Date Collected'] < recency_cutoff]
+    report_new = report[report['Date Collected'] >= recency_cutoff]
+    report_new_emails = report_new[~report_new['Email'].isna()]
+    report_new_no_emails = report_new[report_new['Email'].isna()]
+    assert(report_old.shape[0] + report_new.shape[0] == report.shape[0])
+    assert(report_new_emails.shape[0] + report_new_no_emails.shape[0] == report_new.shape[0])
     output_filename = util.sharing + 'result_reporting_test_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
     if not args.debug:
         with pd.ExcelWriter(output_filename) as writer:
-            report_filtered.to_excel(writer, sheet_name='Needs Results - Recent', index=False)
-            old_report.to_excel(writer, sheet_name='Needs Results - Old(60d+)', index=False)
+            report_new_emails.to_excel(writer, sheet_name='Results to Share', index=False)
+            report_new_no_emails.to_excel(writer, sheet_name='Recent Unshared Results - Email Missing', index=False)
+            report_old.to_excel(writer, sheet_name='Older Unshared Results', index=False)
         print("Report written to {}".format(output_filename))
-    print("Total to report:", report.shape[0], "Older count:", old_report.shape[0], "Recent Results to Share:", report_filtered.shape[0])
+    print("Total to report:", report.shape[0], "Older count:", report_old.shape[0], "Recent Results to Share:", report_new_emails.shape[0], "Recent Results Missing Email:", report_new_no_emails.shape[0])
