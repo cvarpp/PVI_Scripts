@@ -31,6 +31,8 @@ def make_report(use_cache=False):
 
     keep_cols = ['participant_id', 'sample_id', 'Date Collected', util.visit_type, 'Email', 'Qualitative', 'Quantitative', 'COV22', 'Spike endpoint', 'AUC']
     report = samplesClean.join(emails, on='participant_id').reset_index().loc[:, keep_cols]
+    report['COV22 / Quant'] = np.exp2(np.log2(report['COV22']) - np.log2(report['Quantitative']))
+    report['COV22 / Research'] = np.exp2(np.log2(report['COV22']) - np.log2(report['AUC']))
     return report
 
 if __name__ == '__main__':
