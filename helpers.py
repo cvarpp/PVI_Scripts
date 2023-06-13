@@ -191,7 +191,9 @@ def clean_path(df):
     '''
     df = df.copy()
     df['Qualitative'] = df[util.qual].apply(lambda val: "Negative" if str(val).strip().upper()[:2] == "NE" else val)
+    df['Quant_str'] = df[util.quant].fillna('').astype(str)
     df['Quantitative'] = df.apply(lambda row: 1 if row['Qualitative'] == 'Negative' else row[util.quant], axis=1).apply(try_convert).astype(float)
+    df['COV22_str'] = df['COV22 Results'].fillna('').astype(str)
     df['COV22'] = df['COV22 Results'].apply(lambda val: 1 if str(val).strip().upper()[:2] == 'NE' else val).apply(try_convert).astype(float)
     df['Log2Quant'] = np.log2(df['Quantitative'])
     df['Log2COV22'] = np.log2(df['COV22'])

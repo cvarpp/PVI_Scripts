@@ -19,7 +19,7 @@ def make_report(use_cache=False):
     samples = query_intake(use_cache=use_cache, include_research=True)
     share_filter = samples[was_shared_col].apply(not_shared)
     old_result_filter = ~samples['Qualitative'].apply(pd.isna)
-    new_result_filter = ~samples['COV22'].apply(pd.isna)
+    new_result_filter = ~samples['COV22'].apply(pd.isna) | (samples['COV22_str'].str.len() > 0)
     samplesClean = samples[share_filter & (old_result_filter | new_result_filter)].copy()
     samplesCleanAll = samplesClean.copy()
     older_results = []
@@ -29,7 +29,7 @@ def make_report(use_cache=False):
                 .assign(pid=lambda df: df['Subject ID'].str.strip())
                 .drop_duplicates(subset='pid').set_index('pid'))
 
-    keep_cols = ['participant_id', 'sample_id', 'Date Collected', util.visit_type, 'Email', 'Qualitative', 'Quantitative', 'COV22', 'Spike endpoint', 'AUC']
+    keep_cols = ['participant_id', 'sample_id', 'Date Collected', util.visit_type, 'Email', 'Qualitative', 'Quant_str', 'COV22_str', 'Quantitative', 'COV22', 'Spike endpoint', 'AUC']
     report = samplesClean.join(emails, on='participant_id').reset_index().loc[:, keep_cols]
     report['COV22 / Quant'] = np.exp2(np.log2(report['COV22']) - np.log2(report['Quantitative']))
     report['COV22 / Research'] = np.exp2(np.log2(report['COV22']) - np.log2(report['AUC']))
