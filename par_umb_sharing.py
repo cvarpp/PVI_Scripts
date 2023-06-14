@@ -50,7 +50,7 @@ if __name__ == '__main__':
     report_new_no_emails = report_new[report_new['Email'].isna()]
     assert(report_old.shape[0] + report_new.shape[0] == report.shape[0])
     assert(report_new_emails.shape[0] + report_new_no_emails.shape[0] == report_new.shape[0])
-    output_filename = util.sharing + 'result_reporting_test_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
+    output_filename = util.sharing + 'result_reporting_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
     if not args.debug:
         with pd.ExcelWriter(output_filename) as writer:
             report_new_emails.to_excel(writer, sheet_name='Results to Share', index=False)
