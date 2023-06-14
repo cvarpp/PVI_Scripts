@@ -41,4 +41,4 @@ if __name__ == '__main__':
             missing_intake.to_excel(writer, sheet_name='Missing from Intake', index=False)
             missing_dscf.to_excel(writer, sheet_name='Missing from DSCF', index=False)
             missing_cam.to_excel(writer, sheet_name='Missing from CAM', index=False)
-    print("DSCF: {}, Intake: {}, CAM: {} Invalid: {}".format(missing_dscf.shape[0], missing_intake.shape[0], missing_cam.shape[0], invalid_ids.shape[0]))
+    print("DSCF: {}, Intake: {}, CAM: {}, Invalid: {}".format(missing_dscf.shape[0], missing_intake.shape[0], missing_cam.shape[0], invalid_ids.shape[0]))
