@@ -3,13 +3,11 @@ import argparse
 import util
 from helpers import query_dscf, query_intake
 
-
 # Sample ID Master List - Master Sheet
 # Printing Log - LOG
 # Intake - Sample Intake Log
 # Data Sample Collection Form - Lot # Sheet, all samples
 # Processing Notebook - Lot #s
-
 
 if __name__ == '__main__':
 
@@ -64,11 +62,6 @@ if __name__ == '__main__':
       merged_df1 = mast_list_clean.join(plog_df, on=['Kit Type', 'Box #'], lsuffix='_mast', rsuffix='_plog')
       # merged_df1_1 = pd.merge(mast_list_clean, plog_df, on=['Kit Type', 'Box #'])    # (3502, 38) obviously wrong but why?
 
-      # print(mast_list_clean.shape)  # (17935, 9)
-      # print(merged_df1.shape)  # (17043, 38)
-      # print(merged_df1.columns)
-      # print(merged_df1.drop_duplicates(subset=['Sample ID', 'Box #']).shape)  # (17043, 38)
-
 
       #### plog & mast_list & intake ==>> Printed Unused Kits
       
@@ -90,11 +83,8 @@ if __name__ == '__main__':
       # Output 2: Printed but Unused Kits
       unused_kits.dropna(subset='Date Printed').to_excel(util.proc + 'print_log_unused_kits.xlsx', index=False)
 
-      # print(dscf_lot.columns)
-      # print(dscf_lot.shape)  # (224, 19)
 
-
-      ### dscf_lot & proc_lot ==> Concatenated Lots per Date
+      #### dscf_lot & proc_lot ==> Concatenated Lots per Date
 
       # Reformat lots on dscf_lot & proc_lot
       dscf_lot_reformatted = (dscf_lot.drop_duplicates(['Date Used', 'Material'])
@@ -109,13 +99,11 @@ if __name__ == '__main__':
                               .reset_index())
       dscf_lot_reformatted['Material'] = dscf_lot_reformatted['Material'].apply(lambda x: x.strip().upper().title())
 
-
       proc_lot_reformatted = (proc_lot.drop_duplicates(['Date Used', 'Material'])
                               .dropna(subset=['Date Used'])
                               .set_index(['Date Used', 'Material']).fillna('Unavailable')
                               .unstack().resample('1d').asfreq().ffill().stack().reset_index())
       proc_lot_reformatted['Material'] = proc_lot_reformatted['Material'].apply(lambda x: x.strip().upper().title())
-
       
       # Lot keep columns: Date Used, Material, Long-Form Date, Lot Number, EXP Date, Catalog Mumber, Samples Affected/ COMMENTS
       selected_columns = ['Date Used', 'Material', 'Lot Number', 'EXP Date', 'Catalog Number', 'Samples Affected/ COMMENTS']
@@ -143,14 +131,9 @@ if __name__ == '__main__':
 
       # Output 3: Concatenated Lots
       concatenated_lot.to_excel(util.proc + 'print_log_concatenated_lots.xlsx', index=False)
-      
-      # print(concatenated_lot.columns)
-      # print(concatenated_lot.dtypes)
-      # Index(['Date Used', 'Material', 'Lot Number', 'EXP Date', 'Catalog Number','Samples Affected/ COMMENTS'], dtype='object')
 
 
-
-      ### all_samples & lot_per_day ==> Sample with Lot info
+      #### all_samples & lot_per_day ==> Sample with Lot Info
 
       # all_samples keep column: Sample ID, Date Processing Started
       all_samples = query_dscf()
@@ -160,9 +143,9 @@ if __name__ == '__main__':
       all_samples['Date Processing Started'] = pd.to_datetime(all_samples['Date Processing Started'])
       sample_with_lot = pd.merge(all_samples, concatenated_lot, left_on='Date Processing Started', right_on='Date Material Opened')
 
-      # Set (sample_id, Material) as index, Access other columns using df.loc
+      # Set (sample_id, Material) as index
       sample_with_lot.set_index(['sample_id', 'Material'], inplace=True)
-      #sample_with_lot_columns = sample_with_lot.loc[:, ['Date Material Opened', 'Lot Number', 'EXP Date', 'Catalog Number', 'Samples Affected/ COMMENTS']]
+      # sample_with_lot_columns = sample_with_lot.loc[:, ['Date Material Opened', 'Lot Number', 'EXP Date', 'Catalog Number', 'Samples Affected/ COMMENTS']]
 
       # Output 4: List indexed by (sample ID, material) with (catalog #, lot #, expiration)
       sample_with_lot.to_excel(util.proc + 'print_log_sample_with_lot.xlsx')
