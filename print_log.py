@@ -164,6 +164,7 @@ if __name__ == '__main__':
 
 
       # Output 5: List indexed by (sample ID, material) with (catalog #, lot #, expiration)
+      sample_with_lot.set_index(['sample_id', 'Material'], inplace=True)
       sample_with_lot.to_excel(util.proc + 'print_log_sample_with_lot.xlsx', index=False)
 
 
