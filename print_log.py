@@ -117,7 +117,7 @@ if __name__ == '__main__':
       proc_lot_reformatted['Material'] = proc_lot_reformatted['Material'].apply(lambda x: x.strip().upper().title())
 
       
-      # Keep columns: Date Used, Material, Long-Form Date, Lot Number, EXP Date, Catalog Mumber, Samples Affected/ COMMENTS
+      # Lot keep columns: Date Used, Material, Long-Form Date, Lot Number, EXP Date, Catalog Mumber, Samples Affected/ COMMENTS
       selected_columns = ['Date Used', 'Material', 'Lot Number', 'EXP Date', 'Catalog Number', 'Samples Affected/ COMMENTS']
       dscf_lot_new = dscf_lot_reformatted[selected_columns]
       proc_lot_new = proc_lot_reformatted[selected_columns]
@@ -134,44 +134,68 @@ if __name__ == '__main__':
             print("Overlap detected between dscf_lot and proc_lot. Need check.")
             overlap.to_excel(util.proc + 'print_log_overlap.xlsx', index=False)
 
-      # Drop duplicates & Set index (Date Used, Material)
+      # Map format & Drop duplicates
+      concatenated_lot['Material'] = concatenated_lot['Material'].apply(lambda x: x.strip().upper().title())
       concatenated_lot = concatenated_lot.drop_duplicates()
 
       # Output 3: Concatenated Lots
       concatenated_lot.to_excel(util.proc + 'print_log_concatenated_lots.xlsx', index=False)
+      
+      # print(concatenated_lot.columns)
+      # print(concatenated_lot.dtypes)
       # Index(['Date Used', 'Material', 'Lot Number', 'EXP Date', 'Catalog Number','Samples Affected/ COMMENTS'], dtype='object')
 
 
 
 
-
-
-      # Lot per day
-      
-      #concatenated_lot['Date Used'] = pd.to_datetime(concatenated_lot['Date Used'])
-      concatenated_lot.set_index(['Date Used', 'Material'], inplace=True)
-      concatenated_lot.reset_index(inplace=True)
-
-      lot_dates = pd.DataFrame({'Date Used': pd.date_range(concatenated_lot['Date Used'].min(), concatenated_lot['Date Used'].max(), freq='D')})
-      lot_per_day = concatenated_lot.set_index('Date Used').groupby('Material').ffill().resample('D').ffill().loc[lot_dates['Date Used']]
-
-      # Output 4: Lot used per day
-      lot_per_day.to_excel(util.proc + 'print_log_lot_per_day.xlsx', index=False)
-
-      # test
-      print(lot_per_day.shape)
-      print(all_samples.columns)
-
-
       ### all_samples & lot_per_day ==> Sample with Lot info
 
-      # Check sample's date, find matched lot
-      ### Discrepancy comes from: samples not in mast_list ???
+      # all_samples keep column: Sample ID, Date Processing Started
+      all_samples = query_dscf()
+      all_samples = all_samples.reset_index()[['sample_id', 'Date Processing Started']]
 
-      ### Create list indexed by (sample ID, material) with columns (catalog #, lot #, expiration)
+      # Merge based on 'Date Processing Started' in all_samples & 'Date Used' in concatenated_lots
+      all_samples['Date Processing Started'] = pd.to_datetime(all_samples['Date Processing Started'])
+      sample_with_lot = pd.merge(all_samples, concatenated_lot, left_on='Date Processing Started', right_on='Date Used')
 
-      summary_list = merged_data.set_index(['Sample ID', 'Material'])[['Catalog #', 'Lot #', 'Expiration']]
+
+      # print(sample_with_lot.columns)
+      # Index(['sample_id', 'Date Processing Started', 'Date Used', 'Material','Lot Number', 'EXP Date', 'Catalog Number', 'Samples Affected/ COMMENTS'], dtype='object'))
+
 
       # Output 5: List indexed by (sample ID, material) with (catalog #, lot #, expiration)
-      summary_list.to_excel(util.proc + 'print_log_reformatted_lots.xlsx', index=False)
+      sample_with_lot.to_excel(util.proc + 'print_log_sample_with_lot.xlsx', index=False)
+
+
+
+
+
+      # Lot per day 1
+      
+      # concatenated_lot['Date Used'] = pd.to_datetime(concatenated_lot['Date Used'])
+      # concatenated_lot.set_index(['Date Used', 'Material'], inplace=True)
+      # concatenated_lot.reset_index(inplace=True)
+
+      # lot_dates = pd.DataFrame({'Date Used': pd.date_range(concatenated_lot['Date Used'].min(), concatenated_lot['Date Used'].max(), freq='D')})
+      # lot_per_day = concatenated_lot.set_index('Date Used').groupby('Material').ffill().resample('D').ffill().loc[lot_dates['Date Used']]
+
+
+
+      # Lot per day 2
+
+      # concatenated_lot['Date Used'] = pd.to_datetime(concatenated_lot['Date Used'])
+      # concatenated_lot.set_index(['Date Used', 'Material'], inplace=True)
+      # concatenated_lot.reset_index(inplace=True)
+
+      # lot_dates = pd.DataFrame({'Date Used': concatenated_lot['Date Used'].unique()})
+      # lot_per_day = concatenated_lot.groupby(['Material', pd.Grouper(key='Date Used', freq='D')]).ffill()
+      # lot_per_day.reset_index(inplace=True)
+      # lot_per_day = lot_per_day[lot_per_day['Date'].isin(lot_dates['Date Used'])]
+
+
+      # # Output 4: Lot used per day
+      # lot_per_day.to_excel(util.proc + 'print_log_lot_per_day.xlsx', index=False)
+
+
+
 
