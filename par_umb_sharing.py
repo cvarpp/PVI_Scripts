@@ -14,6 +14,8 @@ def not_shared(val):
 def make_report(use_cache=False):
     paris_info = pd.read_excel(util.paris_tracker, sheet_name='Main', header=8)
     umbrella_info = pd.read_excel(util.umbrella_tracker, sheet_name='Summary', header=0)
+    titan_info = pd.read_excel(util.titan_tracker, sheet_name='Tracker', header=4)
+
     was_shared_col = 'Clinical Ab Result Shared?'
 
     samples = query_intake(use_cache=use_cache, include_research=True)
@@ -25,7 +27,8 @@ def make_report(use_cache=False):
     older_results = []
     pemail = paris_info[['Subject ID', 'E-mail']].rename(columns={'E-mail': 'Email'})
     uemail = umbrella_info[['Subject ID', 'Email']]
-    emails = (pd.concat([pemail, uemail])
+    temail = titan_info[['Umbrella Corresponding Participant ID', 'Email (From EPIC)']].rename(columns={'Umbrella Corresponding Participant ID': 'Subject ID', 'Email (From EPIC)': 'Email'})
+    emails = (pd.concat([pemail, uemail, temail])
                 .assign(pid=lambda df: df['Subject ID'].str.strip())
                 .drop_duplicates(subset='pid').set_index('pid'))
 
