@@ -100,7 +100,7 @@ def fallible(f, default=np.nan):
             return default
     return tmp
 
-def query_dscf(sid_list=None, no_pbmcs=set()):
+def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False):
     '''
     Retrieve processing data (volumes, cell counts, and times) for all samples.
     Aggregates across 3 separate files and multiple tabs.
@@ -109,31 +109,41 @@ def query_dscf(sid_list=None, no_pbmcs=set()):
 
     `no_pbmcs` will override initially reported PBMC counts to reflect used sample IDs
     '''
-    correct_2p = {'Comments': 'COMMENTS'}
-    dscf_info = pd.ExcelFile(util.dscf)
-    bsl2p_samples = dscf_info.parse(sheet_name='BSL2+ Samples', header=1).rename(columns=correct_2p)
-    bsl2_samples = dscf_info.parse(sheet_name='BSL2 Samples')
-    correct_crp = {'CELL COUNTER (Total)': 'Cell Count',
-                   '# Aliquots Frozen': '# of aliquots frozen',
-                   'Total Volume of Serum after first spin (ml)': 'Total volume of serum (mL)',
-                   'ACD VOLUME': 'CPT/EDTA VOL'}
-    crp_samples = dscf_info.parse(sheet_name='CRP').rename(columns=correct_crp)
-    crp_samples['# cells per aliquot'] = crp_samples.apply(fallible(lambda row: row['Cell Count'] / row['# of aliquots frozen']), axis=1)
-    crp_samples.loc[crp_samples['Total volume of serum after second spin (ml)'].str.upper().str.strip() != 'X', 'Total volume of serum (mL)'] = crp_samples.loc[crp_samples['Total volume of serum after second spin (ml)'].str.upper().str.strip() != 'X', 'Total volume of serum after second spin (ml)']
-    date_cols = ['Date Processing Started']
-    correct_new = {'# PBMCs per Aliquot': '# cells per aliquot',
-                   '# Aliquots': '# of aliquots frozen',
-                   'Total Plasma Vol. (mL)': 'Total volume of plasma (mL)',
-                   'Total Serum Vol. (mL)': 'Total volume of serum (mL)',
-                   'SST Volume': 'SST VOL',
-                   'Cell Tube Volume (mL)': 'CPT/EDTA VOL'}
-    new_samples = pd.read_excel(util.proc + 'Processing Notebook.xlsx', sheet_name='Specimen Dashboard', header=1).rename(columns=correct_new)
-    all_samples = (pd.concat([bsl2p_samples, bsl2_samples, crp_samples, new_samples])
-                     .assign(sample_id=clean_sample_id)
-                     .drop_duplicates(subset=['sample_id'], keep='last')
-                     .assign(serum_vol=clean_serum)
-                     .pipe(clean_cells, no_pbmcs)
-                     .pipe(map_dates, date_cols))
+    if use_cache:
+        all_samples = pd.read_hdf(util.proc + 'dscf.h5', key='all_samples')
+    else:
+        correct_2p = {'Comments': 'COMMENTS',
+                    'Date of specimen processed ': 'Date Processing Started',}
+        dscf_info = pd.ExcelFile(util.dscf)
+        bsl2p_samples = dscf_info.parse(sheet_name='BSL2+ Samples', header=1).rename(columns=correct_2p)
+        bsl2_samples = dscf_info.parse(sheet_name='BSL2 Samples')
+        dscf_archive = pd.ExcelFile(util.proc + 'DSCF Archive/Data Sample Collection Form Archive.xlsx')
+        bsl2p_archive = dscf_archive.parse(sheet_name='BSL2+ Samples', header=1).rename(columns=correct_2p)
+        bsl2_archive = dscf_archive.parse(sheet_name='BSL2 Samples')
+        correct_crp = {'CELL COUNTER (Total)': 'Cell Count',
+                    '# Aliquots Frozen': '# of aliquots frozen',
+                    'Total Volume of Serum after first spin (ml)': 'Total volume of serum (mL)',
+                    'ACD VOLUME': 'CPT/EDTA VOL',
+                    'Date of specimen processed': 'Date Processing Started'}
+        crp_samples = dscf_info.parse(sheet_name='CRP').rename(columns=correct_crp)
+        crp_samples['# cells per aliquot'] = crp_samples.apply(fallible(lambda row: row['Cell Count'] / row['# of aliquots frozen']), axis=1)
+        crp_samples.loc[crp_samples['Total volume of serum after second spin (ml)'].str.upper().str.strip() != 'X', 'Total volume of serum (mL)'] = crp_samples.loc[crp_samples['Total volume of serum after second spin (ml)'].str.upper().str.strip() != 'X', 'Total volume of serum after second spin (ml)']
+        date_cols = ['Date Processing Started']
+        correct_new = {'# PBMCs per Aliquot': '# cells per aliquot',
+                    '# Aliquots': '# of aliquots frozen',
+                    'Total Plasma Vol. (mL)': 'Total volume of plasma (mL)',
+                    'Total Serum Vol. (mL)': 'Total volume of serum (mL)',
+                    'SST Volume': 'SST VOL',
+                    'Cell Tube Volume (mL)': 'CPT/EDTA VOL',
+                    'Date Processed': 'Date Processing Started'}
+        new_samples = pd.read_excel(util.proc + 'Processing Notebook.xlsx', sheet_name='Specimen Dashboard', header=1).rename(columns=correct_new)
+        all_samples = (pd.concat([bsl2p_archive, bsl2_archive, bsl2p_samples, bsl2_samples, crp_samples, new_samples])
+                        .assign(sample_id=clean_sample_id)
+                        .drop_duplicates(subset=['sample_id'], keep='last')
+                        .assign(serum_vol=clean_serum)
+                        .pipe(clean_cells, no_pbmcs)
+                        .pipe(map_dates, date_cols))
+        all_samples.to_hdf(util.proc + 'dscf.h5', key='all_samples')
     if sid_list is not None:
         samples = all_samples.query('sample_id in @sid_list').copy()
     else:
@@ -181,13 +191,15 @@ def clean_path(df):
     '''
     df = df.copy()
     df['Qualitative'] = df[util.qual].apply(lambda val: "Negative" if str(val).strip().upper()[:2] == "NE" else val)
+    df['Quant_str'] = df[util.quant].fillna('').astype(str)
     df['Quantitative'] = df.apply(lambda row: 1 if row['Qualitative'] == 'Negative' else row[util.quant], axis=1).apply(try_convert).astype(float)
+    df['COV22_str'] = df['COV22 Results'].fillna('').astype(str)
     df['COV22'] = df['COV22 Results'].apply(lambda val: 1 if str(val).strip().upper()[:2] == 'NE' else val).apply(try_convert).astype(float)
     df['Log2Quant'] = np.log2(df['Quantitative'])
     df['Log2COV22'] = np.log2(df['COV22'])
     return df
 
-def query_intake(participants=None, include_research=False):
+def query_intake(participants=None, include_research=False, use_cache=False):
     '''
     Queries the intake log, optionally limited to a subset of participants.
 
@@ -196,19 +208,25 @@ def query_intake(participants=None, include_research=False):
     `include_research` will join the resulting dataframe with the results from `query_research`
     for convenience
     '''
-    drop_cols = ['Date Processed', 'Tubes Pulled?', 'Process Location', 'Box #', 'Specimen Type Sent to Patho', 'Date Given to Patho', 'Delivered by', 'Received by', 'Results received', 'RT-QPCR Result NS (Clinical)', 'Viability', 'Notes', 'Blood Collector Initials', 'New or Follow-up?', 'Participant ID', 'Sample ID', 'Ab Detection S/P Result (Clinical) (Titer or Neg)', 'Ab Concentration (Units - AU/mL)']
-    intake_source = pd.ExcelFile(util.intake)
-    intake = intake_source.parse(sheet_name='Sample Intake Log', header=util.header_intake)
-    date_cols = ['Date Collected']
-    all_samples = (intake.dropna(subset=['Participant ID'])
-                        .assign(participant_id=lambda df: df['Participant ID'].str.strip().str.upper(),
-                                sample_id=clean_sample_id)
-                        .query('sample_id.str.len() == 5')
-                        .pipe(clean_path)
-                        .pipe(map_dates, date_cols)
-                        .set_index('sample_id')
-                        .drop(drop_cols, axis=1)
-                        .sort_values(by=['participant_id', 'Date Collected']))
+    if use_cache:
+        all_samples = pd.read_hdf(util.tracking + 'intake.h5', key='all_samples')
+    else:
+        drop_cols = ['Date Processed', 'Tubes Pulled?', 'Process Location', 'Box #', 'Specimen Type Sent to Patho', 'Date Given to Patho', 'Delivered by', 'Received by', 'Results received', 'RT-QPCR Result NS (Clinical)', 'Viability', 'Notes', 'Blood Collector Initials', 'New or Follow-up?', 'Participant ID', 'Sample ID', 'Ab Detection S/P Result (Clinical) (Titer or Neg)', 'Ab Concentration (Units - AU/mL)']
+        intake_source = pd.ExcelFile(util.intake)
+        intake = intake_source.parse(sheet_name='Sample Intake Log', header=util.header_intake)
+        latest_intake = pd.read_excel(util.tracking + 'Sample Intake Log.xlsx', sheet_name='Sample Intake Log', header=6)
+        date_cols = ['Date Collected']
+        all_samples = (pd.concat([intake, latest_intake]).dropna(subset=['Participant ID'])
+                            .assign(participant_id=lambda df: df['Participant ID'].str.strip().str.upper(),
+                                    sample_id=clean_sample_id)
+                            .query('sample_id.str.len() == 5')
+                            .pipe(clean_path)
+                            .pipe(map_dates, date_cols)
+                            .drop_duplicates(subset=['sample_id', 'Date Collected'], keep='last')
+                            .set_index('sample_id')
+                            .drop(drop_cols, axis=1)
+                            .sort_values(by=['participant_id', 'Date Collected']))
+        all_samples.to_hdf(util.tracking + 'intake.h5', key='all_samples')
     if participants is not None:
         samples = all_samples.query('participant_id in @participants').copy()
     else:
