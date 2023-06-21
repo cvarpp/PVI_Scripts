@@ -25,10 +25,12 @@ def make_report(use_cache=False):
     samplesClean = samples[share_filter & (old_result_filter | new_result_filter)].copy()
     samplesCleanAll = samplesClean.copy()
     older_results = []
+
     pemail = paris_info[['Subject ID', 'E-mail']].rename(columns={'E-mail': 'Email'})
     uemail = umbrella_info[['Subject ID', 'Email']]
     temail = titan_info[['Umbrella Corresponding Participant ID', 'Email (From EPIC)']].rename(columns={'Umbrella Corresponding Participant ID': 'Subject ID', 'Email (From EPIC)': 'Email'})
-    emails = (pd.concat([pemail, uemail, temail])
+    uemail_without_temail = umbrella_info[['Subject ID', 'Email']][~umbrella_info['Subject ID'].isin(temail['Subject ID'])]
+    emails = (pd.concat([pemail, uemail_without_temail])
                 .assign(pid=lambda df: df['Subject ID'].str.strip())
                 .drop_duplicates(subset='pid').set_index('pid'))
 
