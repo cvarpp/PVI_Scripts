@@ -35,7 +35,7 @@ if __name__ == '__main__':
             recent_missing_intake.to_excel(writer, sheet_name='Missing from Intake (Recent)', index=False)
             recent_missing_dscf = missing_dscf[(missing_dscf['Date Collected'] > recency_date)]
             recent_missing_dscf.to_excel(writer, sheet_name='Missing from DSCF (Recent)', index=False)
-            recent_missing_cam = missing_cam[(missing_cam['Date'] > recency_date)]
+            recent_missing_cam = missing_cam[(missing_cam['Date Collected'] > recency_date)]
             recent_missing_cam.to_excel(writer, sheet_name='Missing from CAM (Recent)', index=False)
             invalid_ids.to_excel(writer, sheet_name='Invalid IDs', index=False)
             missing_intake.to_excel(writer, sheet_name='Missing from Intake', index=False)
