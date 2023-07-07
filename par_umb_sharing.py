@@ -61,9 +61,6 @@ if __name__ == '__main__':
         with pd.ExcelWriter(output_filename) as writer:
             report_new_emails.to_excel(writer, sheet_name='Results to Share', index=False)
             report_new_no_emails.to_excel(writer, sheet_name='Recent Unshared - Email Missing', index=False)
-
-
-
             report_old.to_excel(writer, sheet_name='Older Unshared Results', index=False)
         print("Report written to {}".format(output_filename))
     print("Total to report:", report.shape[0], "Older count:", report_old.shape[0], "Recent Results to Share:", report_new_emails.shape[0], "Recent Results Missing Email:", report_new_no_emails.shape[0])
