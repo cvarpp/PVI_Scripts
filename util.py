@@ -5,6 +5,7 @@ onedrive = home + 'The Mount Sinai Hospital/'
 proc = onedrive + 'Simon Lab - Processing Team/'
 dscf = proc + 'Data Sample Collection Form.xlsx'
 proc_ntbk = proc + 'Processing Notebook.xlsx'
+inventory_input = proc + 'New Import Sheet.xlsx'
 
 tracking = onedrive + 'Simon Lab - Sample Tracking/'
 shared_samples = tracking + 'Released Samples/Collaborator Samples Tracker.xlsx'
@@ -66,3 +67,8 @@ header_intake = 0
 qual = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
 quant = 'Ab Concentration (Units - AU/mL)'
 visit_type = "Visit Type / Samples Needed"
+
+# Environment Variables
+
+fp_pass = 'FP_PASS'
+fp_user = 'FP_USER'
