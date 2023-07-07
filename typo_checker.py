@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import argparse
 import util
-from helpers import query_intake, query_dscf
+from helpers import query_intake, query_dscf, clean_sample_id
 from cam_convert import transform_cam
 import datetime
 
@@ -14,7 +14,7 @@ if __name__ == '__main__':
     args = argparser.parse_args()
 
     intake = query_intake(include_research=True, use_cache=args.use_cache)
-    dscf = query_dscf(use_cache=args.use_cache)
+    dscf = query_dscf(use_cache=args.use_cache).rename(columns={'Sample ID': 'Processing Sample ID'})
     cam_full = transform_cam(debug=True).dropna(subset=['Participant ID', 'sample_id']).drop_duplicates(subset='sample_id').set_index('sample_id')
     df = intake.join(dscf, how='outer').join(cam_full, how='outer', rsuffix='_cam').reset_index().sort_values(by=['Date Collected', 'Date Processing Started', 'sample_id'])
     valid_ids = set(pd.read_excel(util.tracking + 'Sample ID Master List.xlsx', sheet_name='Master Sheet').dropna(subset='Location')['Sample ID'].astype(str).unique())
@@ -27,8 +27,9 @@ if __name__ == '__main__':
     in_cam = df_valid.dropna(subset='Date').index
     missing_cam = df_valid.loc[[idx for idx in df_valid.index if idx not in in_cam], :]
     recency_date = (datetime.datetime.today() - datetime.timedelta(days=args.recent_cutoff)).date()
+    fname_missing_ids = util.clin_ops + 'Daily Troubleshooting.xlsx'
     if not args.debug:
-        with pd.ExcelWriter(util.clin_ops + 'Daily Troubleshooting.xlsx') as writer:
+        with pd.ExcelWriter(fname_missing_ids) as writer:
             recent_invalid = invalid_ids[(invalid_ids['Date Collected'] > recency_date) | (invalid_ids['Date Processing Started'] > recency_date)]
             recent_invalid.to_excel(writer, sheet_name='Invalid IDs (Recent)', index=False)
             recent_missing_intake = missing_intake[missing_intake['Date Collected'] > recency_date]
@@ -41,4 +42,26 @@ if __name__ == '__main__':
             missing_intake.to_excel(writer, sheet_name='Missing from Intake', index=False)
             missing_dscf.to_excel(writer, sheet_name='Missing from DSCF', index=False)
             missing_cam.to_excel(writer, sheet_name='Missing from CAM', index=False)
-    print("DSCF: {}, Intake: {}, CAM: {}, Invalid: {}".format(missing_dscf.shape[0], missing_intake.shape[0], missing_cam.shape[0], invalid_ids.shape[0]))
+    print("DSCF: {}, Intake: {}, CAM: {}, Invalid: {}".format(recent_missing_dscf.shape[0], recent_missing_intake.shape[0], recent_missing_cam.shape[0], recent_invalid_ids.shape[0]))
+    print("Report written to {}".format(fname_missing_ids))
+    inventory_boxes = pd.read_excel(util.inventory_input, sheet_name=None)
+    boxes = []
+    for sname, sheet in inventory_boxes.items():
+        if 'Sample ID' not in sheet.columns or 'PSP' in sname or 'cell' in sname.lower() or 'NPS' in sname:
+            continue
+        if sname in ['TEMPLATE', 'Box Converter']:
+            continue
+        boxes.append(sheet.reset_index().rename(
+                columns={'index': 'Position'}
+            ).dropna(subset=['Sample ID']).assign(
+            sample_id=clean_sample_id,
+            Box=sname
+            ).loc[:, ['sample_id', 'Box', 'Position']]
+        )
+    inventory = pd.concat(boxes, axis=0).join(df_valid.set_index('sample_id'), on='sample_id', rsuffix='_not_inventory')
+    inventory_missing_intake = inventory[inventory['Date Collected'].isna()]
+    fname_inventory = util.clin_ops + 'Inventory Troubleshooting.xlsx'
+    with pd.ExcelWriter(fname_inventory) as writer:
+        inventory_missing_intake.to_excel(writer, sheet_name='Missing from Intake', index=False)
+    print("{} likely inventory typos".format(inventory_missing_intake.shape[0]))
+    print("Inventory typo report written to {}".format(fname_inventory))
