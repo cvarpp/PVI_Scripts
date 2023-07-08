@@ -5,12 +5,16 @@ import util
 from helpers import query_intake, query_dscf, clean_sample_id
 from cam_convert import transform_cam
 import datetime
+import os
+import requests
+from time import sleep
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-d', '--debug', action='store_true')
     argparser.add_argument('-c', '--use_cache', action='store_true')
     argparser.add_argument('-r', '--recent_cutoff', type=int, default=120, help='Number of days before today to consider recent')
+    argparser.add_argument('-fp', '--freezerpro', action='store_true')
     args = argparser.parse_args()
 
     intake = query_intake(include_research=True, use_cache=args.use_cache)
@@ -42,8 +46,8 @@ if __name__ == '__main__':
             missing_intake.to_excel(writer, sheet_name='Missing from Intake', index=False)
             missing_dscf.to_excel(writer, sheet_name='Missing from DSCF', index=False)
             missing_cam.to_excel(writer, sheet_name='Missing from CAM', index=False)
-    print("DSCF: {}, Intake: {}, CAM: {}, Invalid: {}".format(recent_missing_dscf.shape[0], recent_missing_intake.shape[0], recent_missing_cam.shape[0], recent_invalid_ids.shape[0]))
-    print("Report written to {}".format(fname_missing_ids))
+        print("Report written to {}".format(fname_missing_ids))
+        print("DSCF: {}, Intake: {}, CAM: {}, Invalid: {}".format(recent_missing_dscf.shape[0], recent_missing_intake.shape[0], recent_missing_cam.shape[0], recent_invalid.shape[0]))
     inventory_boxes = pd.read_excel(util.inventory_input, sheet_name=None)
     boxes = []
     for sname, sheet in inventory_boxes.items():
@@ -51,17 +55,74 @@ if __name__ == '__main__':
             continue
         if sname in ['TEMPLATE', 'Box Converter']:
             continue
+        if 'Sample Type' not in sheet.columns:
+            print(sname, "missing sample type column")
+            continue
         boxes.append(sheet.reset_index().rename(
                 columns={'index': 'Position'}
             ).dropna(subset=['Sample ID']).assign(
             sample_id=clean_sample_id,
-            Box=sname
-            ).loc[:, ['sample_id', 'Box', 'Position']]
+            Box=sname,
+            sample_type=lambda df: df['Sample Type'].str.strip().str.title().str.rstrip('s')
+            ).loc[:, ['sample_id', 'Box', 'Position', 'sample_type']]
         )
     inventory = pd.concat(boxes, axis=0).join(df_valid.set_index('sample_id'), on='sample_id', rsuffix='_not_inventory')
+    inventory_counts = inventory.loc[:, ['sample_id', 'sample_type', 'Position']].groupby(
+        ['sample_id', 'sample_type']
+        ).count().unstack().droplevel(0, axis='columns').fillna(0).rename(
+            columns={'4.5 Ml Tube': '4.5 mL Tube', 'Pbmc': 'PBMC'}
+        ).astype(int)
     inventory_missing_intake = inventory[inventory['Date Collected'].isna()]
+    recent_valid = df_valid[df_valid['Date Collected'] > recency_date].copy()
+    if args.freezerpro:
+        fp_user = os.environ[util.fp_user]
+        fp_pass = os.environ[util.fp_pass]
+        token_response = requests.post(f'{util.fp_url}/auth/login', json={'username': fp_user, 'password': fp_pass})
+        if token_response.status_code != 200:
+            print("Failed authentication. Fatal error, exiting...")
+            exit(1)
+        token = token_response.json()['data']['attributes']['token']
+        headers = {'Authorization': f'token {token}'}
+        vial_type_suffix = 'include=sample_type&fields[sample]=name,vials&fields[sample_type]=name'
+        fp_data = {'Sample ID': [], 'Plasma': [], 'Serum': [], 'Saliva': [], 'Pellet': [], 'PBMC': [], '4.5 mL Tube': []}
+        for sid in recent_valid['sample_id'].to_numpy():
+            sid_response = requests.get(f'{util.fp_url}/samples?filter[name_eq]={sid}&{vial_type_suffix}', headers=headers)
+            if sid_response.status_code != 200:
+                print("Failed to query sample ID {}.".format(sid))
+                for col in fp_data.keys():
+                    if col == 'Sample ID':
+                        fp_data[col].append(sid)
+                    else:
+                        fp_data[col].append(0)
+            elif len(sid_response.json()['data']) == 0:
+                for col in fp_data.keys():
+                    if col == 'Sample ID':
+                        fp_data[col].append(sid)
+                    else:
+                        fp_data[col].append(0)
+            else:
+                sid_json = sid_response.json()
+                sid_data = {}
+                for sample, sample_type in zip(sid_json['data'], sid_json['included']):
+                    stype = sample_type['attributes']['name']
+                    if stype not in sid_data.keys():
+                        sid_data[stype] = 0
+                    sid_data[stype] += len(sample['relationships']['vials']['data'])
+                for col in fp_data.keys():
+                    if col == 'Sample ID':
+                        fp_data[col].append(sid)
+                    elif col in sid_data.keys():
+                        fp_data[col].append(sid_data[col])
+                    else:
+                        fp_data[col].append(0)
+        fp_df = pd.DataFrame(fp_data)
     fname_inventory = util.clin_ops + 'Inventory Troubleshooting.xlsx'
-    with pd.ExcelWriter(fname_inventory) as writer:
-        inventory_missing_intake.to_excel(writer, sheet_name='Missing from Intake', index=False)
+    if not args.debug:
+        with pd.ExcelWriter(fname_inventory) as writer:
+            inventory_missing_intake.to_excel(writer, sheet_name='Missing from Intake', index=False)
+            inventory_counts.to_excel(writer, sheet_name='New Import Sheet Inventory')
+            if args.freezerpro:
+                fp_df.to_excel(writer, sheet_name='FP Inventory', index=False)
+        print("Inventory typo report written to {}".format(fname_inventory))
     print("{} likely inventory typos".format(inventory_missing_intake.shape[0]))
-    print("Inventory typo report written to {}".format(fname_inventory))
+

@@ -58,6 +58,8 @@ seronet_data = cross_d4 + 'Data/'
 seronet_qc = cross_d4 + 'QC/'
 seronet_vax = cross_d4 + 'Vax/'
 
+fp_url = 'https://mssm-simonlab.freezerpro.com/api/v2/'
+
 # Header Heights
 
 header_intake = 0
