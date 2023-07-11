@@ -135,7 +135,8 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False):
                     'Total Serum Vol. (mL)': 'Total volume of serum (mL)',
                     'SST Volume': 'SST VOL',
                     'Cell Tube Volume (mL)': 'CPT/EDTA VOL',
-                    'Date Processed': 'Date Processing Started'}
+                    'Date Processed': 'Date Processing Started',
+                    'Processor Initials': 'proc_inits'}
         new_samples = pd.read_excel(util.proc + 'Processing Notebook.xlsx', sheet_name='Specimen Dashboard', header=1).rename(columns=correct_new)
         all_samples = (pd.concat([bsl2p_archive, bsl2_archive, bsl2p_samples, bsl2_samples, crp_samples, new_samples])
                         .assign(sample_id=clean_sample_id)
