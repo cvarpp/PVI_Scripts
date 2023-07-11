@@ -18,7 +18,6 @@ secret_charles = pvi + 'Secret Sheets/Charles/'
 
 project_ws = onedrive + 'Simon Lab - Project Workspace/'
 
-
 reports = pvi + 'Reports & Data/'
 research = reports + 'From Krammer Lab/Master Sheet.xlsx'
 projects = reports + 'Projects/'
@@ -41,6 +40,7 @@ crp_folder = umbrella + 'Critical Reference Panel/'
 
 umbrella_tracker = umbrella + "Patient Tracker - Umbrella Virology Protocol.xlsx"
 titan_tracker = titan_folder + "TITAN Participant Tracker.xlsx"
+cam_long = clin_ops + "Long-Form CAM Schedule.xlsx"
 
 script_folder = pvi + 'Scripts/'
 script_input = script_folder + 'input/'

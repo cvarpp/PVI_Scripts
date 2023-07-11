@@ -100,7 +100,7 @@ def transform_cam(update=False, debug=False):
                     .sort_values(by='Date', ascending=False)
                     .set_index('idx'))
 
-    output_fname = util.clin_ops + "Long-Form CAM Schedule.xlsx"
+    output_fname = util.cam_long
     if not debug:
         cam_both.to_excel(output_fname, index=False)
         print("Long-Form CAM Schedule written to", output_fname)
