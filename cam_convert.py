@@ -107,7 +107,7 @@ def transform_cam(update=False, debug=False):
     return cam_both
 
 if __name__ == '__main__':
-    argParser = argparse.ArgumentParser(description='Make Seronet monthly sample report.')
+    argParser = argparse.ArgumentParser(description='Convert CAM clinic schedule from wide multi-sheet to long single-sheet format')
     argParser.add_argument('-u', '--update', action='store_true')
     argParser.add_argument('-d', '--debug', action='store_true')
     args = argParser.parse_args()
