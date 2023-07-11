@@ -19,7 +19,11 @@ if __name__ == '__main__':
 
     intake = query_intake(include_research=True, use_cache=args.use_cache)
     dscf = query_dscf(use_cache=args.use_cache).rename(columns={'Sample ID': 'Processing Sample ID'})
-    cam_full = transform_cam(debug=True).dropna(subset=['Participant ID', 'sample_id']).drop_duplicates(subset='sample_id').set_index('sample_id')
+    if args.use_cache:
+        cam_full = pd.read_excel(util.cam_long)
+    else:
+        cam_full = transform_cam(debug=args.debug)
+    cam_full = cam_full.dropna(subset=['Participant ID', 'sample_id']).drop_duplicates(subset='sample_id').set_index('sample_id').loc[:, ['Date', 'Participant ID', 'Time', 'Time Collected', 'Phlebotomist', 'Visit Coordinator']]
     df = intake.join(dscf, how='outer').join(cam_full, how='outer', rsuffix='_cam').reset_index().sort_values(by=['Date Collected', 'Date Processing Started', 'sample_id'])
     valid_ids = set(pd.read_excel(util.tracking + 'Sample ID Master List.xlsx', sheet_name='Master Sheet').dropna(subset='Location')['Sample ID'].astype(str).unique())
     invalid_ids = df[~df['sample_id'].isin(valid_ids)]
@@ -35,13 +39,13 @@ if __name__ == '__main__':
     if not args.debug:
         with pd.ExcelWriter(fname_missing_ids) as writer:
             recent_invalid = invalid_ids[(invalid_ids['Date Collected'] > recency_date) | (invalid_ids['Date Processing Started'] > recency_date)]
-            recent_invalid.to_excel(writer, sheet_name='Invalid IDs (Recent)', index=False)
+            recent_invalid.to_excel(writer, sheet_name='Invalid IDs (Recent)', index=False, freeze_panes=(1,1))
             recent_missing_intake = missing_intake[missing_intake['Date Collected'] > recency_date]
-            recent_missing_intake.to_excel(writer, sheet_name='Missing from Intake (Recent)', index=False)
+            recent_missing_intake.to_excel(writer, sheet_name='Missing from Intake (Recent)', index=False, freeze_panes=(1,1))
             recent_missing_dscf = missing_dscf[(missing_dscf['Date Collected'] > recency_date)]
-            recent_missing_dscf.to_excel(writer, sheet_name='Missing from DSCF (Recent)', index=False)
+            recent_missing_dscf.to_excel(writer, sheet_name='Missing from DSCF (Recent)', index=False, freeze_panes=(1,1))
             recent_missing_cam = missing_cam[(missing_cam['Date Collected'] > recency_date)]
-            recent_missing_cam.to_excel(writer, sheet_name='Missing from CAM (Recent)', index=False)
+            recent_missing_cam.to_excel(writer, sheet_name='Missing from CAM (Recent)', index=False, freeze_panes=(1,1))
             invalid_ids.to_excel(writer, sheet_name='Invalid IDs', index=False)
             missing_intake.to_excel(writer, sheet_name='Missing from Intake', index=False)
             missing_dscf.to_excel(writer, sheet_name='Missing from DSCF', index=False)
@@ -86,6 +90,7 @@ if __name__ == '__main__':
         vial_type_suffix = 'include=sample_type&fields[sample]=name,vials&fields[sample_type]=name'
         fp_data = {'Sample ID': [], 'Plasma': [], 'Serum': [], 'Saliva': [], 'Pellet': [], 'PBMC': [], '4.5 mL Tube': []}
         for sid in recent_valid['sample_id'].to_numpy():
+            sleep(2.2)
             sid_response = requests.get(f'{util.fp_url}/samples?filter[name_eq]={sid}&{vial_type_suffix}', headers=headers)
             if sid_response.status_code != 200:
                 print("Failed to query sample ID {}.".format(sid))
@@ -119,10 +124,10 @@ if __name__ == '__main__':
     fname_inventory = util.clin_ops + 'Inventory Troubleshooting.xlsx'
     if not args.debug:
         with pd.ExcelWriter(fname_inventory) as writer:
-            inventory_missing_intake.to_excel(writer, sheet_name='Missing from Intake', index=False)
-            inventory_counts.to_excel(writer, sheet_name='New Import Sheet Inventory')
+            inventory_missing_intake.to_excel(writer, sheet_name='Missing from Intake', index=False, freeze_panes=(1, 1))
+            inventory_counts.to_excel(writer, sheet_name='New Import Sheet Inventory', freeze_panes=(1, 1))
             if args.freezerpro:
-                fp_df.to_excel(writer, sheet_name='FP Inventory', index=False)
+                fp_df.to_excel(writer, sheet_name='FP Inventory', index=False, freeze_panes=(1, 1))
         print("Inventory typo report written to {}".format(fname_inventory))
     print("{} likely inventory typos".format(inventory_missing_intake.shape[0]))
 
