@@ -88,7 +88,10 @@ if __name__ == '__main__':
         token = token_response.json()['data']['attributes']['token']
         headers = {'Authorization': f'token {token}'}
         vial_type_suffix = 'include=sample_type&fields[sample]=name,vials&fields[sample_type]=name'
-        fp_data = {'Sample ID': [], 'Plasma': [], 'Serum': [], 'Saliva': [], 'Pellet': [], 'PBMC': [], '4.5 mL Tube': []}
+        fp_data = {'Sample ID': []}
+        sample_types = ['Plasma', 'Serum', 'Saliva', 'Pellet', 'PBMC', '4.5 mL Tube']
+        for stype in sample_types:
+            fp_data[stype] = []
         for sid in recent_valid['sample_id'].to_numpy():
             sleep(2.2)
             sid_response = requests.get(f'{util.fp_url}/samples?filter[name_eq]={sid}&{vial_type_suffix}', headers=headers)
@@ -128,6 +131,19 @@ if __name__ == '__main__':
             inventory_counts.to_excel(writer, sheet_name='New Import Sheet Inventory', freeze_panes=(1, 1))
             if args.freezerpro:
                 fp_df.to_excel(writer, sheet_name='FP Inventory', index=False, freeze_panes=(1, 1))
+                proc_info = recent_valid.set_index('sample_id').loc[:, ['Date Collected', '# of aliquots frozen', 'viability', '# cells per aliquot', 'cpt_vol', 'sst_vol',
+                                                 'Total volume of plasma (mL)', 'Total volume of serum (mL)', 'Saliva Volume (mL)',
+                                                 '4.5 mL Tube Needed', '4.5 mL Aliquot?', 'proc_inits']]
+                all_inv = fp_df.join(inventory_counts, on='Sample ID', lsuffix='_fp', rsuffix='_import')
+                for stype in sample_types:
+                    all_inv[stype] = all_inv[stype + '_fp'] + all_inv[stype + '_import']
+                all_inv['Import Sheet Aliquots'] = all_inv.loc[:, [stype + '_import' for stype in sample_types]].sum(axis=1)
+                all_inv['Still in Import Sheet'] = (all_inv['Import Sheet Aliquots'] > 0).apply(lambda val: "Yes" if val else "No")
+                to_wit = proc_info.join(all_inv.set_index('Sample ID')).loc[:, ['Date Collected', 'Still in Import Sheet', 'cpt_vol', 'Total volume of plasma (mL)',
+                    'Plasma', '# of aliquots frozen', '# cells per aliquot', 'PBMC', 'sst_vol', 'Total volume of serum (mL)', 'Serum', '4.5 mL Tube Needed',
+                    '4.5 mL Aliquot?', '4.5 mL Tube', 'Saliva Volume (mL)', 'Saliva', 'Import Sheet Aliquots', 'viability', 'proc_inits',
+                    'Pellet'] + [stype + '_fp' for stype in sample_types] + [stype + '_import' for stype in sample_types]]
+                to_wit.to_excel(writer, sheet_name='Inventory vs Expected', freeze_panes=(1, 1))
         print("Inventory typo report written to {}".format(fname_inventory))
     print("{} likely inventory typos".format(inventory_missing_intake.shape[0]))
 
