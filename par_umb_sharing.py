@@ -36,6 +36,8 @@ def make_report(use_cache=False):
 
     keep_cols = ['participant_id', 'sample_id', 'Date Collected', util.visit_type, 'Email', 'Qualitative', 'Quant_str', 'COV22_str', 'Quantitative', 'COV22', 'Spike endpoint', 'AUC']
     report = samplesClean.join(emails, on='participant_id').reset_index().loc[:, keep_cols]
+    valid_ids = set(paris_info['Subject ID'].str.strip().unique()) | (set(umbrella_info['Subject ID'].str.strip().unique()) - set(titan_info['Umbrella Corresponding Participant ID'].str.strip().unique()))
+    report = report[report['participant_id'].isin(valid_ids)].copy()
     report['COV22 / Quant'] = np.exp2(np.log2(report['COV22']) - np.log2(report['Quantitative']))
     report['COV22 / Research'] = np.exp2(np.log2(report['COV22']) - np.log2(report['AUC']))
     return report
