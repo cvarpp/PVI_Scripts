@@ -39,6 +39,7 @@ prio_folder = clin_ops + 'PRIORITY/'
 crp_folder = umbrella + 'Critical Reference Panel/'
 
 umbrella_tracker = umbrella + "Patient Tracker - Umbrella Virology Protocol.xlsx"
+titan_tracker = titan_folder + "TITAN Participant Tracker.xlsx"
 
 script_folder = pvi + 'Scripts/'
 script_input = script_folder + 'input/'
