@@ -134,7 +134,7 @@ if __name__ == '__main__':
                 proc_info = recent_valid.set_index('sample_id').loc[:, ['Date Collected', '# of aliquots frozen', 'viability', '# cells per aliquot', 'cpt_vol', 'sst_vol',
                                                  'Total volume of plasma (mL)', 'Total volume of serum (mL)', 'Saliva Volume (mL)',
                                                  '4.5 mL Tube Needed', '4.5 mL Aliquot?', 'proc_inits']]
-                all_inv = fp_df.join(inventory_counts, on='Sample ID', lsuffix='_fp', rsuffix='_import')
+                all_inv = fp_df.join(inventory_counts, on='Sample ID', lsuffix='_fp', rsuffix='_import').fillna(0)
                 for stype in sample_types:
                     all_inv[stype] = all_inv[stype + '_fp'] + all_inv[stype + '_import']
                 all_inv['Import Sheet Aliquots'] = all_inv.loc[:, [stype + '_import' for stype in sample_types]].sum(axis=1)
