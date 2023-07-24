@@ -48,7 +48,7 @@ def yes_no(val):
 
 def accrue(args):
     intermediate = 'monthly_report'
-    if args.update:
+    if not args.use_cache:
         all_data = pull_from_source(args.debug).query('Date <= @args.report_end').copy()
         ecrabs = make_ecrabs(all_data, output_fname=intermediate, debug=args.debug)
         dfs_clin = write_clinical(pd.DataFrame(ecrabs['Biospecimen']), 'monthly_tmp', debug=args.debug)
@@ -159,7 +159,7 @@ def accrue(args):
 
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Make files for monthly data submission.')
-    argParser.add_argument('-u', '--update', action='store_true')
+    argParser.add_argument('-c', '--use_cache', action='store_true')
     argParser.add_argument('-s', '--report_start', action='store', required=True, type=pd.to_datetime)
     argParser.add_argument('-e', '--report_end', action='store', required=True, type=pd.to_datetime)
     argParser.add_argument('-d', '--debug', action='store_true')
