@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import argparse
 import util
+from cam_convert import transform_cam
 from helpers import query_dscf, query_research
 
 def sufficient(val):
@@ -86,7 +87,7 @@ def pull_from_source(debug=False):
     source_dfs = {'TITAN': titan_data, 'MARS': mars_data, 'IRIS': iris_data, 'GAEA': gaea_data}
     conversions = {'TITAN': titan_convert, 'MARS': mars_convert, 'IRIS': iris_convert, 'GAEA': gaea_convert}
     intake_source = pd.ExcelFile(util.intake)
-    collection_log = intake_source.parse(sheet_name='Collection Log').assign(sample_id=lambda df: df['Sample ID'].astype(str).str.strip().str.upper()).drop('Sample ID', axis=1).set_index('sample_id')
+    cam_df = transform_cam(debug=debug).drop_duplicates(subset='sample_id').set_index('sample_id')
     samples = intake_source.parse(sheet_name='Sample Intake Log', header=util.header_intake, dtype=str)
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
@@ -133,7 +134,8 @@ def pull_from_source(debug=False):
     shared_samples = pd.read_excel(util.shared_samples, sheet_name='Released Samples')
     no_pbmcs = set([str(sid).strip().upper() for sid in shared_samples[shared_samples['Sample Type'] == 'PBMC']['Sample ID'].unique()])
     all_samples = query_dscf(sid_list=samples_of_interest, no_pbmcs=no_pbmcs)
-    all_samples['coll_time'] = all_samples.apply(lambda row: collection_log.loc[row.name, 'Time Collected'] if row.name in collection_log.index else row['Time Collected'], axis=1)
+    cam_df['coll_time'] = cam_df['Time Collected'].fillna(cam_df['Time'])
+    all_samples['coll_time'] = all_samples.apply(lambda row: cam_df.loc[row.name, 'coll_time'] if row.name in cam_df.index else row['Time Collected'], axis=1)
     serum_or_cells = all_samples['Volume of Serum Collected (mL)'].apply(sufficient) | all_samples['PBMC concentration per mL (x10^6)'].apply(sufficient)
     if not debug:
         all_samples[~serum_or_cells].to_excel(util.script_output + 'missing_info.xlsx', index=False)
