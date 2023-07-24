@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 import util
 from cam_convert import transform_cam
-from helpers import query_intake, query_dscf, clean_sample_id, try_datediff, map_dates
+from helpers import query_dscf, query_research
 
 def sufficient(val):
     try:
@@ -87,13 +87,46 @@ def cohort_data():
     }.items()}
     source_dfs = {'TITAN': titan_data, 'MARS': mars_data, 'IRIS': iris_data, 'GAEA': gaea_data}
     conversions = {'TITAN': titan_convert, 'MARS': mars_convert, 'IRIS': iris_convert, 'GAEA': gaea_convert}
-    source_df = pd.concat([
-        titan_data.rename(columns=titan_convert),
-        mars_data.rename(columns=mars_convert),
-        iris_data.rename(columns=iris_convert),
-        gaea_data.rename(columns=gaea_convert)
-    ]).loc[:, ['Cohort'] + [v for v in titan_convert.values()]]
-    return source_df.pipe(map_dates, [col for col in source_df.columns if 'Date' in col])
+    intake_source = pd.ExcelFile(util.intake)
+    cam_df = transform_cam(debug=debug).drop_duplicates(subset='sample_id').set_index('sample_id')
+    samples = intake_source.parse(sheet_name='Sample Intake Log', header=util.header_intake, dtype=str)
+    newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
+    newCol2 = 'Ab Concentration (Units - AU/mL)'
+    visit_type = "Visit Type / Samples Needed"
+    samplesClean = samples.dropna(subset=['Participant ID'])
+    cutoff_date = pd.to_datetime('2022-11-20').date()
+    participant_samples = {participant: [] for participant in participants}
+    submitted_key = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Source').drop_duplicates(subset=['Participant ID']).set_index('Participant ID')
+    sample_exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Sample Exclusions')
+    exclude_samples = set(sample_exclusions['Sample ID'].astype(str).str.upper().str.strip().unique())
+    samples_of_interest = set()
+    for _, sample in samplesClean.iterrows():
+        sample_id = str(sample['Sample ID']).strip().upper()
+        if len(sample_id) != 5 or sample_id in exclude_samples:
+            continue
+        participant = str(sample['Participant ID']).strip().upper()
+        if str(sample['Study']).strip().upper() == 'PRIORITY':
+            if participant not in participant_samples.keys():
+                participant_samples[participant] = []
+                participant_study[participant] = 'PRIORITY'
+        if participant in participant_samples.keys():
+            if str(sample[newCol]).strip().upper() == "NEGATIVE":
+                sample[newCol2] = "Negative"
+            if pd.isna(sample[newCol2]):
+                result_new = '-'
+            elif type(sample[newCol2]) == int:
+                result_new = sample[newCol2]
+            elif str(sample[newCol2]).strip().upper() == "NEGATIVE":
+                result_new = 1.
+            else:
+                result_new = sample[newCol2]
+            try:
+                sample_date = pd.to_datetime(str(sample['Date Collected']))
+            except:
+                print(sample_id, "has invalid date", sample['Date Collected'])
+                sample_date = pd.to_datetime('1/1/1900')
+            participant_samples[participant].append((sample_date, str(sample_id).strip().upper(), sample[visit_type], sample[newCol], result_new, sample['Blood Collector Initials']))
+            samples_of_interest.add(str(sample_id).strip().upper())
 
 def pull_from_source(debug=False):
     seronet_source = pd.ExcelFile(util.seronet_data + 'SERONET Key.xlsx')
@@ -114,13 +147,10 @@ def pull_from_source(debug=False):
 
     shared_samples = pd.read_excel(util.shared_samples, sheet_name='Released Samples')
     no_pbmcs = set([str(sid).strip().upper() for sid in shared_samples[shared_samples['Sample Type'] == 'PBMC']['Sample ID'].unique()])
-    proc_unfiltered = query_dscf(sid_list=samples_of_interest, no_pbmcs=no_pbmcs)
-    cam_df = transform_cam(debug=debug).drop_duplicates(subset='sample_id').set_index('sample_id')
+    all_samples = query_dscf(sid_list=samples_of_interest, no_pbmcs=no_pbmcs)
     cam_df['coll_time'] = cam_df['Time Collected'].fillna(cam_df['Time'])
-    cam_df['coll_inits'] = cam_df['Phlebotomist'].fillna('CCT (Clinical Care Team)')
-    proc_unfiltered['coll_time'] = proc_unfiltered.apply(lambda row: cam_df.loc[row.name, 'coll_time'] if row.name in cam_df.index else row['Time Collected'], axis=1)
-    proc_unfiltered['coll_inits'] = proc_unfiltered.apply(lambda row: cam_df.loc[row.name, 'coll_inits'] if row.name in cam_df.index else 'CCT (Clinical Care Team)')
-    serum_or_cells = proc_unfiltered['Volume of Serum Collected (mL)'].apply(sufficient) | proc_unfiltered['PBMC concentration per mL (x10^6)'].apply(sufficient)
+    all_samples['coll_time'] = all_samples.apply(lambda row: cam_df.loc[row.name, 'coll_time'] if row.name in cam_df.index else row['Time Collected'], axis=1)
+    serum_or_cells = all_samples['Volume of Serum Collected (mL)'].apply(sufficient) | all_samples['PBMC concentration per mL (x10^6)'].apply(sufficient)
     if not debug:
         proc_unfiltered[~serum_or_cells].to_excel(util.script_output + 'missing_info.xlsx', index=False)
     sample_info = proc_unfiltered[serum_or_cells].copy()
