@@ -386,7 +386,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
 
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Create processing information sheets for SERONET data submissions.')
-    argParser.add_argument('-u', '--update', action='store_true')
+    argParser.add_argument('-c', '--use_cache', action='store_true')
     argParser.add_argument('-o', '--output_file', action='store', default='tmp')
     argParser.add_argument('-s', '--start', action='store', type=pd.to_datetime, default=pd.to_datetime('1/1/2021'))
     argParser.add_argument('-e', '--end', action='store', type=pd.to_datetime, default=pd.to_datetime('12/31/2025'))
@@ -396,7 +396,7 @@ if __name__ == '__main__':
     if args.override is not None:
         make_ecrabs(args.override, args.start, args.end, args.output_file, args.debug)
         exit(0)
-    if args.update:
+    if not args.use_cache:
         source = pull_from_source(args.debug)
     else:
         source = pd.read_excel(util.unfiltered)
