@@ -5,6 +5,22 @@ import util
 from seronet.d4_all_data import pull_from_source
 from helpers import clean_sample_id
 
+# def process_lots():
+#     lots = pd.read_excel(util.dscf, sheet_name='Lot # Sheet')
+#     lot_log = {}
+#     for _, row in lots.sort_values('Date Used').iterrows():
+#         mat = row['Material']
+#         open_date = row['Date Used'].date()
+#         lot = row['Lot Number']
+#         exp = row['EXP Date']
+#         cat = row['Catalog Number']
+#         if mat not in lot_log.keys():
+#             lot_log[mat] = [(open_date, lot, exp, cat)]
+#         else:
+#             lot_log[mat].append((open_date, lot, exp, cat))
+#     return lot_log
+
+
 def process_lots():
     equip_lots = pd.read_excel(util.proc + 'script_data/lots_by_dates.xlsx').set_index(['Date Used', 'Material'])
     return equip_lots
