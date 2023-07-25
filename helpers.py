@@ -135,6 +135,8 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False):
                     'Total Serum Vol. (mL)': 'Total volume of serum (mL)',
                     'SST Volume': 'SST VOL',
                     'Cell Tube Volume (mL)': 'CPT/EDTA VOL',
+                    'Date Processed': 'Date Processing Started',
+                    'Processor Initials': 'Processed by (initials)', # This is a two-step transformation, but the end product is cleaner
                     'Time in -80C (Serum)': 'Time put in -80: SERUM',
                     'Time in Freezing Device': 'Time put in -80: PBMC',}
         new_samples = pd.read_excel(util.proc + 'Processing Notebook.xlsx', sheet_name='Specimen Dashboard', header=1).rename(columns=correct_new)
