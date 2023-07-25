@@ -44,6 +44,35 @@ if __name__ == '__main__':
                         .dropna(subset='Date Printed'))
       unused_kits.to_excel(util.proc + 'script_data/print_log_unused_kits.xlsx', index=False)
 
+      # Add annotations for discrepant sample IDs
+      unused_kits = unused_kits.join(plog_df, on=['Kit Type', 'Box #'], rsuffix='_printing')
+      unused_kits.drop(columns=['Box Min', 'Box Max'], inplace=True)
+
+      # Output 2: Printed but Unused Kits
+      unused_kits.dropna(subset='Date Printed').to_excel(util.proc + 'script_data/print_log_unused_kits.xlsx', index=False)
+
+
+      #### dscf_lot & proc_lot ==> Concatenated Lots per Date
+
+      # Reformat lots on dscf_lot & proc_lot
+      # dscf_lot_reformatted = (dscf_lot.drop_duplicates(['Date Used', 'Material'])
+      #                         .dropna(subset=['Date Used'])
+      #                         .set_index(['Date Used', 'Material'])
+      #                         .fillna('Unavailable')
+      #                         .unstack()    # reshape df by moving index to column headers
+      #                         .resample('1d')
+      #                         .asfreq()    # fill in missing dates in resampled df
+      #                         .ffill()    # forward-fill missing dates, with most recent non-missing one
+      #                         .stack()    # revert df shape, bring column back to index
+      #                         .reset_index())
+      # dscf_lot_reformatted['Material'] = dscf_lot_reformatted['Material'].apply(lambda x: x.strip().upper().title())
+
+      # proc_lot_reformatted = (proc_lot.drop_duplicates(['Date Used', 'Material'])
+      #                         .dropna(subset=['Date Used'])
+      #                         .set_index(['Date Used', 'Material']).fillna('Unavailable')
+      #                         .unstack().resample('1d').asfreq().ffill().stack().reset_index())
+      # proc_lot_reformatted['Material'] = proc_lot_reformatted['Material'].apply(lambda x: x.strip().upper().title())
+
       selected_columns = ['Date Used', 'Material', 'Lot Number', 'EXP Date', 'Catalog Number', 'odate', 'Samples Affected/ COMMENTS']
       lots_reformatted = (pd.concat([dscf_lot, proc_lot]).assign(Material=lambda df: df['Material'].str.strip().str.title())
                               .assign(odate=lambda df: df['Date Used'])
@@ -53,11 +82,50 @@ if __name__ == '__main__':
                               .set_index(['Date Used', 'Material']).fillna('Unavailable')
                               .unstack().resample('1d').asfreq().ffill().stack().reset_index()
                               .loc[:, selected_columns])
+      
+      # Lot keep columns: Date Used, Material, Long-Form Date, Lot Number, EXP Date, Catalog Mumber, Samples Affected/ COMMENTS
+      # selected_columns = ['Date Used', 'Material', 'Lot Number', 'EXP Date', 'Catalog Number', 'Samples Affected/ COMMENTS']
+      # dscf_lot_new = dscf_lot_reformatted[selected_columns]
+      # proc_lot_new = proc_lot_reformatted[selected_columns]
+
+      # Concatenate dscf_lot & proc_lot
+      # concatenated_lot = pd.concat([dscf_lot_new, proc_lot_new])
+      # concatenated_lot.reset_index(drop=True, inplace=True)
+
+      # Checkpoint: proc_lot starts later than dscf_lot so overlap should be empty
+      # overlap = pd.merge(dscf_lot_new, proc_lot_new, how='inner')
+      # if overlap.empty:
+      #       print("No overlap between dscf_lot and proc_lot.")
+      # else:
+      #       print("Overlap detected between dscf_lot and proc_lot. Need check.")
+      #       overlap.to_excel(util.proc + 'print_log_overlap.xlsx', index=False)
+
+      # Map format & Drop duplicates
+      # concatenated_lot['Material'] = concatenated_lot['Material'].apply(lambda x: x.strip().upper().title())
+      # concatenated_lot = concatenated_lot.drop_duplicates()
+
+      # Rename 'Date Used' as 'Date Material Opened'
+      # concatenated_lot.rename(columns={'Date Used': 'Date Material Opened'}, inplace=True)
+
+      # Output 3: Concatenated Lots
+      # concatenated_lot.to_excel(util.proc + 'print_log_concatenated_lots.xlsx', index=False)
       lots_reformatted.to_excel(util.proc + 'script_data/lots_by_dates.xlsx', index=False)
 
+
+      #### all_samples & lot_per_day ==> Sample with Lot Info
+
+      # all_samples keep column: Sample ID, Date Processing Started
+      all_samples = query_dscf()
+      all_samples = all_samples.reset_index()[['sample_id', 'Date Processing Started']]
+
+      # Merge based on 'Date Processing Started' in all_samples & 'Date Used' in concatenated_lots
       all_samples['Date Processing Started'] = pd.to_datetime(all_samples['Date Processing Started'])
-      samples_with_lot = (pd.merge(all_samples, lots_reformatted, left_on='Date Processing Started', right_on='Date Used')
-                              .drop_duplicates(subset=['sample_id', 'Material'])
-                              .set_index(['sample_id', 'Material']))
-      samples_with_lot.to_excel(util.proc + 'script_data/print_log_sample_with_lot.xlsx')
+      sample_with_lot = pd.merge(all_samples, lots_reformatted, left_on='Date Processing Started', right_on='Date Used')
+
+      # Set (sample_id, Material) as index
+      sample_with_lot.set_index(['sample_id', 'Material'], inplace=True)
+      # sample_with_lot_columns = sample_with_lot.loc[:, ['Date Material Opened', 'Lot Number', 'EXP Date', 'Catalog Number', 'Samples Affected/ COMMENTS']]
+
+      # Output 4: List indexed by (sample ID, material) with (catalog #, lot #, expiration)
+      sample_with_lot.to_excel(util.proc + 'script_data/print_log_sample_with_lot.xlsx')
 
