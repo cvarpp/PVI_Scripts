@@ -3,6 +3,7 @@ import datetime
 import argparse
 import util
 from seronet.d4_all_data import pull_from_source
+from helpers import clean_sample_id
 
 def process_lots():
     lots = pd.read_excel(util.dscf, sheet_name='Lot # Sheet')
@@ -71,18 +72,25 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
     future_output['Biospecimen'] = {col: [] for col in biospec_cols}
     future_output['Shipping Manifest'] = {col: [] for col in ship_cols}
     participant_visits = {}
+    sample_visits = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Source').drop_duplicates(subset='Sample ID').assign(sample_id=clean_sample_id).set_index('sample_id')
+    sample_visits['Visit Num'] = sample_visits['Biospecimen_ID'].str[-2:].apply(lambda val: int(val) if val[-1].isdigit() else val)
     for _, row in source.iterrows():
         participant = row['Participant ID']
-        sample_id = row['Sample ID']
+        sample_id = str(row['Sample ID'])
         seronet_id = row['Seronet ID']
         cohort = row['Cohort']
         if participant in exclude_ppl or seronet_id in exclude_ids:
             continue
-        if participant not in participant_visits.keys():
-            participant_visits[participant] = 1
+        if sample_id in sample_visits.index:
+            visit_num = sample_visits.loc[sample_id, 'Visit Num']
         else:
-            participant_visits[participant] += 1
-        visit_num = participant_visits[participant]
+            visit_num = 0
+        if type(visit_num) == int:
+            if participant not in participant_visits.keys():
+                participant_visits[participant] = 1
+            else:
+                participant_visits[participant] += 1
+            visit_num = participant_visits[participant]
         if visit_num == 1:
             visit = 'Baseline(1)'
         else:
