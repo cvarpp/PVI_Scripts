@@ -5,31 +5,33 @@ import util
 from seronet.d4_all_data import pull_from_source
 from helpers import clean_sample_id
 
+# def process_lots():
+#     lots = pd.read_excel(util.dscf, sheet_name='Lot # Sheet')
+#     lot_log = {}
+#     for _, row in lots.sort_values('Date Used').iterrows():
+#         mat = row['Material']
+#         open_date = row['Date Used'].date()
+#         lot = row['Lot Number']
+#         exp = row['EXP Date']
+#         cat = row['Catalog Number']
+#         if mat not in lot_log.keys():
+#             lot_log[mat] = [(open_date, lot, exp, cat)]
+#         else:
+#             lot_log[mat].append((open_date, lot, exp, cat))
+#     return lot_log
+
+
 def process_lots():
-    lots = pd.read_excel(util.dscf, sheet_name='Lot # Sheet')
-    lot_log = {}
-    for _, row in lots.sort_values('Date Used').iterrows():
-        mat = row['Material']
-        open_date = row['Date Used'].date()
-        lot = row['Lot Number']
-        exp = row['EXP Date']
-        cat = row['Catalog Number']
-        if mat not in lot_log.keys():
-            lot_log[mat] = [(open_date, lot, exp, cat)]
-        else:
-            lot_log[mat].append((open_date, lot, exp, cat))
-    return lot_log
+    equip_lots = pd.read_excel(util.proc + 'script_data/lots_by_dates.xlsx').set_index(['Date Used', 'Material'])
+    return equip_lots
 
 def get_catalog_lot_exp(coll_date, material, lot_log):
     unknown = ("Please enter into Lot Sheet", "-", "-", "-")
-    if material not in lot_log.keys():
+    if (pd.to_datetime(coll_date), material.title()) not in lot_log.index:
         return unknown
     else:
-        lots = list(filter(lambda vals: vals[0] <= coll_date, lot_log[material]))
-        if len(lots) > 0:
-            return lots[-1]
-        else:
-            return unknown
+        row = lot_log.loc[(pd.to_datetime(coll_date), material.title()), :]
+        return [row['odate'], row['Lot Number'], row['EXP Date'], row['Catalog Number']]
 
 def time_diff_wrapper(t_start, t_end, annot):
     try:
@@ -156,7 +158,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
                 add_to['Biospecimen_ID'].append(cells_id)
                 add_to['Equipment_ID'].append(mat_row['Equipment_ID'])
                 add_to['Equipment_Type'].append(mat_row['Equipment_Type'])
-                add_to['Equipment_Calibration_Due_Date'].append(mat_row['Equipment_Calibration_Due_Date'])
+                add_to['Equipment_Calibration_Due_Date'].append('N/A')
                 add_to['Comments'].append(mat_row['Comments'])
         '''
         Consumables Next
