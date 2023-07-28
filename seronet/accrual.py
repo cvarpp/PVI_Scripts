@@ -153,13 +153,9 @@ def accrue(args):
     if not args.debug:
         if not os.path.exists(output_inner):
             os.makedirs(output_inner)
-        with pd.ExcelFile(output_outer + 'GAEA_no_biospec.xlsx') as gaea_file:
-            gaea_ppl = gaea_file.parse(sheet_name='participant_info')
-            gaea_vax = gaea_file.parse(sheet_name='vaccination_status')
-            gaea_samples = gaea_file.parse(sheet_name='visit_info')
-        pd.concat([ppl_data, gaea_ppl]).to_excel(output_inner + 'Accrual_Participant_Info.xlsx', index=False, na_rep='N/A')
-        pd.concat([vax_data.drop(orig_date, axis='columns'), gaea_vax]).to_excel(output_inner + 'Accrual_Vaccination_Status.xlsx', index=False, na_rep='N/A')
-        pd.concat([df_start.loc[:, sample_cols], gaea_samples]).to_excel(output_inner + 'Accrual_Visit_Info.xlsx', index=False, na_rep='N/A')
+        ppl_data.to_excel(output_inner + 'Accrual_Participant_Info.xlsx', index=False, na_rep='N/A')
+        vax_data.drop(orig_date, axis=1).to_excel(output_inner + 'Accrual_Vaccination_Status.xlsx', index=False, na_rep='N/A')
+        df_start.loc[:, sample_cols].to_excel(output_inner + 'Accrual_Visit_Info.xlsx', index=False, na_rep='N/A')
         df_start.loc[:, sample_cols + ['Sample ID']].to_excel(output_outer + 'Latest_Accrual_SIDs.xlsx', index=False, na_rep='N/A')
 
 if __name__ == '__main__':
