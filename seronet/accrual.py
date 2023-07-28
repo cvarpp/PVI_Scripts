@@ -156,6 +156,7 @@ def accrue(args):
         ppl_data.to_excel(output_inner + 'Accrual_Participant_Info.xlsx', index=False, na_rep='N/A')
         vax_data.drop(orig_date, axis=1).to_excel(output_inner + 'Accrual_Vaccination_Status.xlsx', index=False, na_rep='N/A')
         df_start.loc[:, sample_cols].to_excel(output_inner + 'Accrual_Visit_Info.xlsx', index=False, na_rep='N/A')
+        df_start.loc[:, sample_cols + ['Sample ID']].to_excel(output_outer + 'Latest_Accrual_SIDs.xlsx', index=False, na_rep='N/A')
 
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Make files for monthly data submission.')
