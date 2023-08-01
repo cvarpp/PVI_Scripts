@@ -46,7 +46,7 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-d', '--debug', action='store_true')
     argparser.add_argument('-c', '--use_cache', action='store_true')
-    argparser.add_argument('-r', '--recency', type=int, default=60, help='Number of days in the past to consider recent')
+    argparser.add_argument('-r', '--recency', type=int, default=180, help='Number of days in the past to consider recent')
     args = argparser.parse_args()
 
     report = make_report(args.use_cache)
@@ -56,13 +56,29 @@ if __name__ == '__main__':
     report_new_emails = report_new[~report_new['Email'].isna()]
     report_new_no_emails = report_new[report_new['Email'].isna()]
 
-    assert(report_old.shape[0] + report_new.shape[0] == report.shape[0])
-    assert(report_new_emails.shape[0] + report_new_no_emails.shape[0] == report_new.shape[0])
-    output_filename = util.sharing + 'result_reporting_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
+    # Separate 'Email Missing' to new workbook
+    output_emails_missing = util.sharing + 'result_reporting_emails_missing_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
+    with pd.ExcelWriter(output_emails_missing) as writer_emails_missing:
+        report_new_no_emails.to_excel(writer_emails_missing, sheet_name='Recent Unshared - Email Missing', index=False)
+    print("Report written to {}".format(output_emails_missing))
+
+    # Main workbook with other sheets
+    output_main = util.sharing + 'result_reporting_main_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
     if not args.debug:
-        with pd.ExcelWriter(output_filename) as writer:
-            report_new_emails.to_excel(writer, sheet_name='Results to Share', index=False)
-            report_new_no_emails.to_excel(writer, sheet_name='Recent Unshared - Email Missing', index=False)
-            report_old.to_excel(writer, sheet_name='Older Unshared Results', index=False)
-        print("Report written to {}".format(output_filename))
+        with pd.ExcelWriter(output_main) as writer_main:
+            report_new_emails.to_excel(writer_main, sheet_name='Results to Share', index=False)
+            report_old.to_excel(writer_main, sheet_name='Older Unshared Results', index=False)
+        print("Report written to {}".format(output_main))
     print("Total to report:", report.shape[0], "Older count:", report_old.shape[0], "Recent Results to Share:", report_new_emails.shape[0], "Recent Results Missing Email:", report_new_no_emails.shape[0])
+
+    # assert(report_old.shape[0] + report_new.shape[0] == report.shape[0])
+    # assert(report_new_emails.shape[0] + report_new_no_emails.shape[0] == report_new.shape[0])
+    # output_filename = util.sharing + 'result_reporting_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
+    # if not args.debug:
+    #     with pd.ExcelWriter(output_filename) as writer:
+    #         report_new_emails.to_excel(writer, sheet_name='Results to Share', index=False)
+    #         report_new_no_emails.to_excel(writer, sheet_name='Recent Unshared - Email Missing', index=False)
+    #         report_old.to_excel(writer, sheet_name='Older Unshared Results', index=False)
+    #     print("Report written to {}".format(output_filename))
+    # print("Total to report:", report.shape[0], "Older count:", report_old.shape[0], "Recent Results to Share:", report_new_emails.shape[0], "Recent Results Missing Email:", report_new_no_emails.shape[0])
+
