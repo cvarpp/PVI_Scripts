@@ -36,6 +36,14 @@ def box_range(plog, input_type):
     
     return box_start, box_end
 
+def output_file(print_type, workbook_name):
+    if print_type == 'STANDARD':
+        return os.path.join(util.tube_print, 'Future Sheets', 'STANDARD', f"{workbook_name}.xlsx")
+    elif print_type == 'SERONET':
+        return os.path.join(util.tube_print, 'Future Sheets', 'SERONET FULL', f"{workbook_name}.xlsx")
+    elif print_type == 'SERUM':
+        return os.path.join(util.tube_print, 'Future Sheets', 'SERUM', f"{workbook_name}.xlsx")
+
 
 if __name__ == '__main__':
 
@@ -56,21 +64,10 @@ if __name__ == '__main__':
     # mast_list: unassigned sample IDs
     unassigned_sample_ids = next_sample_ids(mast_list, print_type)
 
-    # plog: box range
+    # plog: find box range
     box_start, box_end = box_range(plog, print_type)
     workbook_name = f"{print_type} {box_start}-{box_end}"
     
-    # output path
-    if print_type == 'STANDARD':
-        output_path = util.tube_print/'Future Sheets'/'STANDARD'
-    elif print_type == 'SERONET':
-        output_path = util.tube_print/'Future Sheets'/'SERONET FULL'
-    elif print_type == 'SERUM':
-        output_path = util.tube_print/'Future Sheets'/'SERUM'
-    
-    # ## test
-    # print("Printing Type:", print_type)
-    # print("Unassigned Sample IDs:", unassigned_sample_ids)
-    # print("Workbook Name:", workbook_name)
-    # print("Output Path:", output_path)
+    # output location
+    output_file = output_file(print_type)  # (print_type, workbook_name)
 
