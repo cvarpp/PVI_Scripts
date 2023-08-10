@@ -74,7 +74,7 @@ def write_clinical(input_df, output_fname, debug=False):
     for sample_id, row_outer in one_per.sort_values('Date').iterrows():
         seronet_id = row_outer['Research_Participant_ID']
         visit = row_outer['Visit_Number']
-        visit_date = row_outer['Date'].date()
+        visit_date = row_outer['Date']
         participant = row_outer['Participant ID']
         study = participant_study[participant]
         # index_date = row_outer['Index Date'].date()

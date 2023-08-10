@@ -12,7 +12,7 @@ import os
 def lost_calculate(row):
     if row['Date'] != row['Last_Date']:
         return 'No'
-    elif (datetime.date.today() - row['Date'].date()).days < 300:
+    elif (datetime.date.today() - row['Date']).days < 300:
         return 'No'
     else:
         return 'Unknown'
@@ -65,7 +65,7 @@ def accrue(args):
     data_ppl = set(all_data['Seronet ID'].unique())
     ppl_cols = ['Research_Participant_ID', 'Age', 'Race', 'Ethnicity', 'Sex_At_Birth', 'Sunday_Prior_To_Visit_1']
     baseline_dates = all_data.drop_duplicates(subset='Seronet ID').set_index('Seronet ID').loc[:, 'Date']
-    baseline_sundays = baseline_dates - np.mod(baseline_dates.dt.weekday + 1, 7) * datetime.timedelta(days=1)
+    baseline_sundays = baseline_dates - np.mod(pd.to_datetime(baseline_dates).dt.weekday + 1, 7) * datetime.timedelta(days=1)
     ppl_data = (dfs_clin['Baseline']
                     .loc[:, ppl_cols[:-1]] # column subset
                     .query('Research_Participant_ID in @data_ppl') # row subset
@@ -92,8 +92,8 @@ def accrue(args):
         '# of PBMC vials': 'Num_PBMC_Vials_For_FNL'
     }
     df_start = all_data.loc[:, keep_cols].rename(columns=col_map).query('Date <= @args.report_end').copy()
-    cohort_key = {'MARS': 'Cancer', 'IRIS': 'IBD', 'TITAN': 'Transplant', 'PRIORITY': 'Chronic Conditions', 'GAEA': 'Healthy Control'}
-    df_start['Primary_Cohort'] = df_start['Site_Cohort_Name'].apply(lambda val: cohort_key[val])
+    cohort_key = {'M': 'Cancer', 'I': 'IBD', 'T': 'Transplant', 'P': 'Chronic Conditions', 'G': 'Healthy Control'}
+    df_start['Primary_Cohort'] = df_start['Research_Participant_ID'].apply(lambda val: cohort_key[val[3:4]])
     df_start['Visit_Date_Duration_From_Visit_1'] = df_start['Days from Index'] - df_start['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
     df_start['Visit_Number'] = df_start.groupby('Research_Participant_ID').cumcount() + 1
     manifests = seronet_key['Aliquots Shipped'].assign(sample_id=lambda df: df['Sample ID'].astype(str))
