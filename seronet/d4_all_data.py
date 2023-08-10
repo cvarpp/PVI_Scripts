@@ -3,7 +3,7 @@ import numpy as np
 import argparse
 import util
 from cam_convert import transform_cam
-from helpers import query_dscf, query_research
+from helpers import query_intake, query_dscf, clean_sample_id, try_datediff, map_dates
 
 def sufficient(val):
     try:
@@ -11,26 +11,33 @@ def sufficient(val):
     except:
         return False
 
-def pull_from_source(debug=False):
-    iris_data = pd.read_excel(util.iris_folder + 'Participant Tracking - IRIS.xlsx', sheet_name='Main Project', header=4).dropna(subset=['Participant ID'])
-    titan_data = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Tracker', header=4).rename(columns={'Umbrella Corresponding Participant ID': 'Participant ID'}).dropna(subset=['Participant ID'])
-    mars_data = pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name='Pt List').dropna(subset=['Participant ID'])
-    gaea_data = pd.read_excel(util.gaea_folder + 'GAEA Tracker.xlsx', sheet_name='Summary').dropna(subset=['Participant ID'])
-    for df in [iris_data, titan_data, mars_data, gaea_data]:
-        df['Participant ID'] = df['Participant ID'].apply(lambda val: val.strip().upper())
-    participants = np.concatenate((mars_data['Participant ID'].unique(),
-                                   titan_data['Participant ID'].unique(),
-                                   iris_data['Participant ID'].unique(),
-                                   gaea_data['Participant ID'].unique()))
-    participant_study = {p: 'MARS' for p in mars_data['Participant ID'].unique()}
-    participant_study.update({p: 'TITAN' for p in titan_data['Participant ID'].unique()})
-    participant_study.update({p: 'IRIS' for p in iris_data['Participant ID'].unique()})
-    participant_study.update({p: 'GAEA' for p in gaea_data['Participant ID'].unique()})
-    mars_data.set_index('Participant ID', inplace=True)
-    iris_data.set_index('Participant ID', inplace=True)
-    titan_data.set_index('Participant ID', inplace=True)
-    gaea_data.set_index('Participant ID', inplace=True)
-    titan_convert = {
+def seronet_annotate(df):
+    df = df.copy()
+    baseline_df = df.sort_values(by=['participant_id', 'Date Collected']).drop_duplicates(subset='participant_id').reset_index().set_index('participant_id')
+    df['Seronet ID'] = df['participant_id'].apply(lambda val: "14_{}{}".format(baseline_df.loc[val, 'Cohort'][:1], baseline_df.loc[val, 'sample_id']))
+    df['Index Date'] = pd.NA
+    idx_third = df[(df['Cohort'] == 'TITAN')].index
+    df.loc[idx_third, 'Index Date'] = df.loc[idx_third, '3rd Dose Date']
+    df['Final Primary Date'] = df.apply(lambda row: row['1st Dose Date'] if str(row['Vaccine'])[:1].upper() == 'J' else row['2nd Dose Date'], axis=1)
+    idx_vax = df[df['Cohort'].isin(['MARS', 'IRIS'])].index
+    df.loc[idx_vax, 'Index Date'] = df.loc[idx_vax, 'Final Primary Date']
+    unvax_index = df[df['Index Date'].isna()].index.intersection(idx_vax.union(idx_third))
+    df.loc[unvax_index, 'Cohort'] = 'UNVAX'
+    idx_base = df[df['Cohort'].isin(['PRIORITY', 'GAEA', 'UNVAX'])].index
+    df['Baseline Date'] = df['participant_id'].apply(lambda val: baseline_df.loc[val, 'Date Collected'])
+    df.loc[idx_base, 'Index Date'] = df.loc[idx_base, 'Baseline Date']
+    return df
+
+def cohort_data():
+    iris_data = pd.read_excel(util.iris_folder + 'Participant Tracking - IRIS.xlsx', sheet_name='Main Project', header=4).dropna(subset=['Participant ID']).assign(Cohort='IRIS', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
+    titan_data = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Tracker', header=4).rename(columns={'Umbrella Corresponding Participant ID': 'Participant ID'}).dropna(subset=['Participant ID']).assign(Cohort='TITAN', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
+    mars_data = pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name='Pt List').dropna(subset=['Participant ID']).assign(Cohort='MARS', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
+    gaea_data = pd.read_excel(util.gaea_folder + 'GAEA Tracker.xlsx', sheet_name='Summary').dropna(subset=['Participant ID']).assign(Cohort='GAEA', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
+    participants = np.concatenate((mars_data.index.to_numpy(),
+                                   titan_data.index.to_numpy(),
+                                   iris_data.index.to_numpy(),
+                                   gaea_data.index.to_numpy()))
+    titan_convert = {v: k for k, v in {
         'Vaccine': 'Vaccine Type',
         '1st Dose Date': 'Vaccine #1 Date',
         '2nd Dose Date': 'Vaccine #2 Date',
@@ -38,11 +45,11 @@ def pull_from_source(debug=False):
         '3rd Dose Vaccine': '3rd Dose Vaccine Type',
         'Boost Date': 'First Booster Vaccine Type',
         'Boost Vaccine': 'First Booster Dose Date',
-        'Boost 2 Date': 'Second Booster Vaccine Type',
-        'Boost 2 Vaccine': 'Second Booster Dose Date',
+        'Boost 2 Date': 'Second Booster Dose Date',
+        'Boost 2 Vaccine': 'Second Booster Vaccine Type',
         'Baseline Date': 'Baseline date'
-    }
-    mars_convert = {
+    }.items()}
+    mars_convert = {v: k for k, v in {
         'Vaccine': 'Vaccine Name',
         '1st Dose Date': 'Vaccine #1 Date',
         '2nd Dose Date': 'Vaccine #2 Date',
@@ -53,8 +60,8 @@ def pull_from_source(debug=False):
         'Boost 2 Date': '5th vaccine',
         'Boost 2 Vaccine': '5th Vaccine Type',
         'Baseline Date': 'T1'
-    }
-    iris_convert = {
+    }.items()}
+    iris_convert = {v: k for k, v in {
         'Vaccine': 'Which Vaccine?',
         '1st Dose Date': 'First Dose Date',
         '2nd Dose Date': 'Second Dose Date',
@@ -65,8 +72,8 @@ def pull_from_source(debug=False):
         'Boost 2 Date': 'Fifth Dose Date',
         'Boost 2 Vaccine': 'Fifth Dose Type',
         'Baseline Date': 'Baseline Date'
-    }
-    gaea_convert = {
+    }.items()}
+    gaea_convert = {v: k for k, v in {
         'Vaccine': 'Vaccine Type',
         '1st Dose Date': 'Dose #1 Date',
         '2nd Dose Date': 'Dose #2 Date',
@@ -74,200 +81,79 @@ def pull_from_source(debug=False):
         '3rd Dose Vaccine': '3rd Vaccine Type ',
         'Boost Date': '4th Vaccine Date',
         'Boost Vaccine': '4th Vaccine Type',
-        'Boost 2 Date': '5th Vaccine Type',
+        'Boost 2 Date': '5th Vaccine Date',
         'Boost 2 Vaccine': '5th Vaccine Type',
         'Baseline Date': 'Baseline Date'
-    }
-    # mars_data['3rd Dose Date'] = ''
-    # mars_data['3rd Dose Vaccine'] = ''
-    # gaea_data['3rd Dose Date'] = ''
-    # gaea_data['3rd Dose Vaccine'] = ''
-    # iris_data['3rd Dose Date'] = ''
-    # iris_data['3rd Dose Vaccine'] = ''
+    }.items()}
     source_dfs = {'TITAN': titan_data, 'MARS': mars_data, 'IRIS': iris_data, 'GAEA': gaea_data}
     conversions = {'TITAN': titan_convert, 'MARS': mars_convert, 'IRIS': iris_convert, 'GAEA': gaea_convert}
-    intake_source = pd.ExcelFile(util.intake)
-    cam_df = transform_cam(debug=debug).drop_duplicates(subset='sample_id').set_index('sample_id')
-    samples = intake_source.parse(sheet_name='Sample Intake Log', header=util.header_intake, dtype=str)
-    newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
-    newCol2 = 'Ab Concentration (Units - AU/mL)'
-    visit_type = "Visit Type / Samples Needed"
-    samplesClean = samples.dropna(subset=['Participant ID'])
-    cutoff_date = pd.to_datetime('2022-11-20').date()
-    participant_samples = {participant: [] for participant in participants}
-    submitted_key = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Source').drop_duplicates(subset=['Participant ID']).set_index('Participant ID')
-    sample_exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Sample Exclusions')
-    exclude_samples = set(sample_exclusions['Sample ID'].astype(str).str.upper().str.strip().unique())
-    samples_of_interest = set()
-    for _, sample in samplesClean.iterrows():
-        sample_id = str(sample['Sample ID']).strip().upper()
-        if len(sample_id) != 5 or sample_id in exclude_samples:
-            continue
-        participant = str(sample['Participant ID']).strip().upper()
-        if str(sample['Study']).strip().upper() == 'PRIORITY':
-            if participant not in participant_samples.keys():
-                participant_samples[participant] = []
-                participant_study[participant] = 'PRIORITY'
-        if participant in participant_samples.keys():
-            if str(sample[newCol]).strip().upper() == "NEGATIVE":
-                sample[newCol2] = "Negative"
-            if pd.isna(sample[newCol2]):
-                result_new = '-'
-            elif type(sample[newCol2]) == int:
-                result_new = sample[newCol2]
-            elif str(sample[newCol2]).strip().upper() == "NEGATIVE":
-                result_new = 1.
-            else:
-                result_new = sample[newCol2]
-            try:
-                sample_date = pd.to_datetime(str(sample['Date Collected']))
-            except:
-                print(sample_id, "has invalid date", sample['Date Collected'])
-                sample_date = pd.to_datetime('1/1/1900')
-            participant_samples[participant].append((sample_date, str(sample_id).strip().upper(), sample[visit_type], sample[newCol], result_new, sample['Blood Collector Initials']))
-            samples_of_interest.add(str(sample_id).strip().upper())
+    source_df = pd.concat([
+        titan_data.rename(columns=titan_convert),
+        mars_data.rename(columns=mars_convert),
+        iris_data.rename(columns=iris_convert),
+        gaea_data.rename(columns=gaea_convert)
+    ]).loc[:, ['Cohort'] + [v for v in titan_convert.values()]]
+    return source_df.pipe(map_dates, [col for col in source_df.columns if 'Date' in col])
 
-    
+def pull_from_source(debug=False):
+    seronet_source = pd.ExcelFile(util.seronet_data + 'SERONET Key.xlsx')
+    submitted_key = seronet_source.parse(sheet_name='Source').drop_duplicates(subset=['Participant ID']).set_index('Participant ID')
+    sample_exclusions = seronet_source.parse(sheet_name='Sample Exclusions')
+    exclude_samples = set(sample_exclusions.assign(sample_id=clean_sample_id)['sample_id'].unique())
+    exclusions = seronet_source.parse(sheet_name='Exclusions')
+    exclude_ppl = set(exclusions['Participant ID'].str.upper().str.strip().unique())
 
-    research_results = query_research(samples_of_interest)
+    source_df = cohort_data()
+    participant_study = {rname: row['Cohort'] for rname, row in source_df.iterrows()}
+    all_samples = query_intake(include_research=True)
+    priority_ppl = all_samples[(all_samples['Study'] == 'PRIORITY') | (all_samples['participant_id'].str[:3] == 'MSH')]['participant_id'].unique()
+    participant_study.update({pid: 'PRIORITY' for pid in priority_ppl})
+    samples = all_samples[all_samples['participant_id'].isin(participant_study.keys()) & ~all_samples['participant_id'].isin(exclude_ppl)]
+    samples = samples.loc[~samples.index.isin(exclude_samples), :].copy()
+    samples_of_interest = samples.index.to_numpy()
 
     shared_samples = pd.read_excel(util.shared_samples, sheet_name='Released Samples')
     no_pbmcs = set([str(sid).strip().upper() for sid in shared_samples[shared_samples['Sample Type'] == 'PBMC']['Sample ID'].unique()])
-    all_samples = query_dscf(sid_list=samples_of_interest, no_pbmcs=no_pbmcs)
+    proc_unfiltered = query_dscf(sid_list=samples_of_interest, no_pbmcs=no_pbmcs)
+    cam_df = transform_cam(debug=debug).drop_duplicates(subset='sample_id').set_index('sample_id')
     cam_df['coll_time'] = cam_df['Time Collected'].fillna(cam_df['Time'])
-    all_samples['coll_time'] = all_samples.apply(lambda row: cam_df.loc[row.name, 'coll_time'] if row.name in cam_df.index else row['Time Collected'], axis=1)
-    serum_or_cells = all_samples['Volume of Serum Collected (mL)'].apply(sufficient) | all_samples['PBMC concentration per mL (x10^6)'].apply(sufficient)
+    cam_df['coll_inits'] = cam_df['Phlebotomist'].fillna('CCT (Clinical Care Team)')
+    proc_unfiltered['coll_time'] = proc_unfiltered.apply(lambda row: cam_df.loc[row.name, 'coll_time'] if row.name in cam_df.index else row['Time Collected'], axis=1)
+    proc_unfiltered['coll_inits'] = proc_unfiltered.apply(lambda row: cam_df.loc[row.name, 'coll_inits'] if row.name in cam_df.index else 'CCT (Clinical Care Team)')
+    serum_or_cells = proc_unfiltered['Volume of Serum Collected (mL)'].apply(sufficient) | proc_unfiltered['PBMC concentration per mL (x10^6)'].apply(sufficient)
     if not debug:
-        all_samples[~serum_or_cells].to_excel(util.script_output + 'missing_info.xlsx', index=False)
-    sample_info = all_samples[serum_or_cells].copy()
+        proc_unfiltered[~serum_or_cells].to_excel(util.script_output + 'missing_info.xlsx', index=False)
+    sample_info = proc_unfiltered[serum_or_cells].copy()
     sample_info.loc[sample_info['Volume of Serum Collected (mL)'] > 4.5, 'Volume of Serum Collected (mL)'] = 4.5
 
-    proc_cols = ['Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
+    proc_cols = ['Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_time', 'coll_inits', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
+    key_cols = ['Cohort', 'Vaccine', '1st Dose Date', '2nd Dose Date', '3rd Dose Date', '3rd Dose Vaccine', 'Boost Date', 'Boost Vaccine', 'Boost 2 Date', 'Boost 2 Vaccine', 'Baseline Date']
 
-    columns = ['Cohort', 'Seronet ID', 'Index Date', 'Days from Index', 'Vaccine', '1st Dose Date', 'Days to 1st', '2nd Dose Date', 'Days to 2nd', '3rd Dose Date', 'Days to 3rd', 'Boost Vaccine', 'Boost Date', 'Days to Boost', 'Boost 2 Vaccine', 'Boost 2 Date', 'Days to Boost 2', 'Participant ID', 'Date', 'Post-Baseline', 'Sample ID', 'Visit Type', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_inits', 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
+    cutoff_date = pd.to_datetime('2022-11-20').date()
+    samples = samples.join(sample_info.loc[:, proc_cols], how='inner').join(source_df.loc[:, key_cols], on='participant_id')
+    samples['Cohort'] = samples['Cohort'].fillna('PRIORITY')
+    samples = samples[(samples['Cohort'] != 'IRIS') | (samples['Date Collected'] <= cutoff_date)].pipe(seronet_annotate)
+    pid_replace = samples[samples['participant_id'].isin(submitted_key.index)].index
+    samples['Seronet ID'] = samples.apply(lambda row: submitted_key.loc[row['participant_id'], 'Research_Participant_ID'] if row['participant_id'] in submitted_key.index else row['Seronet ID'], axis=1)
 
-    data = {col: [] for col in columns}
-    participant_data = {}
-    exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
-    exclude_ppl = set(exclusions['Participant ID'].unique())
-    
-    for participant, samples in participant_samples.items():
-        if participant in exclude_ppl:
-            continue
-        try:
-            samples.sort(key=lambda x: x[0])
-        except:
-            print(participant, "has samples that won't sort (see below)")
-            print(samples)
-            print()
-            continue
-        if len(samples) < 1:
-            print(participant, "has no samples")
-            print()
-            continue
-        baseline = samples[0][0]
-        participant_data[participant] = {}
-        cohort = participant_study[participant].strip().upper()
-        seronet_id = "14_{}{}".format(cohort[:1], samples[0][1])
-        key_cols = ['Vaccine', '1st Dose Date', '2nd Dose Date', '3rd Dose Date', '3rd Dose Vaccine', 'Boost Date', 'Boost Vaccine', 'Boost 2 Date', 'Boost 2 Vaccine', 'Baseline Date']
-        if cohort in conversions.keys():
-            source_df = source_dfs[cohort]
-            converter = conversions[cohort]
-            for k in key_cols:
-                if 'Date' in k:
-                    try:
-                        participant_data[participant][k] = pd.to_datetime(source_df.loc[participant, converter[k]])
-                    except:
-                        participant_data[participant][k] = source_df.loc[participant, converter[k]]
-                else:
-                    participant_data[participant][k] = source_df.loc[participant, converter[k]]
-            if cohort == 'TITAN':
-                participant_data[participant]['Index Date'] = participant_data[participant]['3rd Dose Date']
-            elif cohort == 'GAEA':
-                participant_data[participant]['Index Date'] = participant_data[participant]['Baseline Date']
-            elif str(participant_data[participant]['Vaccine'])[:1].upper() == 'J':
-                participant_data[participant]['Index Date'] = participant_data[participant]['1st Dose Date']
-            else:
-                participant_data[participant]['Index Date'] = participant_data[participant]['2nd Dose Date']
-            if type(participant_data[participant]['Index Date']) != pd.Timestamp or pd.isna(participant_data[participant]['Index Date']):
-                participant_data[participant]['Index Date'] = baseline
-        elif participant_study[participant] == 'PRIORITY':
-            for k in key_cols:
-                participant_data[participant][k] = ''
-            participant_data[participant]['Index Date'] = baseline
-        else:
-            print(participant, "is not in the study! They are in", participant_study[participant])
-            exit(1)
-        if participant in submitted_key.index:
-            seronet_id = submitted_key.loc[participant, 'Research_Participant_ID']
+    columns = ['Cohort', 'Seronet ID', 'Index Date', 'Days from Index', 'Vaccine', '1st Dose Date', 'Days to 1st',
+                '2nd Dose Date', 'Days to 2nd', '3rd Dose Date', 'Days to 3rd', 'Boost Vaccine', 'Boost Date', 'Days to Boost',
+                'Boost 2 Vaccine', 'Boost 2 Date', 'Days to Boost 2', 'Participant ID', 'Date', 'Post-Baseline', 'Sample ID',
+                'Visit Type', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC',
+                'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_inits',
+                'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability',
+                'cpt_vol', 'sst_vol', 'proc_comment']
 
-        for date_, sample_id, visit_type, result, result_new, coll_inits in samples:
-            sample_id = str(sample_id).strip().upper()
-            if cohort == 'IRIS' :
-                if date_ > cutoff_date:
-                    continue
-            if sample_id not in sample_info.index:
-                continue
-            for col in proc_cols:
-                data[col].append(sample_info.loc[sample_id, col])
-            data['Cohort'].append(participant_study[participant])
-            data['Index Date'].append(participant_data[participant]['Index Date'])
-            try:
-                data['Days from Index'].append(int((date_ - data['Index Date'][-1]).days))
-            except:
-                data['Days from Index'].append('')
-            data['Vaccine'].append(participant_data[participant]['Vaccine'])
-            data['1st Dose Date'].append(participant_data[participant]['1st Dose Date'])
-            try:
-                data['Days to 1st'].append(int((date_ - data['1st Dose Date'][-1]).days))
-            except:
-                data['Days to 1st'].append('')
-            data['2nd Dose Date'].append(participant_data[participant]['2nd Dose Date'])
-            try:
-                data['Days to 2nd'].append(int((date_ - data['2nd Dose Date'][-1]).days))
-            except:
-                data['Days to 2nd'].append('')
-            data['3rd Dose Date'].append(participant_data[participant]['3rd Dose Date'])
-            try:
-                data['Days to 3rd'].append(int((date_ - data['3rd Dose Date'][-1]).days))
-            except:
-                data['Days to 3rd'].append('')
-            data['Boost Date'].append(participant_data[participant]['Boost Date'])
-            try:
-                data['Days to Boost'].append(int((date_ - data['Boost Date'][-1]).days))
-            except:
-                data['Days to Boost'].append('')
-            data['Boost Vaccine'].append(participant_data[participant]['Boost Vaccine'])
-            data['Boost 2 Date'].append(participant_data[participant]['Boost 2 Date'])
-            try:
-                data['Days to Boost 2'].append(int((date_ - data['Boost 2 Date'][-1]).days))
-            except:
-                data['Days to Boost 2'].append('')            
-            
-            data['Boost 2 Vaccine'].append(participant_data[participant]['Boost 2 Vaccine'])
-            data['Seronet ID'].append(seronet_id)
-            data['Participant ID'].append(participant)
-            data['Date'].append(date_)
-            data['Post-Baseline'].append((date_ - baseline).days)
-            data['Sample ID'].append(sample_id)
-            data['Visit Type'].append(visit_type)
-            data['Qualitative'].append(result)
-            data['Quantitative'].append(result_new)
-            if sample_id in research_results.index:
-                for col in ['Spike endpoint', 'AUC']:
-                    data[col].append(research_results.loc[sample_id, col])
-                if type(data['AUC'][-1]) in [int, float]:
-                    data['Log2AUC'].append(np.log2(data['AUC'][-1]))
-                else:
-                    data['Log2AUC'].append('-')
-            else:
-                for col in ['Spike endpoint', 'AUC']:
-                    data[col].append('-')
-                data['Log2AUC'].append('-')
-            data['coll_inits'].append(coll_inits)
-    report = pd.DataFrame(data)
+    days = ['Days from Index', 'Days to 1st', 'Days to 2nd', 'Days to 3rd', 'Days to Boost', 'Days to Boost 2', 'Post-Baseline']
+    dates = ['Index Date', '1st Dose Date', '2nd Dose Date', '3rd Dose Date', 'Boost Date', 'Boost 2 Date', 'Baseline Date']
+    for day_col, date_col in zip(days, dates):
+        samples[day_col] = (samples['Date Collected'] - samples[date_col]).dt.days
+    samples['Sample ID']=  samples.index.to_numpy()
+    report = samples.rename(
+        columns={'participant_id': 'Participant ID', 'Date Collected': 'Date', 'Visit Type / Samples Needed': 'Visit Type'}
+    ).loc[:, columns].sort_values(by=['Participant ID', 'Date']).copy()
     if not debug:
-        report.to_excel(util.unfiltered, index=False)
+        report.to_excel(util.unfiltered, index=False, freeze_panes=(1,3))
         print("Report written to {}".format(util.unfiltered))
     print("{} samples characterized.".format(report.shape[0]))
     return report
