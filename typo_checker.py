@@ -9,7 +9,58 @@ import os
 import requests
 from time import sleep
 
-def query_fp(recent_valid, sample_types):
+def query_import_sheet(df_valid):
+    inventory_boxes = pd.read_excel(util.inventory_input, sheet_name=None)
+    boxes = []
+    for sname, sheet in inventory_boxes.items():
+        if 'Sample ID' not in sheet.columns or 'PSP' in sname or 'cell' in sname.lower() or 'NPS' in sname:
+            continue
+        if sname in ['TEMPLATE', 'Box Converter']:
+            continue
+        if 'Sample Type' not in sheet.columns:
+            print(sname, "missing sample type column")
+            continue
+        boxes.append(sheet.reset_index().rename(
+                columns={'index': 'Position'}
+            ).dropna(subset=['Sample ID']).assign(
+            sample_id=clean_sample_id,
+            Box=sname,
+            sample_type=lambda df: df['Sample Type'].str.strip().str.title().str.rstrip('s')
+            ).loc[:, ['sample_id', 'Box', 'Position', 'sample_type']]
+        )
+    inventory = pd.concat(boxes, axis=0).join(df_valid.set_index('sample_id'), on='sample_id', rsuffix='_not_inventory')
+    return inventory
+
+def write_missing_ids(df_valid, invalid_ids, recency_date):
+    in_intake = df_valid.dropna(subset='participant_id').index
+    missing_intake = df_valid.loc[[idx for idx in df_valid.index if idx not in in_intake], :]
+    in_dscf = df_valid.dropna(subset='Date Processing Started').index
+    missing_dscf = df_valid.loc[[idx for idx in df_valid.index if idx not in in_dscf], :]
+    in_cam = df_valid.dropna(subset='Date').index
+    missing_cam = df_valid.loc[[idx for idx in df_valid.index if idx not in in_cam], :]
+    fname_missing_ids = util.proc + 'Troubleshooting/Cross-Sheet Issues.xlsx'
+    with pd.ExcelWriter(fname_missing_ids) as writer:
+        invalid_ids = invalid_ids.loc[:, ['sample_id', 'Date Collected', 'Date Processing Started', 'Date', 'proc_inits']]
+        recent_invalid = invalid_ids[(invalid_ids['Date Collected'] > recency_date) | (invalid_ids['Date Processing Started'] > recency_date)]
+        recent_invalid.to_excel(writer, sheet_name='Invalid IDs (Recent)', index=False, freeze_panes=(1,1))
+        missing_intake = missing_intake.loc[:, ['sample_id', 'Date Collected', 'Date Processing Started', 'Date', 'proc_inits']]
+        recent_missing_intake = missing_intake[missing_intake['Date Processing Started'] > recency_date]
+        recent_missing_intake.to_excel(writer, sheet_name='Missing from Intake (Recent)', index=False, freeze_panes=(1,1))
+        missing_dscf = missing_dscf.loc[:, ['sample_id', 'Date Collected', 'Study', 'Visit Type / Samples Needed', 'participant_id']]
+        recent_missing_dscf = missing_dscf[(missing_dscf['Date Collected'] > recency_date)]
+        recent_missing_dscf.to_excel(writer, sheet_name='Missing from DSCF (Recent)', index=False, freeze_panes=(1,1))
+        missing_cam = missing_cam.loc[:, ['sample_id', 'Date Collected', 'Study', 'Visit Type / Samples Needed', 'participant_id', 'proc_inits']]
+        recent_missing_cam = missing_cam[(missing_cam['Date Collected'] > recency_date)]
+        recent_missing_cam.to_excel(writer, sheet_name='Missing from CAM (Recent)', index=False, freeze_panes=(1,1))
+        invalid_ids.to_excel(writer, sheet_name='Invalid IDs', index=False)
+        missing_intake.to_excel(writer, sheet_name='Missing from Intake', index=False)
+        missing_dscf.to_excel(writer, sheet_name='Missing from DSCF', index=False)
+        missing_cam.to_excel(writer, sheet_name='Missing from CAM', index=False)
+    print("Report written to {}".format(fname_missing_ids))
+    print("DSCF: {}, Intake: {}, CAM: {}, Invalid: {}".format(recent_missing_dscf.shape[0], recent_missing_intake.shape[0], recent_missing_cam.shape[0], recent_invalid.shape[0]))
+
+def query_fp(recent_valid, inventory_counts):
+    sample_types = ['Plasma', 'Serum', 'Saliva', 'Pellet', 'PBMC', '4.5 mL Tube']
     fp_user = os.environ[util.fp_user]
     fp_pass = os.environ[util.fp_pass]
     token_response = requests.post(f'{util.fp_url}/auth/login', json={'username': fp_user, 'password': fp_pass})
@@ -22,6 +73,7 @@ def query_fp(recent_valid, sample_types):
     fp_data = {'Sample ID': []}
     for stype in sample_types:
         fp_data[stype] = []
+    print("Querying FP for {} samples... Estimated time {:.1f} minutes".format(recent_valid.shape[0], recent_valid.shape[0] * 2.2 / 60))
     for sid in recent_valid['sample_id'].to_numpy():
         sleep(2.2)
         sid_response = requests.get(f'{util.fp_url}/samples?filter[name_eq]={sid}&{vial_type_suffix}', headers=headers)
@@ -54,7 +106,19 @@ def query_fp(recent_valid, sample_types):
                 else:
                     fp_data[col].append(0)
     fp_df = pd.DataFrame(fp_data)
-    return fp_df
+    proc_info = recent_valid.set_index('sample_id').loc[:, ['Date Collected', '# of aliquots frozen', 'viability', '# cells per aliquot', 'cpt_vol', 'sst_vol',
+                                        'Total volume of plasma (mL)', 'Total volume of serum (mL)', 'Saliva Volume (mL)',
+                                        '4.5 mL Tube Needed', '4.5 mL Aliquot?', 'proc_inits']]
+    all_inv = fp_df.join(inventory_counts, on='Sample ID', lsuffix='_fp', rsuffix='_import').fillna(0)
+    for stype in sample_types:
+        all_inv[stype] = all_inv[stype + '_fp'] + all_inv[stype + '_import']
+    all_inv['Import Sheet Aliquots'] = all_inv.loc[:, [stype + '_import' for stype in sample_types]].sum(axis=1)
+    all_inv['Still in Import Sheet'] = (all_inv['Import Sheet Aliquots'] > 0).apply(lambda val: "Yes" if val else "No")
+    output = proc_info.join(all_inv.set_index('Sample ID')).loc[:, ['Date Collected', 'Still in Import Sheet', 'cpt_vol', 'Total volume of plasma (mL)',
+        'Plasma', '# of aliquots frozen', '# cells per aliquot', 'PBMC', 'sst_vol', 'Total volume of serum (mL)', 'Serum', '4.5 mL Tube Needed',
+        '4.5 mL Aliquot?', '4.5 mL Tube', 'Saliva Volume (mL)', 'Saliva', 'Import Sheet Aliquots', 'viability', 'proc_inits',
+        'Pellet'] + [stype + '_fp' for stype in sample_types] + [stype + '_import' for stype in sample_types]]
+    return output
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
@@ -76,52 +140,9 @@ if __name__ == '__main__':
     invalid_ids = df[~df['sample_id'].isin(valid_ids)]
     df_valid = df[df['sample_id'].isin(valid_ids)]
     recency_date = (datetime.datetime.today() - datetime.timedelta(days=args.recent_cutoff)).date()
-    in_intake = df_valid.dropna(subset='participant_id').index
-    missing_intake = df_valid.loc[[idx for idx in df_valid.index if idx not in in_intake], :]
-    in_dscf = df_valid.dropna(subset='Date Processing Started').index
-    missing_dscf = df_valid.loc[[idx for idx in df_valid.index if idx not in in_dscf], :]
-    in_cam = df_valid.dropna(subset='Date').index
-    missing_cam = df_valid.loc[[idx for idx in df_valid.index if idx not in in_cam], :]
-    fname_missing_ids = util.proc + 'Troubleshooting/Cross-Sheet Issues.xlsx'
     if not args.debug:
-        with pd.ExcelWriter(fname_missing_ids) as writer:
-            invalid_ids = invalid_ids.loc[:, ['sample_id', 'Date Collected', 'Date Processing Started', 'Date', 'proc_inits']]
-            recent_invalid = invalid_ids[(invalid_ids['Date Collected'] > recency_date) | (invalid_ids['Date Processing Started'] > recency_date)]
-            recent_invalid.to_excel(writer, sheet_name='Invalid IDs (Recent)', index=False, freeze_panes=(1,1))
-            missing_intake = missing_intake.loc[:, ['sample_id', 'Date Collected', 'Date Processing Started', 'Date', 'proc_inits']]
-            recent_missing_intake = missing_intake[missing_intake['Date Processing Started'] > recency_date]
-            recent_missing_intake.to_excel(writer, sheet_name='Missing from Intake (Recent)', index=False, freeze_panes=(1,1))
-            missing_dscf = missing_dscf.loc[:, ['sample_id', 'Date Collected', 'Study', 'Visit Type / Samples Needed', 'participant_id']]
-            recent_missing_dscf = missing_dscf[(missing_dscf['Date Collected'] > recency_date)]
-            recent_missing_dscf.to_excel(writer, sheet_name='Missing from DSCF (Recent)', index=False, freeze_panes=(1,1))
-            missing_cam = missing_cam.loc[:, ['sample_id', 'Date Collected', 'Study', 'Visit Type / Samples Needed', 'participant_id', 'proc_inits']]
-            recent_missing_cam = missing_cam[(missing_cam['Date Collected'] > recency_date)]
-            recent_missing_cam.to_excel(writer, sheet_name='Missing from CAM (Recent)', index=False, freeze_panes=(1,1))
-            invalid_ids.to_excel(writer, sheet_name='Invalid IDs', index=False)
-            missing_intake.to_excel(writer, sheet_name='Missing from Intake', index=False)
-            missing_dscf.to_excel(writer, sheet_name='Missing from DSCF', index=False)
-            missing_cam.to_excel(writer, sheet_name='Missing from CAM', index=False)
-        print("Report written to {}".format(fname_missing_ids))
-        print("DSCF: {}, Intake: {}, CAM: {}, Invalid: {}".format(recent_missing_dscf.shape[0], recent_missing_intake.shape[0], recent_missing_cam.shape[0], recent_invalid.shape[0]))
-    inventory_boxes = pd.read_excel(util.inventory_input, sheet_name=None)
-    boxes = []
-    for sname, sheet in inventory_boxes.items():
-        if 'Sample ID' not in sheet.columns or 'PSP' in sname or 'cell' in sname.lower() or 'NPS' in sname:
-            continue
-        if sname in ['TEMPLATE', 'Box Converter']:
-            continue
-        if 'Sample Type' not in sheet.columns:
-            print(sname, "missing sample type column")
-            continue
-        boxes.append(sheet.reset_index().rename(
-                columns={'index': 'Position'}
-            ).dropna(subset=['Sample ID']).assign(
-            sample_id=clean_sample_id,
-            Box=sname,
-            sample_type=lambda df: df['Sample Type'].str.strip().str.title().str.rstrip('s')
-            ).loc[:, ['sample_id', 'Box', 'Position', 'sample_type']]
-        )
-    inventory = pd.concat(boxes, axis=0).join(df_valid.set_index('sample_id'), on='sample_id', rsuffix='_not_inventory')
+        write_missing_ids(df_valid, invalid_ids, recency_date)
+    inventory = query_import_sheet(df_valid)
     inventory_counts = inventory.loc[:, ['sample_id', 'sample_type', 'Position']].groupby(
         ['sample_id', 'sample_type']
         ).count().unstack().droplevel(0, axis='columns').fillna(0).rename(
@@ -129,29 +150,14 @@ if __name__ == '__main__':
         ).astype(int)
     inventory_missing_intake = inventory[inventory['Date Collected'].isna()]
     recent_valid = df_valid[df_valid['Date Collected'] > recency_date].copy()
-    sample_types = ['Plasma', 'Serum', 'Saliva', 'Pellet', 'PBMC', '4.5 mL Tube']
-    if args.freezerpro:
-        fp_df = query_fp(recent_valid, sample_types)
     fname_inventory = util.proc + 'Troubleshooting/Inventory Check.xlsx'
     if not args.debug:
         with pd.ExcelWriter(fname_inventory) as writer:
             inventory_missing_intake.loc[:, ['sample_id', 'Box', 'Position', 'sample_type']].to_excel(writer, sheet_name='Missing from Intake', index=False, freeze_panes=(1, 1))
             inventory_counts.to_excel(writer, sheet_name='New Import Sheet Inventory', freeze_panes=(1, 1))
             if args.freezerpro:
-                fp_df.to_excel(writer, sheet_name='FP Inventory', index=False, freeze_panes=(1, 1))
-                proc_info = recent_valid.set_index('sample_id').loc[:, ['Date Collected', '# of aliquots frozen', 'viability', '# cells per aliquot', 'cpt_vol', 'sst_vol',
-                                                 'Total volume of plasma (mL)', 'Total volume of serum (mL)', 'Saliva Volume (mL)',
-                                                 '4.5 mL Tube Needed', '4.5 mL Aliquot?', 'proc_inits']]
-                all_inv = fp_df.join(inventory_counts, on='Sample ID', lsuffix='_fp', rsuffix='_import').fillna(0)
-                for stype in sample_types:
-                    all_inv[stype] = all_inv[stype + '_fp'] + all_inv[stype + '_import']
-                all_inv['Import Sheet Aliquots'] = all_inv.loc[:, [stype + '_import' for stype in sample_types]].sum(axis=1)
-                all_inv['Still in Import Sheet'] = (all_inv['Import Sheet Aliquots'] > 0).apply(lambda val: "Yes" if val else "No")
-                to_wit = proc_info.join(all_inv.set_index('Sample ID')).loc[:, ['Date Collected', 'Still in Import Sheet', 'cpt_vol', 'Total volume of plasma (mL)',
-                    'Plasma', '# of aliquots frozen', '# cells per aliquot', 'PBMC', 'sst_vol', 'Total volume of serum (mL)', 'Serum', '4.5 mL Tube Needed',
-                    '4.5 mL Aliquot?', '4.5 mL Tube', 'Saliva Volume (mL)', 'Saliva', 'Import Sheet Aliquots', 'viability', 'proc_inits',
-                    'Pellet'] + [stype + '_fp' for stype in sample_types] + [stype + '_import' for stype in sample_types]]
-                to_wit.to_excel(writer, sheet_name='Inventory vs Expected', freeze_panes=(1, 1))
+                inv_check = query_fp(recent_valid, inventory_counts)
+                inv_check.to_excel(writer, sheet_name='Inventory vs Expected', freeze_panes=(1, 1))
         print("Inventory typo report written to {}".format(fname_inventory))
     print("{} likely inventory typos".format(inventory_missing_intake.shape[0]))
 
