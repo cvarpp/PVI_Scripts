@@ -3,36 +3,74 @@ import argparse
 import util
 import os
 
+def next_sample_ids(mast_list, input_type):
+    if input_type == 'STANDARD':
+        num_samples = 6
+    elif input_type == 'SERONET':
+        num_samples = 18
+    elif input_type == 'SERUM':
+        num_samples = 24
+    
+    unassigned_samples = mast_list[mast_list['Kit Type'].isnull()].head(num_samples)
+    return unassigned_samples['Sample ID'].tolist()
+
+def box_range(plog, input_type):
+    plog.dropna(subset=['Box Min', 'Box Max'], inplace=True)
+    plog['Box Min'] = pd.to_numeric(plog['Box Min'], errors='coerce')
+    plog['Box Max'] = pd.to_numeric(plog['Box Max'], errors='coerce')
+    # plog['Box Min'] = plog['Box Min'].astype(int, errors='ignore')
+    # plog['Box Max'] = plog['Box Max'].astype(int, errors='ignore')
+
+    filtered_plog = plog[plog['Kit Type'] == input_type].sort_values(by='Box Max', ascending=False).iloc[0]
+    recent_box_max = filtered_plog['Box Max']
+
+    if input_type == 'STANDARD':
+        box_start = recent_box_max + 1
+        box_end = recent_box_max + 6
+    elif input_type == 'SERONET':
+        box_start = recent_box_max + 1
+        box_end = recent_box_max + 6
+    elif input_type == 'SERUM':
+        box_start = recent_box_max + 1
+        box_end = recent_box_max + 4
+    
+    return box_start, box_end
+
 
 if __name__ == '__main__':
-      
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("print_type", choices=['STANDARD', 'SERONET', 'SERUM'], help="Choose print type")
+    args = parser.parse_args()
+
     # Rename mast_list: Location - Kit Type, Study ID - Sample ID; plog: Study - Kit Type
     mast_list = (pd.read_excel(util.tracking + "Sample ID Master List.xlsx", sheet_name='Master Sheet', header=0)
                    .rename(columns={'Location': 'Kit Type', 'Study ID': 'Sample ID'}))
+    plog = (pd.read_excel(util.print_log, sheet_name='LOG', header=0)
+              .rename(columns={'Box numbers': 'Box Min', 'Unnamed: 4': 'Box Max', 'Study': 'Kit Type'})
+              .drop(1))
     
-    plog = (pd.read_excel(util.print_log, sheet_name='LOG', header=1)
-              .rename(columns={'Box numbers':'Box Min', 'Unnamed: 4':'Box Max', 'Study':'Kit Type'})
-              .drop(0))
+    # Input
+    print_type = args.print_type
     
-    type = ['Standard', 'SERONET', 'PRIORITY']
-    folder = {'Standard': 'STANDARD', 'SERONET': 'SERONET FULL', 'PRIORITY': 'SERUM'}
+    # mast_list: unassigned sample IDs
+    unassigned_sample_ids = next_sample_ids(mast_list, print_type)
 
-    # DRAFT: start with serum 
-    for kit_type in type:
-        plog_kit_type = plog[plog['Kit Type'] == kit_type]
-        recent_priority = plog_kit_type[plog_kit_type['Study'] == 'PRIORITY'].iloc[-1]
-        
-        box_start = recent_priority['Box Max'] + 1
-        box_end = box_start + 3
-        workbook_name = f"{kit_type} {box_start}-{box_end}"
-        folder_name = folder_name[kit_type]
-        output_path = os.path.join(util.tube_print, 'Future Sheets', folder_name, f"{workbook_name}.xlsx")
-        writer = pd.ExcelWriter(output_path, engine='xlsxwriter')
-
-        
-        for sheet_num, sheet_name in enumerate(['1 – Kits', '2 – Tops', '3 – Sides', '4 – 4.5 mL Tops', '5 - 4.5 mL Sides'], start=1):
-            df = mast_list[mast_list['Kit Type'] == kit_type].copy()
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
-        
-        writer.save()
+    # plog: box range
+    box_start, box_end = box_range(plog, print_type)
+    workbook_name = f"{print_type} {box_start}-{box_end}"
+    
+    # output path
+    if print_type == 'STANDARD':
+        output_path = util.tube_print/'Future Sheets'/'STANDARD'
+    elif print_type == 'SERONET':
+        output_path = util.tube_print/'Future Sheets'/'SERONET FULL'
+    elif print_type == 'SERUM':
+        output_path = util.tube_print/'Future Sheets'/'SERUM'
+    
+    # ## test
+    # print("Printing Type:", print_type)
+    # print("Unassigned Sample IDs:", unassigned_sample_ids)
+    # print("Workbook Name:", workbook_name)
+    # print("Output Path:", output_path)
 
