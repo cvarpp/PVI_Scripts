@@ -100,14 +100,14 @@ def transform_cam(update=False, debug=False):
                     .sort_values(by='Date', ascending=False)
                     .set_index('idx'))
 
-    output_fname = util.clin_ops + "Long-Form CAM Schedule.xlsx"
+    output_fname = util.cam_long
     if not debug:
         cam_both.to_excel(output_fname, index=False)
         print("Long-Form CAM Schedule written to", output_fname)
     return cam_both
 
 if __name__ == '__main__':
-    argParser = argparse.ArgumentParser(description='Make Seronet monthly sample report.')
+    argParser = argparse.ArgumentParser(description='Convert CAM clinic schedule from wide multi-sheet to long single-sheet format')
     argParser.add_argument('-u', '--update', action='store_true')
     argParser.add_argument('-d', '--debug', action='store_true')
     args = argParser.parse_args()

@@ -40,9 +40,7 @@ if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Aggregate inventory of each sample type for FP upload')
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=78)
     args = argParser.parse_args()
-    home = '~/The Mount Sinai Hospital/'
-    processing = home + 'Simon Lab - Processing Team/'
-    inventory_boxes = pd.read_excel(processing + 'New Import Sheet.xlsx', sheet_name=None)
+    inventory_boxes = pd.read_excel(util.inventory_input, sheet_name=None)
     sample_types = ['Plasma', 'Serum', 'Pellet', 'Saliva', 'PBMC', 'HT', '4.5 mL Tube', 'All']
     data = {'Name': [], 'Sample ID': [], 'Sample Type': [],'Freezer': [],'Level1': [],'Level2': [],'Level3': [],'Box': [],'Position': [], 'ALIQUOT': []}
     samples_data = {st: deepcopy(data) for st in sample_types if st != 'HT'}
@@ -120,12 +118,6 @@ if __name__ == '__main__':
                 if sample_type == 'N/A':
                     print(row['Sample ID'], 'in box', box_name, 'has no sample type specified. (', row['Sample Type'], ')')
                     continue
-                # if (row['Sample ID'], sample_type) in aliquot_counts.keys():
-                #     aliquot = aliquot_counts[(row['Sample ID'], sample_type)]
-                #     aliquot_counts[(row['Sample ID'], sample_type)] += 1
-                # else:
-                #     aliquot = 1
-                #     aliquot_counts[(row['Sample ID'], sample_type)] = 2
                 data = samples_data[sample_type]
                 data['Name'].append(sample_id)
                 data['Sample ID'].append(sample_id)
