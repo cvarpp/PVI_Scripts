@@ -31,7 +31,6 @@ def get_box_range(input_type):
 
 
 def get_sample_ids(sheet_name, box_start, box_end):
-
     print_planning_path = os.path.join(util.tube_print, 'Print Planning.xlsx')
     print_planning = pd.read_excel(print_planning_path, sheet_name=sheet_name)
     box_range = print_planning['Box ID'].apply(lambda bid: box_start <= bid <= box_end) # Use column name and loc instead of iloc
@@ -39,15 +38,16 @@ def get_sample_ids(sheet_name, box_start, box_end):
 
     return sample_ids
 
+
 def seronet_workbook(assigned_sample_ids, box_start, box_end, workbook_name):
     template1_path = os.path.join(util.tube_print, 'Future Sheets', 'SERONET FULL', 'SERONET FULL Template.xlsx')
     template1 = pd.read_excel(template1_path, sheet_name=None)
     # template2_path = os.path.join(util.tube_print, 'Future Sheets', 'SERONET FULL', 'SERONET FULL PBMC Template.xlsx')
     # template2 = pd.read_excel(template2_path, sheet_name=None)
 
-    output_file_seronet = os.path.join(util.tube_print, 'Future Sheets', 'SERONET FULL', f"{workbook_name}.xlsx")
+    output_seronet = os.path.join(util.tube_print, 'Future Sheets', 'SERONET FULL', f"{workbook_name}.xlsx")
 
-    with pd.ExcelWriter(output_file_seronet, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(output_seronet, engine='xlsxwriter') as writer:
         for sheet_name, sheet_data in template1.items():
             if 'READ ME' in sheet_name:
                 sheet_data.loc[2:19, 'M'] = assigned_sample_ids
@@ -55,7 +55,8 @@ def seronet_workbook(assigned_sample_ids, box_start, box_end, workbook_name):
                 sheet_data.loc[2:19, 'N'] = box_numbers
             sheet_data.to_excel(writer, sheet_name=sheet_name, index=True)
 
-def serum_workbook(writer, sample_ids, box_start, box_end):
+
+def serum_workbook(assigned_sample_ids, box_start, box_end, workbook_name):
     template_path = os.path.join(util.tube_print, 'Future Sheets', 'SERUM', 'Serum Template.xlsx')
     template = pd.read_excel(template_path, sheet_name=None)
 
@@ -70,7 +71,7 @@ def serum_workbook(writer, sample_ids, box_start, box_end):
             sheet_data.to_excel(writer, sheet_name=sheet_name, index=False)
 
 
-def standard_workbook(writer, sample_ids, box_start, box_end):
+def standard_workbook(assigned_sample_ids, box_start, box_end, workbook_name):
     template1_path = os.path.join(util.tube_print, 'Future Sheets', 'STANDARD', 'STANDARD Template.xlsx')
     template1 = pd.read_excel(template1_path, sheet_name=None)
     # template2_path = os.path.join(util.tube_print, 'Future Sheets', 'STANDARD', 'STANDARD PBMC Template.xlsx')
@@ -98,26 +99,20 @@ if __name__ == '__main__':
     # Printing Log: box range
     box_start, box_end = get_box_range(print_type)
 
-
-    if print_type == 'SERONET':
-        sheet_name = 'Seronet Full'
-    elif print_type == 'SERUM':
-        sheet_name = 'Serum'
-    elif print_type == 'STANDARD':
-        sheet_name = 'Standard'
+    # Map print_type to sheet_name & workbook
+    print_type_mapping = {
+        'SERONET': ('Seronet Full', seronet_workbook),
+        'SERUM': ('Serum', serum_workbook),
+        'STANDARD': ('Standard', standard_workbook)
+    }
+    sheet_name, workbook_function = print_type_mapping[print_type]
 
     # Print Planning: sample IDs
     assigned_sample_ids = get_sample_ids(sheet_name, box_start, box_end)
 
     # Output
     workbook_name = f"{sheet_name.upper()} {box_start}-{box_end}"
-
-    if print_type == 'SERONET':
-        seronet_workbook(assigned_sample_ids, box_start, box_end, workbook_name)
-    elif print_type == 'SERUM':
-        serum_workbook(assigned_sample_ids, box_start, box_end, workbook_name)
-    elif print_type == 'STANDARD':
-        standard_workbook(assigned_sample_ids, box_start, box_end, workbook_name)
+    workbook_function(assigned_sample_ids, box_start, box_end, workbook_name)
     
-    print("Done! Output workbook is under PVI/ Print Shop/ Tube Printing/ Future Sheets.")
+    print("Output workbook is under PVI/ Print Shop/ Tube Printing/ Future Sheets.")
 
