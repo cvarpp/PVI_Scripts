@@ -64,7 +64,7 @@ def seronet_workbook(assigned_sample_ids, box_start, box_end, workbook_name):
                 sheet_data.loc[2:19, 'M'] = assigned_sample_ids
                 box_numbers = [box for _ in range(3) for box in range(box_start, box_end + 1)]
                 sheet_data.loc[2:19, 'N'] = box_numbers
-            sheet_data.to_excel(writer, sheet_name=sheet_name, index=False)
+            sheet_data.to_excel(writer, sheet_name=sheet_name, index=True)
 
 
 def serum_workbook(writer, sample_ids, box_start, box_end):
@@ -88,9 +88,9 @@ def standard_workbook(writer, sample_ids, box_start, box_end):
     # template2_path = os.path.join(util.tube_print, 'Future Sheets', 'STANDARD', 'STANDARD PBMC Template.xlsx')
     # template2 = pd.read_excel(template2_path, sheet_name=None)
 
-    output_file_seronet = os.path.join(util.tube_print, 'Future Sheets', 'STANDARD', f"{workbook_name}.xlsx")
+    output_standard = os.path.join(util.tube_print, 'Future Sheets', 'STANDARD', f"{workbook_name}.xlsx")
 
-    with pd.ExcelWriter(output_file_seronet, engine='xlsxwriter') as writer:
+    with pd.ExcelWriter(output_standard, engine='xlsxwriter') as writer:
         for sheet_name, sheet_data in template1.items():
             if 'READ ME' in sheet_name:
                 sheet_data.loc[2:19, 'M'] = assigned_sample_ids
@@ -109,26 +109,29 @@ if __name__ == '__main__':
             .rename(columns={'Box numbers': 'Box Min', 'Unnamed: 4': 'Box Max', 'Study': 'Kit Type'})
             .drop(1))
 
-    # Input: print_type & box_start & box_end (e.g.: SERUM 63 66)
+    # Input: print_type (SERONET/SERUM/STANDARD)
     print_type = args.print_type
     
-    # Printing Log: Find box range
+    # Printing Log: box range
     box_start, box_end = get_box_range(plog, print_type)
-    workbook_name = f"{print_type} {box_start}-{box_end}"
 
-    # Print Planning: Retrieve sample IDs
+    # Print Planning: sample IDs
     assigned_sample_ids = get_sample_ids(print_type, box_start, box_end)
 
-    # Output workbook
+    # Output
+    if print_type == 'SERONET':
+        workbook_name = f"{print_type} FULL {box_start}-{box_end}"
+    else:
+        workbook_name = f"{print_type} {box_start}-{box_end}"
+
     output_file = get_output_file(print_type, workbook_name)
 
-    with pd.ExcelWriter(output_file, engine='xlsxwriter') as writer:
-        if print_type == 'SERONET':
-            seronet_workbook(assigned_sample_ids, box_start, box_end, workbook_name)
-        elif print_type == 'SERUM':
-            serum_workbook(assigned_sample_ids, box_start, box_end, workbook_name)
-        elif print_type == 'STANDARD':
-            standard_workbook(assigned_sample_ids, box_start, box_end, workbook_name)
+    if print_type == 'SERONET':
+        seronet_workbook(assigned_sample_ids, box_start, box_end, workbook_name)
+    elif print_type == 'SERUM':
+        serum_workbook(assigned_sample_ids, box_start, box_end, workbook_name)
+    elif print_type == 'STANDARD':
+        standard_workbook(assigned_sample_ids, box_start, box_end, workbook_name)
     
     print("Done! Output workbook is under PVI/ Print Shop/ Tube Printing/ Future Sheets.")
 
