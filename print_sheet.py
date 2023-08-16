@@ -4,12 +4,17 @@ import util
 import os
 
 
-def get_box_range(plog, input_type):
-    plog.dropna(subset=['Box Min', 'Box Max'], inplace=True)
+def get_box_range(input_type):
+    # Rename Printing Log: Study - Kit Type
+    plog = (pd.read_excel(util.print_log, sheet_name='LOG', header=0)
+            .rename(columns={'Box numbers': 'Box Min', 'Unnamed: 4': 'Box Max', 'Study': 'Kit Type'})
+            .drop(1))
+
     plog['Box Min'] = pd.to_numeric(plog['Box Min'], errors='coerce')
     plog['Box Max'] = pd.to_numeric(plog['Box Max'], errors='coerce')
+    plog.dropna(subset=['Box Min', 'Box Max'], inplace=True)
 
-    filtered_plog = plog[plog['Kit Type'] == input_type].sort_values(by='Box Max', ascending=False).iloc[0]
+    filtered_plog = plog[(plog['Kit Type'] == input_type)].sort_values(by='Box Max', ascending=False).iloc[0] # will currently cause problems, but we'd like to reformat source data
     recent_box_max = filtered_plog['Box Max']
 
     if input_type == 'SERONET':
@@ -21,34 +26,18 @@ def get_box_range(plog, input_type):
     elif input_type == 'STANDARD':
         box_start = recent_box_max + 1
         box_end = recent_box_max + 6
-    
+
     return int(box_start), int(box_end)
 
 
-def get_sample_ids(print_type, box_start, box_end):
-    if print_type == 'SERONET':
-        sheet_name = 'Seronet Full'
-    elif print_type == 'SERUM':
-        sheet_name = 'Serum'
-    elif print_type == 'STANDARD':
-        sheet_name = 'Standard'
+def get_sample_ids(sheet_name, box_start, box_end):
 
     print_planning_path = os.path.join(util.tube_print, 'Print Planning.xlsx')
     print_planning = pd.read_excel(print_planning_path, sheet_name=sheet_name)
-    box_range = (print_planning.iloc[:, 1] >= box_start) & (print_planning.iloc[:, 1] <= box_end)
-    sample_ids = print_planning.loc[box_range, print_planning.columns[0]].reset_index(drop=True)
+    box_range = print_planning['Box ID'].apply(lambda bid: box_start <= bid <= box_end) # Use column name and loc instead of iloc
+    sample_ids = print_planning.loc[box_range, 'Sample ID'].to_numpy()
 
     return sample_ids
-
-
-def get_output_file(print_type, workbook_name):
-    if print_type == 'SERONET':
-        return os.path.join(util.tube_print, 'Future Sheets', 'SERONET FULL', f"{workbook_name}.xlsx")
-    elif print_type == 'SERUM':
-        return os.path.join(util.tube_print, 'Future Sheets', 'SERUM', f"{workbook_name}.xlsx")
-    elif print_type == 'STANDARD':
-        return os.path.join(util.tube_print, 'Future Sheets', 'STANDARD', f"{workbook_name}.xlsx")
-
 
 def seronet_workbook(assigned_sample_ids, box_start, box_end, workbook_name):
     template1_path = os.path.join(util.tube_print, 'Future Sheets', 'SERONET FULL', 'SERONET FULL Template.xlsx')
@@ -65,7 +54,6 @@ def seronet_workbook(assigned_sample_ids, box_start, box_end, workbook_name):
                 box_numbers = [box for _ in range(3) for box in range(box_start, box_end + 1)]
                 sheet_data.loc[2:19, 'N'] = box_numbers
             sheet_data.to_excel(writer, sheet_name=sheet_name, index=True)
-
 
 def serum_workbook(writer, sample_ids, box_start, box_end):
     template_path = os.path.join(util.tube_print, 'Future Sheets', 'SERUM', 'Serum Template.xlsx')
@@ -104,27 +92,25 @@ if __name__ == '__main__':
     parser.add_argument("print_type", choices=['SERONET', 'SERUM', 'STANDARD'], help="Choose print type")
     args = parser.parse_args()
 
-    # Rename Printing Log: Study - Kit Type
-    plog = (pd.read_excel(util.print_log, sheet_name='LOG', header=0)
-            .rename(columns={'Box numbers': 'Box Min', 'Unnamed: 4': 'Box Max', 'Study': 'Kit Type'})
-            .drop(1))
-
     # Input: print_type (SERONET/SERUM/STANDARD)
     print_type = args.print_type
     
     # Printing Log: box range
-    box_start, box_end = get_box_range(plog, print_type)
+    box_start, box_end = get_box_range(print_type)
+
+
+    if print_type == 'SERONET':
+        sheet_name = 'Seronet Full'
+    elif print_type == 'SERUM':
+        sheet_name = 'Serum'
+    elif print_type == 'STANDARD':
+        sheet_name = 'Standard'
 
     # Print Planning: sample IDs
-    assigned_sample_ids = get_sample_ids(print_type, box_start, box_end)
+    assigned_sample_ids = get_sample_ids(sheet_name, box_start, box_end)
 
     # Output
-    if print_type == 'SERONET':
-        workbook_name = f"{print_type} FULL {box_start}-{box_end}"
-    else:
-        workbook_name = f"{print_type} {box_start}-{box_end}"
-
-    output_file = get_output_file(print_type, workbook_name)
+    workbook_name = f"{sheet_name.upper()} {box_start}-{box_end}"
 
     if print_type == 'SERONET':
         seronet_workbook(assigned_sample_ids, box_start, box_end, workbook_name)
