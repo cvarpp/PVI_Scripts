@@ -14,7 +14,16 @@ def get_box_range(input_type):
     plog['Box Max'] = pd.to_numeric(plog['Box Max'], errors='coerce')
     plog.dropna(subset=['Box Min', 'Box Max'], inplace=True)
 
-    filtered_plog = plog[(plog['Kit Type'] == input_type)].sort_values(by='Box Max', ascending=False).iloc[0] # will currently cause problems, but we'd like to reformat source data
+    if input_type == 'SERONET':
+        filtered_plog = plog[(plog['Kit Type'] == 'SERONET') & (plog['PBMCs'] == 'No')]
+    elif input_type == 'SERONETPBMC':
+        filtered_plog = plog[(plog['Kit Type'].isin(['SERONET', 'MIT (PBMCs)'])) & (plog['PBMCs'] == 'Yes')]
+    elif input_type == 'STANDARD':
+        filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'] == 'No')]
+    elif input_type == 'STANDARDPBMC':
+        filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'] == 'Yes')]
+
+    filtered_plog = plog[(plog['Kit Type'] == input_type)].sort_values(by='Box Max', ascending=False).iloc[0]
     recent_box_max = filtered_plog['Box Max']
 
     if input_type == 'SERONET':
@@ -26,7 +35,13 @@ def get_box_range(input_type):
     elif input_type == 'STANDARD':
         box_start = recent_box_max + 1
         box_end = recent_box_max + 6
-
+    elif input_type == 'SERONETPBMC':
+        box_start = recent_box_max + 1
+        box_end = recent_box_max + 32
+    elif input_type == 'STANDARDPBMC':
+        box_start = recent_box_max + 1
+        box_end = recent_box_max + 32
+    
     return int(box_start), int(box_end)
 
 
@@ -40,15 +55,13 @@ def get_sample_ids(sheet_name, box_start, box_end):
 
 
 def seronet_workbook(assigned_sample_ids, box_start, box_end, workbook_name):
-    template1_path = os.path.join(util.tube_print, 'Future Sheets', 'SERONET FULL', 'SERONET FULL Template.xlsx')
-    template1 = pd.read_excel(template1_path, sheet_name=None)
-    # template2_path = os.path.join(util.tube_print, 'Future Sheets', 'SERONET FULL', 'SERONET FULL PBMC Template.xlsx')
-    # template2 = pd.read_excel(template2_path, sheet_name=None)
+    template_path = os.path.join(util.tube_print, 'Future Sheets', 'SERONET FULL', 'SERONET FULL Template.xlsx')
+    template = pd.read_excel(template_path, sheet_name=None)
 
     output_seronet = os.path.join(util.tube_print, 'Future Sheets', 'SERONET FULL', f"{workbook_name}.xlsx")
 
     with pd.ExcelWriter(output_seronet, engine='xlsxwriter') as writer:
-        for sheet_name, sheet_data in template1.items():
+        for sheet_name, sheet_data in template.items():
             if 'READ ME' in sheet_name:
                 sheet_data.loc[2:19, 'M'] = assigned_sample_ids
                 box_numbers = [box for _ in range(3) for box in range(box_start, box_end + 1)]
@@ -72,15 +85,13 @@ def serum_workbook(assigned_sample_ids, box_start, box_end, workbook_name):
 
 
 def standard_workbook(assigned_sample_ids, box_start, box_end, workbook_name):
-    template1_path = os.path.join(util.tube_print, 'Future Sheets', 'STANDARD', 'STANDARD Template.xlsx')
-    template1 = pd.read_excel(template1_path, sheet_name=None)
-    # template2_path = os.path.join(util.tube_print, 'Future Sheets', 'STANDARD', 'STANDARD PBMC Template.xlsx')
-    # template2 = pd.read_excel(template2_path, sheet_name=None)
+    template_path = os.path.join(util.tube_print, 'Future Sheets', 'STANDARD', 'STANDARD Template.xlsx')
+    template = pd.read_excel(template_path, sheet_name=None)
 
     output_standard = os.path.join(util.tube_print, 'Future Sheets', 'STANDARD', f"{workbook_name}.xlsx")
 
     with pd.ExcelWriter(output_standard, engine='xlsxwriter') as writer:
-        for sheet_name, sheet_data in template1.items():
+        for sheet_name, sheet_data in template.items():
             if 'READ ME' in sheet_name:
                 sheet_data.loc[2:19, 'M'] = assigned_sample_ids
                 box_numbers = [box for _ in range(3) for box in range(box_start, box_end + 1)]
@@ -88,12 +99,42 @@ def standard_workbook(assigned_sample_ids, box_start, box_end, workbook_name):
             sheet_data.to_excel(writer, sheet_name=sheet_name, index=False)
 
 
+def seronet_pbmc_workbook(assigned_sample_ids, box_start, box_end, workbook_name):
+    template_path = os.path.join(util.tube_print, 'Future Sheets', 'SERONET FULL', 'SERONET FULL PBMC Template.xlsx')
+    template = pd.read_excel(template_path, sheet_name=None)
+
+    output_seronet_pbmc = os.path.join(util.tube_print, 'Future Sheets', 'SERONET PBMC', f"{workbook_name}.xlsx")
+
+    with pd.ExcelWriter(output_seronet_pbmc, engine='xlsxwriter') as writer:
+        for sheet_name, sheet_data in template.items():
+            if 'READ ME' in sheet_name:
+                sheet_data.loc[1:96, 'V'] = assigned_sample_ids
+                box_numbers = [box for _ in range(3) for box in range(box_start, box_end + 1)]
+                sheet_data.loc[1:96, 'W'] = box_numbers
+            sheet_data.to_excel(writer, sheet_name=sheet_name, index=False)
+
+
+def standard_pbmc_workbook(assigned_sample_ids, box_start, box_end, workbook_name):
+    template_path = os.path.join(util.tube_print, 'Future Sheets', 'STANDARD', 'STANDARD PBMC Template.xlsx')
+    template = pd.read_excel(template_path, sheet_name=None)
+
+    output_standard_pbmc = os.path.join(util.tube_print, 'Future Sheets', 'STANDARD PBMC', f"{workbook_name}.xlsx")
+
+    with pd.ExcelWriter(output_standard_pbmc, engine='xlsxwriter') as writer:
+        for sheet_name, sheet_data in template.items():
+            if 'READ ME' in sheet_name:
+                sheet_data.loc[1:96, 'V'] = assigned_sample_ids
+                box_numbers = [box for _ in range(3) for box in range(box_start, box_end + 1)]
+                sheet_data.loc[1:96, 'W'] = box_numbers
+            sheet_data.to_excel(writer, sheet_name=sheet_name, index=False)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("print_type", choices=['SERONET', 'SERUM', 'STANDARD'], help="Choose print type")
+    parser.add_argument("print_type", choices=['SERONET', 'SERUM', 'STANDARD', 'SERONETPBMC', 'STANDARDPBMC'], help="Choose print type")
     args = parser.parse_args()
 
-    # Input: print_type (SERONET/SERUM/STANDARD)
+    # Input: print_type (SERONET/SERUM/STANDARD/SERONETPBMC/STANDARDPBMC)
     print_type = args.print_type
     
     # Printing Log: box range
@@ -103,15 +144,24 @@ if __name__ == '__main__':
     print_type_mapping = {
         'SERONET': ('Seronet Full', seronet_workbook),
         'SERUM': ('Serum', serum_workbook),
-        'STANDARD': ('Standard', standard_workbook)
+        'STANDARD': ('Standard', standard_workbook),
+        'SERONETPBMC': ('Seronet Full', seronet_pbmc_workbook),
+        'STANDARDPBMC': ('Standard Standard', standard_pbmc_workbook)
     }
     sheet_name, workbook_function = print_type_mapping[print_type]
+
+    # Workbook name
+    if print_type in ['SERONET', 'SERUM', 'STANDARD']:
+        workbook_name = f"{sheet_name.upper()} {box_start}-{box_end}"
+    elif print_type == 'SERONETPBMC':
+        workbook_name = f"{sheet_name} {box_start}-{box_end}"
+    elif print_type == 'STANDARDPBMC':
+        workbook_name = f"{sheet_name} {box_start}-{box_end}"
 
     # Print Planning: sample IDs
     assigned_sample_ids = get_sample_ids(sheet_name, box_start, box_end)
 
     # Output
-    workbook_name = f"{sheet_name.upper()} {box_start}-{box_end}"
     workbook_function(assigned_sample_ids, box_start, box_end, workbook_name)
     
     print("Output workbook is under PVI/ Print Shop/ Tube Printing/ Future Sheets.")
