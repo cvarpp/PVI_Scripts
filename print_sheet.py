@@ -16,10 +16,12 @@ def get_box_range(input_type):
 
     if input_type == 'SERONET':
         filtered_plog = plog[(plog['Kit Type'] == 'SERONET') & (plog['PBMCs'] == 'No')]
-    elif input_type == 'SERONETPBMC':
-        filtered_plog = plog[(plog['Kit Type'].isin(['SERONET', 'MIT (PBMCs)'])) & (plog['PBMCs'] == 'Yes')]
+    elif input_type == 'SERUM':
+        filtered_plog = plog[(plog['Kit Type'] == 'SERUM')]
     elif input_type == 'STANDARD':
         filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'] == 'No')]
+    elif input_type == 'SERONETPBMC':
+        filtered_plog = plog[(plog['Kit Type'].isin(['SERONET', 'MIT (PBMCs)'])) & (plog['PBMCs'] == 'Yes')]
     elif input_type == 'STANDARDPBMC':
         filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'] == 'Yes')]
 
@@ -148,21 +150,18 @@ if __name__ == '__main__':
         'SERONETPBMC': ('Seronet Full', seronet_pbmc_workbook),
         'STANDARDPBMC': ('Standard Standard', standard_pbmc_workbook)
     }
-    sheet_name, workbook_function = print_type_mapping[print_type]
-
-    # Workbook name
-    if print_type in ['SERONET', 'SERUM', 'STANDARD']:
-        workbook_name = f"{sheet_name.upper()} {box_start}-{box_end}"
-    elif print_type == 'SERONETPBMC':
-        workbook_name = f"{sheet_name} {box_start}-{box_end}"
-    elif print_type == 'STANDARDPBMC':
-        workbook_name = f"{sheet_name} {box_start}-{box_end}"
+    sheet_name, workbook_generation = print_type_mapping[print_type]
 
     # Print Planning: sample IDs
     assigned_sample_ids = get_sample_ids(sheet_name, box_start, box_end)
 
     # Output
-    workbook_function(assigned_sample_ids, box_start, box_end, workbook_name)
+    if print_type in ['SERONET', 'SERUM', 'STANDARD']:
+        workbook_name = f"{sheet_name.upper()} {box_start}-{box_end}"
+    elif print_type in ['SERONETPBMC', 'STANDARDPBMC']:
+        workbook_name = f"{print_type.replace('PBMC', ' PBMC')} {box_start}-{box_end}"
+    
+    workbook_generation(assigned_sample_ids, box_start, box_end, workbook_name)
     
     print("Output workbook is under PVI/ Print Shop/ Tube Printing/ Future Sheets.")
 
