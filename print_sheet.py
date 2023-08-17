@@ -15,17 +15,17 @@ def get_box_range(input_type):
     plog.dropna(subset=['Box Min', 'Box Max'], inplace=True)
 
     if input_type == 'SERONET':
-        filtered_plog = plog[(plog['Kit Type'] == 'SERONET') & (plog['PBMCs'] == 'No')]
+        filtered_plog = plog[(plog['Kit Type'] == 'SERONET') & (plog['PBMCs'].isin(['No', 'no']))]
     elif input_type == 'SERUM':
         filtered_plog = plog[(plog['Kit Type'] == 'SERUM')]
     elif input_type == 'STANDARD':
-        filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'] == 'No')]
+        filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].isin(['No', 'no']))]
     elif input_type == 'SERONETPBMC':
-        filtered_plog = plog[(plog['Kit Type'].isin(['SERONET', 'MIT (PBMCs)'])) & (plog['PBMCs'] == 'Yes')]
+        filtered_plog = plog[(plog['Kit Type'].isin(['SERONET', 'MIT (PBMCs)'])) & (plog['PBMCs'].isin(['Yes', 'yes']))]
     elif input_type == 'STANDARDPBMC':
-        filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'] == 'Yes')]
+        filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].isin(['Yes', 'yes']))]
 
-    filtered_plog = plog[(plog['Kit Type'] == input_type)].sort_values(by='Box Max', ascending=False).iloc[0]
+    filtered_plog = filtered_plog.sort_values(by='Box Max', ascending=False).iloc[0]
     recent_box_max = filtered_plog['Box Max']
 
     if input_type == 'SERONET':
@@ -105,7 +105,7 @@ def seronet_pbmc_workbook(assigned_sample_ids, box_start, box_end, workbook_name
     template_path = os.path.join(util.tube_print, 'Future Sheets', 'SERONET FULL', 'SERONET FULL PBMC Template.xlsx')
     template = pd.read_excel(template_path, sheet_name=None)
 
-    output_seronet_pbmc = os.path.join(util.tube_print, 'Future Sheets', 'SERONET PBMC', f"{workbook_name}.xlsx")
+    output_seronet_pbmc = os.path.join(util.tube_print, 'Future Sheets', 'SERONET FULL', f"{workbook_name}.xlsx")
 
     with pd.ExcelWriter(output_seronet_pbmc, engine='xlsxwriter') as writer:
         for sheet_name, sheet_data in template.items():
@@ -120,7 +120,7 @@ def standard_pbmc_workbook(assigned_sample_ids, box_start, box_end, workbook_nam
     template_path = os.path.join(util.tube_print, 'Future Sheets', 'STANDARD', 'STANDARD PBMC Template.xlsx')
     template = pd.read_excel(template_path, sheet_name=None)
 
-    output_standard_pbmc = os.path.join(util.tube_print, 'Future Sheets', 'STANDARD PBMC', f"{workbook_name}.xlsx")
+    output_standard_pbmc = os.path.join(util.tube_print, 'Future Sheets', 'STANDARD', f"{workbook_name}.xlsx")
 
     with pd.ExcelWriter(output_standard_pbmc, engine='xlsxwriter') as writer:
         for sheet_name, sheet_data in template.items():
@@ -148,7 +148,7 @@ if __name__ == '__main__':
         'SERUM': ('Serum', serum_workbook),
         'STANDARD': ('Standard', standard_workbook),
         'SERONETPBMC': ('Seronet Full', seronet_pbmc_workbook),
-        'STANDARDPBMC': ('Standard Standard', standard_pbmc_workbook)
+        'STANDARDPBMC': ('Standard', standard_pbmc_workbook)
     }
     sheet_name, workbook_generation = print_type_mapping[print_type]
 
@@ -159,7 +159,7 @@ if __name__ == '__main__':
     if print_type in ['SERONET', 'SERUM', 'STANDARD']:
         workbook_name = f"{sheet_name.upper()} {box_start}-{box_end}"
     elif print_type in ['SERONETPBMC', 'STANDARDPBMC']:
-        workbook_name = f"{print_type.replace('PBMC', ' PBMC')} {box_start}-{box_end}"
+        workbook_name = f"{sheet_name.upper()} PBMC {box_start}-{box_end}"
     
     workbook_generation(assigned_sample_ids, box_start, box_end, workbook_name)
     
