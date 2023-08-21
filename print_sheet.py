@@ -25,7 +25,7 @@ def get_box_range(print_type):
     elif print_type == 'STANDARDPBMC':
         filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].isin(['Yes', 'yes']))]
 
-    filtered_plog = filtered_plog.sort_values(by='Box Max', ascending=False).iloc[0]  # will currently cause problems, but we'd like to reformat source data
+    filtered_plog = filtered_plog.sort_values(by='Box Max', ascending=False).iloc[0]
     recent_box_max = filtered_plog['Box Max']
 
     if print_type == 'SERONET':
@@ -62,26 +62,126 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
 
     with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer:
         for sheet_name, sheet_data in template.items():
-            if print_type == 'SERONET' and 'READ ME' in sheet_name:
-                sheet_data.loc[2:19, 'M'] = assigned_sample_ids
-                box_numbers = [box for _ in range(3) for box in range(box_start, box_end + 1)]
-                sheet_data.loc[2:19, 'N'] = box_numbers
-            elif print_type == 'SERUM' and '1 - Kits' in sheet_name:
-                sheet_data.loc[1:24, 'Sample IDs'] = assigned_sample_ids
-                box_numbers = [box for _ in range(6) for box in range(box_start, box_end + 1)]
-                sheet_data.loc[1:24, 'Box Numbers'] = box_numbers
-            elif print_type == 'STANDARD' and 'READ ME' in sheet_name:
-                sheet_data.loc[2:19, 'M'] = assigned_sample_ids
-                box_numbers = [box for _ in range(3) for box in range(box_start, box_end + 1)]
-                sheet_data.loc[2:19, 'N'] = box_numbers
-            elif print_type == 'SERONETPBMC' and 'READ ME' in sheet_name:
-                sheet_data.loc[1:96, 'V'] = assigned_sample_ids
-                box_numbers = [box for _ in range(3) for box in range(box_start, box_end + 1)]
-                sheet_data.loc[1:96, 'W'] = box_numbers
-            elif print_type == 'STANDARDPBMC' and 'READ ME' in sheet_name:
-                sheet_data.loc[1:96, 'V'] = assigned_sample_ids
-                box_numbers = [box for _ in range(3) for box in range(box_start, box_end + 1)]
-                sheet_data.loc[1:96, 'W'] = box_numbers
+            if print_type == 'SERONET':
+                if 'READ ME' in sheet_name:
+                    sheet_data.loc[2:19, 'M'] = assigned_sample_ids
+                    box_numbers_repeated = [box for box in range(box_start, box_end + 1) for _ in range(3)]
+                    sheet_data.loc[2:19, 'N'] = box_numbers_repeated
+                elif '4.5 mL Tops' in sheet_name:
+                    sheet_data.loc[0:17, 'C'] = assigned_sample_ids
+                elif '4.5 mL Sides' in sheet_name:
+                    sheet_data.loc[0:17, 'B'] = assigned_sample_ids_repeated
+                elif '1-Box Top round1' in sheet_name:
+                    assigned_sample_ids_1 = assigned_sample_ids[:6]
+                    sheet_data.loc[1:6, 'H'] = assigned_sample_ids_1
+                    assigned_sample_ids_1_repeated = [sid for sid in assigned_sample_ids_1 for _ in range(15)]
+                    sheet_data.loc[1:90, 'B'] = assigned_sample_ids_1_repeated
+                elif '2-Box Side round1' in sheet_name:
+                    sheet_data.loc[1:6, 'H'] = assigned_sample_ids_1
+                    sheet_data.loc[1:90, 'L'] = assigned_sample_ids_1_repeated
+                    sheet_data['B'] = sheet_data['M'] + " " + sheet_data['L']
+                elif '3-Box Top round2' in sheet_name:
+                    assigned_sample_ids_2 = assigned_sample_ids[6:12]
+                    sheet_data.loc[1:6, 'H'] = assigned_sample_ids_2
+                    assigned_sample_ids_2_repeated = [sid for sid in assigned_sample_ids_2 for _ in range(15)]
+                    sheet_data.loc[1:90, 'B'] = assigned_sample_ids_2_repeated
+                elif '4-Box Side round2' in sheet_name:
+                    sheet_data.loc[1:6, 'H'] = assigned_sample_ids_2
+                    sheet_data.loc[1:90, 'L'] = assigned_sample_ids_2_repeated
+                    sheet_data['B'] = sheet_data['M'] + " " + sheet_data['L']
+                elif '5-Box Top round3' in sheet_name:
+                    assigned_sample_ids_3 = assigned_sample_ids[12:18]
+                    sheet_data.loc[1:6, 'H'] = assigned_sample_ids_3
+                    assigned_sample_ids_3_repeated = [sid for sid in assigned_sample_ids_3 for _ in range(15)]
+                    sheet_data.loc[1:90, 'B'] = assigned_sample_ids_3_repeated
+                elif '6-Box Side round3' in sheet_name:
+                    sheet_data.loc[1:6, 'H'] = assigned_sample_ids_3
+                    sheet_data.loc[1:90, 'L'] = assigned_sample_ids_3_repeated
+                    sheet_data['B'] = sheet_data['M'] + " " + sheet_data['L']
+                elif '7-Kits' in sheet_name:
+                    # assigned_sample_ids_repeated_total = []
+                    # for i in range(0, len(assigned_sample_ids), 2):
+                    #     assigned_sample_ids_repeated_total.extend([assigned_sample_ids[i], assigned_sample_ids[i + 1]] * 5)
+                    assigned_sample_ids_repeated_total = [sid for i in range(0, len(assigned_sample_ids), 2) for sid in [assigned_sample_ids[i], assigned_sample_ids[i + 1]] * 5]
+                    sheet_data.loc[0:89, 'B'] = assigned_sample_ids_repeated_total
+
+            elif print_type == 'SERUM':
+                if sheet_name == '1 - Kits':
+                    box_numbers_repeated = [box for box in range(box_start, box_end + 1) for _ in range(6)]
+                    assigned_sample_ids_repeated = [sid for sid in assigned_sample_ids for _ in range(2)]
+                    sheet_data.loc[1:24, 'N'] = assigned_sample_ids
+                    sheet_data.loc[1:24, 'O'] = box_numbers_repeated
+                    sheet_data.loc[0:47, 'B'] = assigned_sample_ids_repeated
+                elif sheet_name == '2 - Tops':
+                    assigned_sample_ids_repeated = [sid for sid in assigned_sample_ids for _ in range(7)]
+                    sheet_data.loc[0:167, 'B'] = assigned_sample_ids_repeated
+                elif sheet_name == '3 - Sides':
+                    sheet_data.loc[0:167, 'C'] = assigned_sample_ids_repeated
+                elif sheet_name == '4 - 4.5 mL Tops':
+                    sheet_data.loc[0:23, 'C'] = assigned_sample_ids
+                elif sheet_name == '5 - 4.5 mL Sides':
+                    sheet_data.loc[0:23, 'B'] = assigned_sample_ids
+                    
+            elif print_type == 'STANDARD':
+                if 'READ ME' in sheet_name:
+                    sheet_data.loc[2:19, 'M'] = assigned_sample_ids
+                    box_numbers_repeated = [box for box in range(box_start, box_end + 1) for _ in range(3)]
+                    sheet_data.loc[2:19, 'N'] = box_numbers_repeated
+                elif '4.5 mL Tops' in sheet_name:
+                    sheet_data.loc[0:17, 'C'] = assigned_sample_ids
+                elif '4.5 mL Sides' in sheet_name:
+                    sheet_data.loc[0:17, 'B'] = assigned_sample_ids_repeated
+                elif '1-Box Top round1' in sheet_name:
+                    assigned_sample_ids_1 = assigned_sample_ids[:6]
+                    sheet_data.loc[1:6, 'H'] = assigned_sample_ids_1
+                    assigned_sample_ids_1_repeated = [sid for sid in assigned_sample_ids_1 for _ in range(15)]
+                    sheet_data.loc[1:90, 'B'] = assigned_sample_ids_1_repeated
+                elif '2-Box Side round1' in sheet_name:
+                    sheet_data.loc[1:6, 'H'] = assigned_sample_ids_1
+                    sheet_data.loc[1:90, 'L'] = assigned_sample_ids_1_repeated
+                    sheet_data['B'] = sheet_data['M'] + " " + sheet_data['L']
+                elif '3-Box Top round2' in sheet_name:
+                    assigned_sample_ids_2 = assigned_sample_ids[6:12]
+                    sheet_data.loc[1:6, 'H'] = assigned_sample_ids_2
+                    assigned_sample_ids_2_repeated = [sid for sid in assigned_sample_ids_2 for _ in range(15)]
+                    sheet_data.loc[1:90, 'B'] = assigned_sample_ids_2_repeated
+                elif '4-Box Side round2' in sheet_name:
+                    sheet_data.loc[1:6, 'H'] = assigned_sample_ids_2
+                    sheet_data.loc[1:90, 'L'] = assigned_sample_ids_2_repeated
+                    sheet_data['B'] = sheet_data['M'] + " " + sheet_data['L']
+                elif '5-Box Top round3' in sheet_name:
+                    assigned_sample_ids_3 = assigned_sample_ids[12:18]
+                    sheet_data.loc[1:6, 'H'] = assigned_sample_ids_3
+                    assigned_sample_ids_3_repeated = [sid for sid in assigned_sample_ids_3 for _ in range(15)]
+                    sheet_data.loc[1:90, 'B'] = assigned_sample_ids_3_repeated
+                elif '6-Box Side round3' in sheet_name:
+                    sheet_data.loc[1:6, 'H'] = assigned_sample_ids_3
+                    sheet_data.loc[1:90, 'L'] = assigned_sample_ids_3_repeated
+                    sheet_data['B'] = sheet_data['M'] + " " + sheet_data['L']
+                elif '7-Kits' in sheet_name:
+                    assigned_sample_ids_repeated_total = [sid for i in range(0, len(assigned_sample_ids), 2) for sid in [assigned_sample_ids[i], assigned_sample_ids[i + 1]] * 5]
+                    sheet_data.loc[0:89, 'B'] = assigned_sample_ids_repeated_total
+            
+            elif print_type == 'SERONETPBMC':
+                if 'Instructions' in sheet_name:
+                    sheet_data.loc[1:96, 'V'] = assigned_sample_ids
+                    box_numbers = [box for box in range(box_start, box_end + 1) for _ in range(3)]
+                    sheet_data.loc[1:96, 'W'] = box_numbers
+                elif 'PBMC Tops' in sheet_name:
+                    sheet_data.loc[0:95, 'B'] = assigned_sample_ids
+                elif 'PBMC Sides' in sheet_name:
+                    sheet_data.loc[0:95, 'B'] = assigned_sample_ids
+            
+            elif print_type == 'STANDARDPBMC':
+                if 'Instructions' in sheet_name:
+                    sheet_data.loc[1:96, 'V'] = assigned_sample_ids
+                    box_numbers = [box for box in range(box_start, box_end + 1) for _ in range(3)]
+                    sheet_data.loc[1:96, 'W'] = box_numbers
+                elif 'PBMC Tops' in sheet_name:
+                    sheet_data.loc[0:95, 'B'] = assigned_sample_ids
+                elif 'PBMC Sides' in sheet_name:
+                    sheet_data.loc[0:95, 'B'] = assigned_sample_ids
+
             sheet_data.to_excel(writer, sheet_name=sheet_name, index=False)
 
 
@@ -110,7 +210,7 @@ if __name__ == '__main__':
     assigned_sample_ids = get_sample_ids(sheet_name, box_start, box_end)
 
     # Output
-    workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end}"
+    workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} test"
     template_path = os.path.join(util.tube_print, 'Future Sheets', template_file)
     output_path = os.path.join(util.tube_print, output_folder, f"{workbook_name}.xlsx")
 
@@ -118,3 +218,6 @@ if __name__ == '__main__':
 
     print(f"'{workbook_name}' workbook generated in {output_folder}.")
 
+    # test use only
+    print(box_start, box_end)
+    print(assigned_sample_ids)
