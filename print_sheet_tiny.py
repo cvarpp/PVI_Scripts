@@ -66,15 +66,15 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
             if print_type == 'STANDARD':
                 if 'READ ME' in sheet_name:
                     box_numbers_range = range(box_start, box_end + 1)
-                    sheet_data.loc[1:6, 7] = box_numbers_range
-                    sheet_data.loc[7:24, 7] = assigned_sample_ids
-                    sheet_data.loc[2:19, 12] = assigned_sample_ids
-                    sheet_data.loc[2:19, 13] = [box for box in range(box_start, box_end + 1) for _ in range(3)]
+                    sheet_data.iloc[1:7, 7] = box_numbers_range
+                    sheet_data.iloc[7:25, 7] = assigned_sample_ids
+                    sheet_data.iloc[2:20, 12] = assigned_sample_ids
+                    sheet_data.iloc[2:20, 13] = [box for box in range(box_start, box_end + 1) for _ in range(3)]
                 if '1-Box Top round1' in sheet_name:
-                    sheet_data.loc[1:6, 7] = assigned_sample_ids[:6]
-                    sheet_data.loc[1:90, 1] = [sid for sid in assigned_sample_ids[:6] for _ in range(15)]
+                    sheet_data.iloc[1:7, 7] = assigned_sample_ids[:6]
+                    sheet_data.iloc[:90, 1] = [sid for sid in assigned_sample_ids[:6] for _ in range(15)]
             
-            sheet_data.to_excel(writer, sheet_name=sheet_name, index=False)
+            sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
 
             # test use
             print(assigned_sample_ids)
