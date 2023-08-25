@@ -170,14 +170,27 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
             
             if print_type == 'STANDARDPBMC':
                 if 'Instructions' in sheet_name:
-                    sheet_data.loc[1:96, 21] = assigned_sample_ids
+                    sheet_data.iloc[:96, 21] = assigned_sample_ids
                     box_numbers = [box for box in range(box_start, box_end + 1) for _ in range(3)]
-                    sheet_data.loc[1:96, 22] = box_numbers
-                    # Add check box
-                if 'PBMC Tops' in sheet_name:
-                    sheet_data.loc[0:95, 1] = assigned_sample_ids
-                if 'PBMC Sides' in sheet_name:
-                    sheet_data.loc[0:95, 1] = assigned_sample_ids
+                    sheet_data.iloc[:96, 22] = box_numbers
+                    
+                    sheet_data.iloc[4, 15] = "Box #" + str(box_numbers[0])
+                    sheet_data.iloc[9, 15] = "Box #" + str(box_numbers[1])
+                    sheet_data.iloc[14, 15] = "Box #" + str(box_numbers[2])
+                    sheet_data.iloc[4, 18] = "Box #" + str(box_numbers[3])
+                    sheet_data.iloc[9, 18] = "Box #" + str(box_numbers[4])
+                    sheet_data.iloc[14, 18] = "Box #" + str(box_numbers[5])
+
+                    sheet_data.iloc[4:7, 16] = assigned_sample_ids[:3]
+                    sheet_data.iloc[9:12, 16] = assigned_sample_ids[15:18]
+                    sheet_data.iloc[14:17, 16] = assigned_sample_ids[30:33]
+                    sheet_data.iloc[4:7, 19] = assigned_sample_ids[45:48]
+                    sheet_data.iloc[9:12, 19] = assigned_sample_ids[60:63]
+                    sheet_data.iloc[14:17, 19] = assigned_sample_ids[75:78]
+                if 'PBMC Top' in sheet_name:
+                    sheet_data.iloc[:96, 2] = assigned_sample_ids
+                if 'PBMC Side' in sheet_name:
+                    sheet_data.iloc[:96, 2] = assigned_sample_ids
 
             sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
 
@@ -207,11 +220,12 @@ if __name__ == '__main__':
     assigned_sample_ids = get_sample_ids(sheet_name, box_start, box_end)
 
     # Output
-    workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} test DO NOT USE"
+    workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} test"
     template_path = os.path.join(util.tube_print, 'Future Sheets', template_file)
     output_path = os.path.join(util.tube_print, output_folder, f"{workbook_name}.xlsx")
 
     generate_workbook(assigned_sample_ids, box_start, box_end, workbook_name, template_path, output_path, print_type)
 
     print(f"'{workbook_name}' workbook generated in {output_folder}.")
+
 
