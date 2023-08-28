@@ -15,15 +15,15 @@ def get_box_range(print_type):
     plog.dropna(subset=['Box Min', 'Box Max'], inplace=True)
 
     if print_type == 'SERONET':
-        filtered_plog = plog[(plog['Kit Type'] == 'SERONET') & (plog['PBMCs'].isin(['No', 'no', 'NO']))]
+        filtered_plog = plog[(plog['Kit Type'] == 'SERONET') & (plog['PBMCs'].astype(str).str.strip().str.lower() == 'no')]
     elif print_type == 'SERUM':
         filtered_plog = plog[(plog['Kit Type'] == 'SERUM')]
     elif print_type == 'STANDARD':
-        filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].isin(['No', 'no', 'NO']))]
+        filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].astype(str).str.strip().str.lower() == 'no')]
     elif print_type == 'SERONETPBMC':
-        filtered_plog = plog[(plog['Kit Type'].isin(['SERONET', 'MIT (PBMCS)'])) & (plog['PBMCs'].isin(['Yes', 'yes', 'YES']))]
+        filtered_plog = plog[(plog['Kit Type'].isin(['SERONET', 'MIT (PBMCS)'])) & (plog['PBMCs'].astype(str).str.strip().str.lower() == 'yes')]
     elif print_type == 'STANDARDPBMC':
-        filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].isin(['Yes', 'yes', 'YES']))]
+        filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].astype(str).str.strip().str.lower() == 'yes')]
 
     filtered_plog = filtered_plog.sort_values(by='Box Max', ascending=False).iloc[0]
     recent_box_max = filtered_plog['Box Max']
