@@ -2,8 +2,6 @@
 
 A set of useful scripts transforming data (input and output in Sharepoint folders synced with OneDrive).
 
-[GitHub Setup Guide](#create-github-account)
-
 Scripts in subfolders (results and seronet, currently) must be run with module syntax, from the outer folder of this repository (until further developments). Specifically, the syntax for running the PARIS results report is:
 ```
 python -m results.PARIS
