@@ -28,21 +28,15 @@ def get_box_range(print_type):
     filtered_plog = filtered_plog.sort_values(by='Box Max', ascending=False).iloc[0]
     recent_box_max = filtered_plog['Box Max']
 
-    if print_type == 'SERONET':
-        box_start = recent_box_max + 1
-        box_end = recent_box_max + 6
-    elif print_type == 'SERUM':
-        box_start = recent_box_max + 1
-        box_end = recent_box_max + 4
-    elif print_type == 'STANDARD':
-        box_start = recent_box_max + 1
-        box_end = recent_box_max + 6
-    elif print_type == 'SERONETPBMC':
-        box_start = recent_box_max + 1
-        box_end = recent_box_max + 32
-    elif print_type == 'STANDARDPBMC':
-        box_start = recent_box_max + 1
-        box_end = recent_box_max + 32
+    box_range_mapping = {
+    'SERONET': 6,
+    'SERUM': 4,
+    'STANDARD': 6,
+    'SERONETPBMC': 32,
+    'STANDARDPBMC': 32,
+    }
+    box_start = recent_box_max + 1
+    box_end = recent_box_max + box_range_mapping[print_type]
     
     return int(box_start), int(box_end)
 
