@@ -75,7 +75,7 @@ def query_fp(recent_valid, inventory_counts):
         fp_data[stype] = []
     print("Querying FP for {} samples... Estimated time {:.1f} minutes".format(recent_valid.shape[0], recent_valid.shape[0] * 2.2 / 60))
     for sid in recent_valid['sample_id'].to_numpy():
-        sleep(2.2)
+        sleep(0.3)
         sid_response = requests.get(f'{util.fp_url}/samples?filter[name_eq]={sid}&{vial_type_suffix}', headers=headers)
         if sid_response.status_code != 200:
             print("Failed to query sample ID {}.".format(sid))
