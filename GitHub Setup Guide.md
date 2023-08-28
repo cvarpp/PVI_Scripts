@@ -2,6 +2,10 @@
 
 This guide will walk you through the process of setting up a GitHub account and running scripts.
 
+## Table of Contents
+
+1. [Create a GitHub Account](#create-a-github-account)
+
 ## Create a GitHub Account
 
 1. Open your web browser and navigate to [GitHub](https://github.com/).
