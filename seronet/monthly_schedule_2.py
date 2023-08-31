@@ -28,7 +28,7 @@ if __name__ == '__main__':
     weeks = [datetime.timedelta(days=int(x) * 7) for x in raw_weeks]
     contents = ['blood (5), saliva'] * 70
     days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-    emails = ['jessica.nardulli@mssm.edu', 'jacob.mauldin@mssm.edu']
+    emails = ['morgan.vankesteren@mssm.edu', 'jacob.mauldin@mssm.edu']
     crcs = ['Jessica', 'Jake', 'Mobile Session']
     max_days = 28
     crc_schedule = {} #unnecessary? scared to remove it due to line 70, but possibly unneeded
@@ -91,7 +91,7 @@ if __name__ == '__main__':
             for k in secret_table.keys():
                 secret_table[k].append('')
         pd.DataFrame.from_dict(secret_table).to_excel(writer, sheet_name='{}-{}'.format(first_day.strftime("%m.%d.%y"), (first_day + datetime.timedelta(days=4)).strftime("%m.%d.%y")), index=False)
-        
+
     writer.save()
     print("Written to", support_loc)
     writer.close()
