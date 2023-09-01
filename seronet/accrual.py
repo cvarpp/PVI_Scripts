@@ -97,14 +97,11 @@ def accrue(args):
     df_start['Visit_Date_Duration_From_Visit_1'] = df_start['Days from Index'] - df_start['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
     df_start['Visit_Number'] = df_start.groupby('Research_Participant_ID').cumcount() + 1
     manifests = seronet_key['Aliquots Shipped'].assign(sample_id=lambda df: df['Sample ID'].astype(str))
-    # manifests['Sample Type'] = manifests['Aliquot_ID'].str[10]
     volcols = ['sample_id', 'Volume (mL)']
     pbmcs = manifests[manifests['Sample Type'] == 'PBMC'].loc[:, volcols].groupby('sample_id').sum()
     sera = manifests[manifests['Sample Type'] == 'Serum'].loc[:, volcols].groupby('sample_id').sum()
     df_start['Serum_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: min(sera.loc[val, 'Volume (mL)'], 4.5) if val in sera.index else 0)
     df_start['PBMC_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: pbmcs.loc[val, 'Volume (mL)'] if val in pbmcs.index else 0)
-    # df_start['Serum_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: "Yes" if val in sera.index else "No")
-    # df_start['PBMC_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: "Yes" if val in pbmcs.index else "No")
     df_start['Collected_In_This_Reporting_Period'] = (df_start['Date'] >= args.report_start).apply(lambda val: "Yes" if val else "No")
     cov_info = dfs_clin['COVID'].assign(sample_id=lambda df: df['Sample ID'].astype(str).str.strip().str.upper()).drop_duplicates(subset='sample_id', keep='last').set_index('sample_id')
     cov_map = {'Positive, Test Not Specified': 'Has Reported Infection',
@@ -119,17 +116,7 @@ def accrue(args):
                'No COVID event reported': 'Has Not Reported Infection',
                'No COVID data collected': 'Not Reported',
                '': 'Has Not Reported Infection'}
-    # this needs fixing, should be precise
     cov_map = {k.upper(): v for k, v in cov_map.items()}
-    # seen = set()
-    # for val in df_start['Sample ID'].astype(str):
-    #     if val.upper() in cov_info.index:
-    #         ret = cov_info.loc[val.upper(), 'COVID_Status']
-    #         if type(ret) != str:
-    #             print(val, ret)
-    #         else:
-    #             seen.add(ret)
-    # print(seen)
     df_start['SARS_CoV_2_Infection_Status'] = df_start['Sample ID'].astype(str).apply(lambda val: cov_map[cov_info.loc[val.strip().upper(), 'COVID_Status'].strip().upper()] if val.strip().upper() in cov_info.index else 'Not Reported')
     last_date = df_start.loc[:, ['Research_Participant_ID', 'Date']].groupby('Research_Participant_ID').max()
     baseline_date = df_start.loc[:, ['Research_Participant_ID', 'Date']].groupby('Research_Participant_ID').min()
@@ -137,7 +124,6 @@ def accrue(args):
     df_start['Baseline_Date'] = df_start['Research_Participant_ID'].apply(lambda val: baseline_date.loc[val, 'Date'])
     df_start['Lost_To_FollowUp'] = df_start.apply(lost_calculate, axis=1)
     df_start['Final_Visit'] = df_start['Lost_To_FollowUp']
-    # df_start[['Unscheduled_Visit', 'Unscheduled_Visit_Purpose']] = df_start.apply(unscheduled_calculate, axis=1, result_type='expand')
     df_start['Unscheduled_Visit'] = 'No'
     df_start['Unscheduled_Visit_Purpose'] = 'N/A'
     blanks_filter = df_start['Serum_Volume_For_FNL'] == ''
