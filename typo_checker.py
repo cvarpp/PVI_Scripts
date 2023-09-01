@@ -73,7 +73,7 @@ def query_fp(recent_valid, inventory_counts):
     fp_data = {'Sample ID': []}
     for stype in sample_types:
         fp_data[stype] = []
-    print("Querying FP for {} samples... Estimated time {:.1f} minutes".format(recent_valid.shape[0], recent_valid.shape[0] * 2.2 / 60))
+    print("Querying FP for {} samples... Estimated time {:.1f} minutes".format(recent_valid.shape[0], recent_valid.shape[0] * 0.3 / 60))
     for sid in recent_valid['sample_id'].to_numpy():
         sleep(0.3)
         sid_response = requests.get(f'{util.fp_url}/samples?filter[name_eq]={sid}&{vial_type_suffix}', headers=headers)
@@ -160,4 +160,3 @@ if __name__ == '__main__':
                 inv_check.to_excel(writer, sheet_name='Inventory vs Expected', freeze_panes=(1, 1))
         print("Inventory typo report written to {}".format(fname_inventory))
     print("{} likely inventory typos".format(inventory_missing_intake.shape[0]))
-
