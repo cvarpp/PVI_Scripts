@@ -77,7 +77,9 @@ def accrue(args):
     vax_cols = ['Research_Participant_ID', 'Visit_Number', 'Vaccination_Status', 'SARS-CoV-2_Vaccine_Type', 'SARS-CoV-2_Vaccination_Date_Duration_From_Visit1']
     orig_date = 'SARS-CoV-2_Vaccination_Date_Duration_From_Index'
     vax_data = dfs_clin['Vax'].loc[:, vax_cols[:-1] + [orig_date]].query('Research_Participant_ID in @data_ppl').copy()
-    vax_data['Visit_Number'] = vax_data['Visit_Number'].astype(str).str.strip('bBaseline()')
+    vax_visits = vax_data.drop_duplicates(subset=['Research_Participant_ID', 'Visit_Number']).groupby('Research_Participant_ID').cumcount() + 1
+    vax_visits.index = [(row['Research_Participant_ID'], row['Visit_Number']) for _, row in vax_data.drop_duplicates(subset=['Research_Participant_ID', 'Visit_Number']).iterrows()]
+    vax_data['Visit_Number'] = vax_data.apply(lambda row: vax_visits[(row['Research_Participant_ID'], row['Visit_Number'])], axis=1)
     index_to_baseline = all_data.drop_duplicates(subset='Seronet ID').set_index('Seronet ID').loc[:, 'Days from Index']
     vax_data[vax_cols[-1]] = vax_data[orig_date].apply(lambda val: 0 if val == 'N/A' else val) - vax_data['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
     vax_data.loc[(vax_data[orig_date] == 'N/A'), vax_cols[-1]] = 'N/A'
@@ -97,14 +99,11 @@ def accrue(args):
     df_start['Visit_Date_Duration_From_Visit_1'] = df_start['Days from Index'] - df_start['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
     df_start['Visit_Number'] = df_start.groupby('Research_Participant_ID').cumcount() + 1
     manifests = seronet_key['Aliquots Shipped'].assign(sample_id=lambda df: df['Sample ID'].astype(str))
-    # manifests['Sample Type'] = manifests['Aliquot_ID'].str[10]
     volcols = ['sample_id', 'Volume (mL)']
     pbmcs = manifests[manifests['Sample Type'] == 'PBMC'].loc[:, volcols].groupby('sample_id').sum()
     sera = manifests[manifests['Sample Type'] == 'Serum'].loc[:, volcols].groupby('sample_id').sum()
     df_start['Serum_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: min(sera.loc[val, 'Volume (mL)'], 4.5) if val in sera.index else 0)
     df_start['PBMC_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: pbmcs.loc[val, 'Volume (mL)'] if val in pbmcs.index else 0)
-    # df_start['Serum_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: "Yes" if val in sera.index else "No")
-    # df_start['PBMC_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: "Yes" if val in pbmcs.index else "No")
     df_start['Collected_In_This_Reporting_Period'] = (df_start['Date'] >= args.report_start).apply(lambda val: "Yes" if val else "No")
     cov_info = dfs_clin['COVID'].assign(sample_id=lambda df: df['Sample ID'].astype(str).str.strip().str.upper()).drop_duplicates(subset='sample_id', keep='last').set_index('sample_id')
     cov_map = {'Positive, Test Not Specified': 'Has Reported Infection',
@@ -119,17 +118,7 @@ def accrue(args):
                'No COVID event reported': 'Has Not Reported Infection',
                'No COVID data collected': 'Not Reported',
                '': 'Has Not Reported Infection'}
-    # this needs fixing, should be precise
     cov_map = {k.upper(): v for k, v in cov_map.items()}
-    # seen = set()
-    # for val in df_start['Sample ID'].astype(str):
-    #     if val.upper() in cov_info.index:
-    #         ret = cov_info.loc[val.upper(), 'COVID_Status']
-    #         if type(ret) != str:
-    #             print(val, ret)
-    #         else:
-    #             seen.add(ret)
-    # print(seen)
     df_start['SARS_CoV_2_Infection_Status'] = df_start['Sample ID'].astype(str).apply(lambda val: cov_map[cov_info.loc[val.strip().upper(), 'COVID_Status'].strip().upper()] if val.strip().upper() in cov_info.index else 'Not Reported')
     last_date = df_start.loc[:, ['Research_Participant_ID', 'Date']].groupby('Research_Participant_ID').max()
     baseline_date = df_start.loc[:, ['Research_Participant_ID', 'Date']].groupby('Research_Participant_ID').min()
@@ -137,7 +126,6 @@ def accrue(args):
     df_start['Baseline_Date'] = df_start['Research_Participant_ID'].apply(lambda val: baseline_date.loc[val, 'Date'])
     df_start['Lost_To_FollowUp'] = df_start.apply(lost_calculate, axis=1)
     df_start['Final_Visit'] = df_start['Lost_To_FollowUp']
-    # df_start[['Unscheduled_Visit', 'Unscheduled_Visit_Purpose']] = df_start.apply(unscheduled_calculate, axis=1, result_type='expand')
     df_start['Unscheduled_Visit'] = 'No'
     df_start['Unscheduled_Visit_Purpose'] = 'N/A'
     blanks_filter = df_start['Serum_Volume_For_FNL'] == ''
@@ -148,6 +136,8 @@ def accrue(args):
     df_start.loc[df_start['Serum_Volume_For_FNL'] == 0, 'Serum_Shipped_To_FNL'] = 'N/A'
     df_start.loc[df_start['PBMC_Shipped_To_FNL'] > 0, 'Num_PBMC_Vials_For_FNL'] = df_start.loc[df_start['PBMC_Shipped_To_FNL'] > 0, 'PBMC_Shipped_To_FNL']
     df_start['PBMC_Shipped_To_FNL'] = df_start['PBMC_Shipped_To_FNL'].apply(yes_no)
+    df_start['Num_PBMC_Vials_For_FNL'] = pd.to_numeric(df_start['Num_PBMC_Vials_For_FNL'], errors='coerce').fillna(0).astype(int)
+    df_start.loc[df_start['Num_PBMC_Vials_For_FNL'] > 2, 'Num_PBMC_Vials_For_FNL'] = 2
     df_start.loc[df_start['Num_PBMC_Vials_For_FNL'] == 0, 'PBMC_Shipped_To_FNL'] = 'N/A'
 
     if not args.debug:
