@@ -77,7 +77,9 @@ def accrue(args):
     vax_cols = ['Research_Participant_ID', 'Visit_Number', 'Vaccination_Status', 'SARS-CoV-2_Vaccine_Type', 'SARS-CoV-2_Vaccination_Date_Duration_From_Visit1']
     orig_date = 'SARS-CoV-2_Vaccination_Date_Duration_From_Index'
     vax_data = dfs_clin['Vax'].loc[:, vax_cols[:-1] + [orig_date]].query('Research_Participant_ID in @data_ppl').copy()
-    vax_data['Visit_Number'] = vax_data['Visit_Number'].astype(str).str.strip('bBaseline()')
+    vax_visits = vax_data.drop_duplicates(subset=['Research_Participant_ID', 'Visit_Number']).groupby('Research_Participant_ID').cumcount() + 1
+    vax_visits.index = [(row['Research_Participant_ID'], row['Visit_Number']) for _, row in vax_data.drop_duplicates(subset=['Research_Participant_ID', 'Visit_Number']).iterrows()]
+    vax_data['Visit_Number'] = vax_data.apply(lambda row: vax_visits[(row['Research_Participant_ID'], row['Visit_Number'])], axis=1)
     index_to_baseline = all_data.drop_duplicates(subset='Seronet ID').set_index('Seronet ID').loc[:, 'Days from Index']
     vax_data[vax_cols[-1]] = vax_data[orig_date].apply(lambda val: 0 if val == 'N/A' else val) - vax_data['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
     vax_data.loc[(vax_data[orig_date] == 'N/A'), vax_cols[-1]] = 'N/A'
