@@ -136,6 +136,8 @@ def accrue(args):
     df_start.loc[df_start['Serum_Volume_For_FNL'] == 0, 'Serum_Shipped_To_FNL'] = 'N/A'
     df_start.loc[df_start['PBMC_Shipped_To_FNL'] > 0, 'Num_PBMC_Vials_For_FNL'] = df_start.loc[df_start['PBMC_Shipped_To_FNL'] > 0, 'PBMC_Shipped_To_FNL']
     df_start['PBMC_Shipped_To_FNL'] = df_start['PBMC_Shipped_To_FNL'].apply(yes_no)
+    df_start['Num_PBMC_Vials_For_FNL'] = pd.to_numeric(df_start['Num_PBMC_Vials_For_FNL'], errors='coerce').fillna(0).astype(int)
+    df_start.loc[df_start['Num_PBMC_Vials_For_FNL'] > 2, 'Num_PBMC_Vials_For_FNL'] = 2
     df_start.loc[df_start['Num_PBMC_Vials_For_FNL'] == 0, 'PBMC_Shipped_To_FNL'] = 'N/A'
 
     if not args.debug:
