@@ -45,6 +45,7 @@ if __name__ == '__main__':
     
     for val in range(0, max_days, 7):
         first_day = start_date + datetime.timedelta(days=val)
+        crc_schedule[val] = [[] for _ in range(len(emails))]
         ref = participants['Baseline / Day 0 / Week 0'].apply(lambda val: functor(first_day, val))
         for week_num, day_diff, content in zip(raw_weeks, weeks, contents):
             for subj_id in participants.index:
@@ -63,37 +64,37 @@ if __name__ == '__main__':
     ls_col = 'Last Seen as of {}'.format(datetime.date.today())
     completed.loc[:, ['Recently Seen']].to_excel(writer, sheet_name='May Need Reconsent')
 
-    for val in range(0, max_days,7):
-        for val in crc_schedule:
-            secret_table = {ls_col: [], 'Email': [], 'Name': [], 'Study': [], 'Week Details': [], 'NoF': [], 'ID': [], 'Location': [], 'Week Number': [], 'Day': [], 'Frequency': [], 'Notes': [] }
-            first_day = start_date + datetime.timedelta(days=val)
-            for i, subjs in enumerate(crc_schedule[val]):
-                subjs = sorted(subjs, key=lambda tup: (tup[3], tup[0]))
-                for k in secret_table.keys():
-                    if k == 'Name':
-                        secret_table[k].append(crcs[i])
-                    else:
-                        secret_table[k].append('')
-                for k in secret_table.keys():
-                    secret_table[k].append(k)
-                for subj_id, week_num, contents, idx in subjs:
-                    secret_table[ls_col].append(participants.loc[subj_id, 'Recently Seen'])
-                    secret_table['Email'].append(participants.loc[subj_id, 'E-mail'])
-                    secret_table['Name'].append(participants.loc[subj_id, 'Subject Name'])
-                    secret_table['Study'].append('PARIS')
-                    secret_table['Week Details'].append('Week {} - {}'.format(week_num, contents))
-                    secret_table['NoF'].append('follow-up')
-                    secret_table['ID'].append(subj_id)
-                    secret_table['Location'].append(participants.loc[subj_id, 'Blood / Saliva Location'])
-                    secret_table['Week Number'].append(week_num)
-                    secret_table['Day'].append('{}, {}'.format(days[idx], (first_day + datetime.timedelta(days=idx)).strftime("%m.%d.%y")))
-                    secret_table['Frequency'].append(participants.loc[subj_id, 'Schedule'])
-                    secret_table['Notes'].append(participants.loc[subj_id, 'Scheduling Notes'])
-                for k in secret_table.keys():
+    for val in range(0, max_days, 7):
+        secret_table = {ls_col: [], 'Email': [], 'Name': [], 'Study': [], 'Week Details': [], 'NoF': [], 'ID': [], 'Location': [], 'Week Number': [], 'Day': [], 'Frequency': [], 'Notes': [] }
+        first_day = start_date + datetime.timedelta(days=val)
+        for i, subjs in enumerate(crc_schedule[val]):
+            subjs = sorted(subjs, key=lambda tup: (tup[3], tup[0]))
+            for k in secret_table.keys():
+                if k == 'Name':
+                    secret_table[k].append(crcs[i])
+                else:
                     secret_table[k].append('')
-                pd.DataFrame.from_dict(secret_table).to_excel(writer, sheet_name='{}-{}'.format(first_day.strftime("%m.%d.%y"), (first_day + datetime.timedelta(days=4)).strftime("%m.%d.%y")), index=False)
-        else:
-            print(f"No data for val={val}") 
+            for k in secret_table.keys():
+                secret_table[k].append(k)
+            for subj_id, week_num, contents, idx in subjs:
+                secret_table[ls_col].append(participants.loc[subj_id, 'Recently Seen'])
+                secret_table['Email'].append(participants.loc[subj_id, 'E-mail'])
+                secret_table['Name'].append(participants.loc[subj_id, 'Subject Name'])
+                secret_table['Study'].append('PARIS')
+                secret_table['Week Details'].append('Week {} - {}'.format(week_num, contents))
+                secret_table['NoF'].append('follow-up')
+                secret_table['ID'].append(subj_id)
+                secret_table['Location'].append(participants.loc[subj_id, 'Blood / Saliva Location'])
+                secret_table['Week Number'].append(week_num)
+                secret_table['Day'].append('{}, {}'.format(days[idx], (first_day + datetime.timedelta(days=idx)).strftime("%m.%d.%y")))
+                secret_table['Frequency'].append(participants.loc[subj_id, 'Schedule'])
+                secret_table['Notes'].append(participants.loc[subj_id, 'Scheduling Notes'])
+            for k in secret_table.keys():
+                secret_table[k].append('')
+        pd.DataFrame.from_dict(secret_table).to_excel(writer, sheet_name='{}-{}'.format(first_day.strftime("%m.%d.%y"), (first_day + datetime.timedelta(days=4)).strftime("%m.%d.%y")), index=False)
+    else:
+        print(f"No data for val={val}") 
+
     writer.save()
     print("Written to", support_loc)
     writer.close()
