@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import util
+import os
 
 def try_convert(val):
     '''
@@ -100,7 +101,7 @@ def fallible(f, default=np.nan):
             return default
     return tmp
 
-def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False):
+def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=False):
     '''
     Retrieve processing data (volumes, cell counts, and times) for all samples.
     Aggregates across 3 separate files and multiple tabs.
@@ -109,8 +110,8 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False):
 
     `no_pbmcs` will override initially reported PBMC counts to reflect used sample IDs
     '''
-    if use_cache:
-        all_samples = pd.read_hdf(util.proc + 'dscf.h5', key='all_samples')
+    if use_cache and os.path.exists('local_cache/dscf.h5') and '/proc_info' in pd.HDFStore('local_cache/dscf.h5', mode='r').keys():
+        all_samples = pd.read_hdf(util.proc + 'dscf.h5', key='proc_info')
     else:
         correct_2p = {'Comments': 'COMMENTS',
                     'Date of specimen processed ': 'Date Processing Started',}
@@ -144,7 +145,10 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False):
                         .assign(serum_vol=clean_serum)
                         .pipe(clean_cells, no_pbmcs)
                         .pipe(map_dates, date_cols))
-        all_samples.to_hdf(util.proc + 'dscf.h5', key='all_samples')
+        if update_cache:
+            if not os.path.exists('local_cache/'):
+                os.mkdir('local_cache/')
+            all_samples.to_hdf('local_cache/dscf.h5', key='proc_info')
     if sid_list is not None:
         samples = all_samples.query('sample_id in @sid_list').copy()
     else:
@@ -200,7 +204,7 @@ def clean_path(df):
     df['Log2COV22'] = np.log2(df['COV22'])
     return df
 
-def query_intake(participants=None, include_research=False, use_cache=False):
+def query_intake(participants=None, include_research=False, use_cache=False, update_cache=False):
     '''
     Queries the intake log, optionally limited to a subset of participants.
 
@@ -209,8 +213,8 @@ def query_intake(participants=None, include_research=False, use_cache=False):
     `include_research` will join the resulting dataframe with the results from `query_research`
     for convenience
     '''
-    if use_cache:
-        all_samples = pd.read_hdf(util.tracking + 'intake.h5', key='all_samples')
+    if use_cache and os.path.exists('local_cache/dscf.h5') and '/intake_info' in pd.HDFStore('local_cache/dscf.h5', mode='r').keys():
+        all_samples = pd.read_hdf(util.tracking + 'intake.h5', key='intake_info')
     else:
         drop_cols = ['Date Processed', 'Tubes Pulled?', 'Process Location', 'Box #', 'Specimen Type Sent to Patho', 'Date Given to Patho', 'Delivered by', 'Received by', 'Results received', 'RT-QPCR Result NS (Clinical)', 'Viability', 'Notes', 'Blood Collector Initials', 'New or Follow-up?', 'Participant ID', 'Sample ID', 'Ab Detection S/P Result (Clinical) (Titer or Neg)', 'Ab Concentration (Units - AU/mL)']
         intake_source = pd.ExcelFile(util.intake)
@@ -227,7 +231,10 @@ def query_intake(participants=None, include_research=False, use_cache=False):
                             .set_index('sample_id')
                             .drop(drop_cols, axis=1)
                             .sort_values(by=['participant_id', 'Date Collected']))
-        all_samples.to_hdf(util.tracking + 'intake.h5', key='all_samples')
+        if update_cache:
+            if not os.path.exists('local_cache/'):
+                os.mkdir('local_cache/')
+            all_samples.to_hdf(util.tracking + 'intake.h5', key='intake_info')
     if participants is not None:
         samples = all_samples.query('participant_id in @participants').copy()
     else:
