@@ -24,14 +24,14 @@ if __name__ == '__main__':
     completed = participants[participants['Study Status'] == 'Completed']
     participants = participants[participants['Study Status'] == 'Active']
     latest_week = 48
-    raw_weeks = range(latest_week, latest_week + 300,4) # could future-proof this, really goes from 48-128 right now say
+    raw_weeks = range(latest_week, latest_week + 300, 4) # could future-proof this, really goes from 48-128 right now say
     weeks = [datetime.timedelta(days=int(x) * 7) for x in raw_weeks]
     contents = ['blood (5), saliva'] * 70
     days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
     emails = ['morgan.vankesteren@mssm.edu', 'jacob.mauldin@mssm.edu']
-    crcs = ['Jessica', 'Jake', 'Mobile Session']
+    crcs = ['Jessica', 'Jake']
     max_days = 28
-    crc_schedule = {} #unnecessary? scared to remove it due to line 70, but possibly unneeded
+    crc_schedule = {} 
 
     if len(sys.argv) != 2:
         print("usage: python monthly_schedule.py MM-DD-YYYY")
@@ -52,7 +52,10 @@ if __name__ == '__main__':
                 delta = day_diff - ref.loc[subj_id]
                 for idx in range(5):
                     try:
-                        if delta == datetime.timedelta(days=idx) and (week_num % 8 == 0 or participants.loc[subj_id, 'Schedule'] == '4 weeks'):
+                        if delta == datetime.timedelta(days=idx) and (participants.loc[subj_id, 'Schedule'] == '4 weeks'):
+                            crc_email = participants.loc[subj_id, 'CRC Email']
+                            if crc_email in emails:
+                                crc_schedule[val][emails.index(crc_email)].append((subj_id, week_num, content, idx))
                             print("{} was not added. This is controlled by the 'CRC Email' column in the 'Participant Details' tab".format(subj_id))
                     except:
                         print(subj_id)
@@ -91,10 +94,11 @@ if __name__ == '__main__':
                 secret_table['Notes'].append(participants.loc[subj_id, 'Scheduling Notes'])
             for k in secret_table.keys():
                 secret_table[k].append('')
+        print(secret_table)
         pd.DataFrame.from_dict(secret_table).to_excel(writer, sheet_name='{}-{}'.format(first_day.strftime("%m.%d.%y"), (first_day + datetime.timedelta(days=4)).strftime("%m.%d.%y")), index=False)
     else:
         print(f"No data for val={val}") 
-
+        
     writer.save()
     print("Written to", support_loc)
     writer.close()
