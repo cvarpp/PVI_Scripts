@@ -1,9 +1,13 @@
+import sys
 import pandas as pd
 import datetime
 import argparse
 import util
+import PySimpleGUI as sg
 from seronet.d4_all_data import pull_from_source
 from helpers import clean_sample_id
+
+
 
 def process_lots():
     equip_lots = pd.read_excel(util.proc + 'script_data/lots_by_dates.xlsx').set_index(['Date Used', 'Material'])
@@ -379,19 +383,55 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
 
 
 if __name__ == '__main__':
-    argParser = argparse.ArgumentParser(description='Create processing information sheets for SERONET data submissions.')
-    argParser.add_argument('-c', '--use_cache', action='store_true')
-    argParser.add_argument('-o', '--output_file', action='store', default='tmp')
-    argParser.add_argument('-s', '--start', action='store', type=pd.to_datetime, default=pd.to_datetime('1/1/2021'))
-    argParser.add_argument('-e', '--end', action='store', type=pd.to_datetime, default=pd.to_datetime('12/31/2025'))
-    argParser.add_argument('-x', '--override', action='store', type=pd.read_excel)
-    argParser.add_argument('-d', '--debug', action='store_true')
-    args = argParser.parse_args()
-    if args.override is not None:
-        make_ecrabs(args.override, args.start, args.end, args.output_file, args.debug)
-        exit(0)
-    if not args.use_cache:
+    if len(sys.argv) !=1 :
+        argParser = argparse.ArgumentParser(description='Create processing information sheets for SERONET data submissions.')
+        argParser.add_argument('-c', '--use_cache', action='store_true')
+        argParser.add_argument('-o', '--output_file', action='store', default='tmp')
+        argParser.add_argument('-s', '--start', action='store', type=pd.to_datetime, default=pd.to_datetime('1/1/2021'))
+        argParser.add_argument('-e', '--end', action='store', type=pd.to_datetime, default=pd.to_datetime('12/31/2025'))
+        argParser.add_argument('-x', '--override', action='store', type=pd.read_excel)
+        argParser.add_argument('-d', '--debug', action='store_true')
+        args = argParser.parse_args()
+    else:
+        sg.theme('Dark Blue 17')
+
+        layout = [[sg.Text('ECRABS')],
+                  [sg.Checkbox("Update", key='update', default=False), \
+                   sg.Checkbox("override", key='override', default=False), \
+                    sg.Checkbox("debug", key='debug', default=False)],
+                  [sg.Text('Output file'), sg.Input(key='output_file')],
+                  [sg.Text('Start date\nMM/DD/YY'), sg.Input(key='start', default_text='1/1/2021'),\
+                        sg.Text('end date\nMM/DD/YY'), sg.Input(key='end', default_text='12/31/2025')],
+                    [sg.Submit(), sg.Cancel()]]
+
+        window = sg.Window("ECRABS", layout)
+
+        event, values = window.read()
+        window.close()
+
+        if event =='Cancel':
+            quit()
+        else:
+            args = ValuesToClass(values)
+
+    if args.override is not None and args.override == True:
+        try:
+            make_ecrabs(args.override, args.start, args.end, args.output_file, args.debug)
+            exit(0)
+        except:
+            start_date = pd.to_datetime(args.start)
+            end_date = pd.to_datetime(args.end)
+            make_ecrabs(args.override, start_date, end_date, args.output_file, args.debug)
+
+
+    if not args.use_cache == True:
         source = pull_from_source(args.debug)
     else:
         source = pd.read_excel(util.unfiltered)
-    make_ecrabs(source, args.start, args.end, args.output_file, args.debug)
+    
+    try:
+        make_ecrabs(source, args.start, args.end, args.output_file, args.debug)
+    except:
+        start_date = pd.to_datetime(args.start)
+        end_date = pd.to_datetime(args.end)
+        make_ecrabs(source, start_date, end_date, args.output_file, args.debug)
