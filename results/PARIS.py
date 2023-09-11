@@ -4,7 +4,9 @@ from datetime import date
 from dateutil import parser
 import util
 import argparse
-from helpers import try_datediff, permissive_datemax, query_intake, query_research, map_dates
+import sys
+import PySimpleGUI as sg
+from helpers import try_datediff, permissive_datemax, query_intake, query_research, map_dates, ValuesToClass
 
 def auc_logger(val):
     if val == '-' or str(val).strip() == '' or len(str(val)) > 15:
@@ -63,10 +65,31 @@ def paris_results():
     return sample_info.loc[:, col_order]
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(description='Generate report for all PARIS samples')
-    argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="Prefix for the output file (current date appended")
-    argparser.add_argument('-d', '--debug', action='store_true', help="Print to the command line but do not write to file")
-    args = argparser.parse_args()
+    if len(sys.argv) != 1:
+
+        argparser = argparse.ArgumentParser(description='Generate report for all PARIS samples')
+        argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="Prefix for the output file (current date appended")
+        argparser.add_argument('-d', '--debug', action='store_true', help="Print to the command line but do not write to file")
+        args = argparser.parse_args()
+
+    else:
+        sg.theme('Dark Blue 17')
+
+        layout = [[sg.Text('MARS Result Generation Script')],
+                  [sg.Checkbox('Debug?', key='debug', default=False)],
+                  [sg.Text('Output File Name:'),sg.Input(key='output_file')],
+                  [sg.Submit(), sg.Cancel()]]
+        
+        window = sg.Window('MARS Results Script', layout)
+
+        event,  values = window.read()
+        window.close()
+
+        if event=='Cancel':
+            quit()
+        else:
+            args = ValuesToClass(values)
+
 
     report = paris_results()
     if not args.debug:
