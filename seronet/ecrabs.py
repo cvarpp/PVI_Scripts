@@ -396,7 +396,7 @@ if __name__ == '__main__':
         sg.theme('Dark Blue 17')
 
         layout = [[sg.Text('ECRABS')],
-                  [sg.Checkbox("Update", key='update', default=False), \
+                  [sg.Checkbox("Use Cache", key='use_cache', default=False), \
                    sg.Checkbox("override", key='override', default=False), \
                     sg.Checkbox("debug", key='debug', default=False)],
                   [sg.Text('Output file'), sg.Input(key='output_file')],
