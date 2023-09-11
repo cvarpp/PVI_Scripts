@@ -121,7 +121,7 @@ def query_fp(recent_valid, inventory_counts):
     return output
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser()
+    argparser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     argparser.add_argument('-d', '--debug', action='store_true')
     argparser.add_argument('-c', '--use_cache', action='store_true')
     argparser.add_argument('-r', '--recent_cutoff', type=int, default=120, help='Number of days before today to consider recent')
