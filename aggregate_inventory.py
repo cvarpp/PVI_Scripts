@@ -1,6 +1,7 @@
 from matplotlib.pyplot import box
 import pandas as pd
 import numpy as np
+import util
 from datetime import date
 import re
 from copy import deepcopy
@@ -160,9 +161,9 @@ if __name__ == '__main__':
         box_data['Name'].append(box_name)
         box_data['Tube Count'].append(tube_count)
     box_df = pd.DataFrame(box_data)
-    pd.DataFrame(samples_data['All']).to_excel(processing + 'inventory_in_progress.xlsx')
+    pd.DataFrame(samples_data['All']).to_excel(util.proc + 'inventory_in_progress.xlsx')
     uploading_boxes = box_df[box_df['Name'].apply(lambda val: filter_box(val, uploaded, args, box_df=box_df))]
-    with pd.ExcelWriter(processing + 'aggregate_inventory_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))) as writer:
+    with pd.ExcelWriter(util.proc + 'aggregate_inventory_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))) as writer:
         for sample_type, data in samples_data.items():
             if sample_type != 'All':
                 df = pd.DataFrame(data)
