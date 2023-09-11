@@ -8,6 +8,9 @@ from seronet.d4_all_data import pull_from_source
 from seronet.ecrabs import make_ecrabs
 from seronet.clinical_forms import write_clinical
 import os
+import sys
+import PySimpleGUI as sg
+from helpers import ValuesToClass
 
 def lost_calculate(row):
     if row['Date'] != row['Last_Date']:
@@ -153,10 +156,36 @@ def accrue(args):
         df_start.loc[:, sample_cols + ['Sample ID']].to_excel(output_outer + 'Latest_Accrual_SIDs.xlsx', index=False, na_rep='N/A')
 
 if __name__ == '__main__':
-    argParser = argparse.ArgumentParser(description='Make files for monthly data submission.')
-    argParser.add_argument('-c', '--use_cache', action='store_true')
-    argParser.add_argument('-s', '--report_start', action='store', required=True, type=pd.to_datetime)
-    argParser.add_argument('-e', '--report_end', action='store', required=True, type=pd.to_datetime)
-    argParser.add_argument('-d', '--debug', action='store_true')
-    args = argParser.parse_args()
-    accrue(args)
+
+    if len(sys.argv) != 1:
+        
+        argParser = argparse.ArgumentParser(description='Make files for monthly data submission.')
+        argParser.add_argument('-c', '--use_cache', action='store_true')
+        argParser.add_argument('-s', '--report_start', action='store', type=pd.to_datetime)
+        argParser.add_argument('-e', '--report_end', action='store', type=pd.to_datetime)
+        argParser.add_argument('-d', '--debug', action='store_true')
+        args = argParser.parse_args()
+    
+    else:
+        sg.theme('Dark Blue 17')
+
+        layout = [[sg.Text('Accrual')],
+                  [sg.Checkbox("Use Cache", key='use_cache', default=False), \
+                    sg.Checkbox("debug", key='debug', default=False)],
+                  [sg.Text('Start date'), sg.Input(key='report_start', default_text='1/1/2021'), sg.CalendarButton(button_text="choose date",close_when_date_chosen=True, target="report_start", format='%m/%d/%Y')],
+                        [sg.Text('End date'), sg.Input(key='report_end', default_text='12/31/2025'), sg.CalendarButton(button_text="choose date",close_when_date_chosen=True, target="report_end", format='%m/%d/%Y')],
+                    [sg.Submit(), sg.Cancel()]]
+
+        window = sg.Window("Accrual Generation Script", layout)
+
+        event, values = window.read()
+        window.close()
+
+        if event =='Cancel':
+            quit()
+        else:
+            values['report_start'] = pd.to_datetime(values['report_start'])
+            values['report_end'] = pd.to_datetime(values['report_start'])
+            args = ValuesToClass(values)
+        
+        accrue(args)
