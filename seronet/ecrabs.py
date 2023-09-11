@@ -5,7 +5,7 @@ import argparse
 import util
 import PySimpleGUI as sg
 from seronet.d4_all_data import pull_from_source
-from helpers import clean_sample_id
+from helpers import clean_sample_id, ValuesToClass
 
 
 

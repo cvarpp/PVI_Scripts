@@ -3,7 +3,9 @@ import numpy as np
 from datetime import date
 import util
 import argparse
-from helpers import try_datediff, permissive_datemax, query_intake, query_research, map_dates, query_dscf
+import sys
+import PySimpleGUI as sg
+from helpers import try_datediff, permissive_datemax, query_intake, query_research, map_dates, query_dscf, ValuesToClass
 from bisect import bisect_left
 
 def auc_logger(val):
@@ -107,10 +109,29 @@ def crp_results():
     return sample_info.assign(last_event=lambda df: df.apply(find_last_event, axis=1)).loc[:, col_order].assign(total_pbmcs=lambda df: df['PBMC concentration per mL (x10^6)'] * df['# of PBMC vials'])
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(description='Generate report for all CRP samples')
-    argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="Prefix for the output file (in addition to current date)")
-    argparser.add_argument('-d', '--debug', action='store_true', help="Print to the command line but do not write to file")
-    args = argparser.parse_args()
+    if len(sys.argv) != 1:
+        argparser = argparse.ArgumentParser(description='Generate report for all CRP samples')
+        argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="Prefix for the output file (in addition to current date)")
+        argparser.add_argument('-d', '--debug', action='store_true', help="Print to the command line but do not write to file")
+        args = argparser.parse_args()
+    else:
+        sg.theme('Dark Blue 17')
+
+        layout = [[sg.Text('CRP Result Generation Script')],
+                  [sg.Checkbox('Debug?', key='debug', default=False)],
+                  [sg.Text('Output File Name:'),sg.Input(key='output_file')],
+                  [sg.Submit(), sg.Cancel()]]
+        
+        window = sg.Window('CRP Results Script', layout)
+
+        event,  values = window.read()
+        window.close()
+
+        if event=='Cancel':
+            quit()
+        else:
+            args = ValuesToClass(values)
+
 
     report = crp_results()
     converter = pd.read_excel(util.tracking + 'AUC Converter.xlsx', sheet_name='Key').set_index('Spike Endpoint')
@@ -122,6 +143,7 @@ if __name__ == '__main__':
                  'Volume of Serum Collected (mL)', 'Total volume of plasma (mL)', 'total_pbmcs',
                  'PBMC concentration per mL (x10^6)', 'viability', '# of PBMC vials',
                  'cpt_vol', 'sst_vol', 'proc_comment']
+    
     if not args.debug:
         with pd.ExcelWriter(output_filename) as writer:
             report.to_excel(writer, sheet_name='Source', index=False)
