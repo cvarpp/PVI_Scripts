@@ -5,8 +5,10 @@ import util
 from datetime import date
 import datetime
 from dateutil import parser
-from helpers import query_intake
+from helpers import query_intake, ValuesToClass
 import argparse
+import sys
+import PySimpleGUI as sg
 
 def not_shared(val):
     return pd.isna(val) or val == 'No' or val == ''
@@ -43,11 +45,31 @@ def make_report(use_cache=False):
     return report
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument('-d', '--debug', action='store_true')
-    argparser.add_argument('-c', '--use_cache', action='store_true')
-    argparser.add_argument('-r', '--recency', type=int, default=60, help='Number of days in the past to consider recent')
-    args = argparser.parse_args()
+    if len(sys.argv) != 1:
+        argparser = argparse.ArgumentParser()
+        argparser.add_argument('-d', '--debug', action='store_true')
+        argparser.add_argument('-c', '--use_cache', action='store_true')
+        argparser.add_argument('-r', '--recency', type=int, default=60, help='Number of days in the past to consider recent')
+        args = argparser.parse_args()
+    else:
+        sg.theme('Dark Blue 17')
+
+        layout = [[sg.Text('Umbrella Sharing Script')],
+                  [sg.Checkbox("Use Cache", key='use_cache', default=False), \
+                    sg.Checkbox("Debug?", key='debug', default=False)],
+                    [sg.Text('How Recent?') ,sg.Input(key="recency", default_text="60")],
+                    [sg.Submit(), sg.Cancel()]]
+
+        window = sg.Window("Umbrella Sharing Script", layout)
+
+        event, values = window.read()
+        window.close()
+
+        if event =='Cancel':
+            quit()
+        else:
+            values['recency'] = int(values['recency'])
+            args = ValuesToClass(values)        
 
     report = make_report(args.use_cache)
     recency_cutoff = date.today() - datetime.timedelta(days=args.recency)
