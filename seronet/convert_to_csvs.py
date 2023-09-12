@@ -4,8 +4,11 @@ import glob
 import os
 import argparse
 import PySimpleGUI as sg
-from helpers import ValuesToClass
 
+class ValuesToClass(object):
+    def __init__(self,values):
+        for key in values:
+            setattr(self, key, values[key])
 
 if __name__ == '__main__':
     if len(sys.argv) != 1:
