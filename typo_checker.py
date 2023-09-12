@@ -2,7 +2,9 @@ import pandas as pd
 import numpy as np
 import argparse
 import util
-from helpers import query_intake, query_dscf, clean_sample_id
+import sys
+import PySimpleGUI as sg
+from helpers import query_intake, query_dscf, clean_sample_id, ValuesToClass
 from cam_convert import transform_cam
 import datetime
 import os
@@ -121,12 +123,34 @@ def query_fp(recent_valid, inventory_counts):
     return output
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    argparser.add_argument('-d', '--debug', action='store_true')
-    argparser.add_argument('-c', '--use_cache', action='store_true')
-    argparser.add_argument('-r', '--recent_cutoff', type=int, default=120, help='Number of days before today to consider recent')
-    argparser.add_argument('-fp', '--freezerpro', action='store_true')
-    args = argparser.parse_args()
+    if len(sys.argv) != 1:
+        argparser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        argparser.add_argument('-d', '--debug', action='store_true')
+        argparser.add_argument('-c', '--use_cache', action='store_true')
+        argparser.add_argument('-r', '--recent_cutoff', type=int, default=120, help='Number of days before today to consider recent')
+        argparser.add_argument('-fp', '--freezerpro', action='store_true')
+        args = argparser.parse_args()
+    
+    else:
+        sg.theme('Dark Blue 17')
+
+        layout = [[sg.Text('Typo-Checker')],
+                  [sg.Checkbox("Use Cache", key='use_cache', default=False), \
+                   sg.Checkbox("Freezer-Pro", key='freezerpro', default=False), \
+                    sg.Checkbox("Debug?", key='debug', default=False)],
+                    [sg.Text('Recent Cutoff') ,sg.Input(key="recent_cutoff", default_text="120")],
+                    [sg.Submit(), sg.Cancel()]]
+
+        window = sg.Window("Typo Checker Script", layout)
+
+        event, values = window.read()
+        window.close()
+
+        if event =='Cancel':
+            quit()
+        else:
+            values['recent_cutoff'] = int(values['recent_cutoff'])
+            args = ValuesToClass(values)        
 
     intake = query_intake(include_research=True, use_cache=args.use_cache)
     dscf = query_dscf(use_cache=args.use_cache).rename(columns={'Sample ID': 'Processing Sample ID'})
