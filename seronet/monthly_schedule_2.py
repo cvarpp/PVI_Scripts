@@ -1,76 +1,70 @@
 import pandas as pd
 import numpy as np
 import datetime
-from datetime import date
-from dateutil import parser
-import csv
 import sys
 import util
 
-def functor(first_day, val): #rename val to baseline
-    if type(val) == datetime.time:
+def day_difference(first_date, baseline_datetime):
+    if type(baseline_datetime) == datetime.time:
         print("Please make sure every participant has a baseline visit date in the tracker!")
         print("If they have not yet had their baseline visit, please disregard.")
         return datetime.timedelta(days=-1)
     else:
-        return first_day - val.date()
+        return first_date - baseline_datetime.date()
 
 if __name__ == '__main__':
-
+    if len(sys.argv) != 2:
+        print("usage: python monthly_schedule.py MM-DD-YYYY")
+        exit(1)
+    else:
+        try:
+            start_monday = pd.to_datetime(sys.argv[1]).date() # TODO: Add check verifying that this is a Monday
+        except:
+            print("usage: python monthly_schedule.py MM-DD-YYYY")
+            exit(1)
     participants = pd.read_excel(util.paris_tracker, sheet_name='Participant details')
     last_visit = pd.read_excel(util.intake, sheet_name='Sample Intake Log', header=util.header_intake).drop_duplicates(subset='Participant ID', keep='last').set_index('Participant ID')
     participants.set_index('Subject ID', inplace=True)
     participants['Recently Seen'] = participants.apply(lambda row: last_visit.loc[row.name, 'Date Collected'] if row.name in last_visit.index.to_numpy() else datetime.date.today(), axis=1)
     completed = participants[participants['Study Status'] == 'Completed']
     participants = participants[participants['Study Status'] == 'Active']
-    latest_week = 48
-    raw_weeks = range(latest_week, latest_week + 300, 4) # could future-proof this, really goes from 48-128 right now say
-    weeks = [datetime.timedelta(days=int(x) * 7) for x in raw_weeks]
-    contents = ['blood (5), saliva'] * 70
+    latest_week = 48 # This is actually the earliest visit we are worrying about (Week 48) since everyone has reached it
+    visit_week_numbers = range(latest_week, latest_week + 300, 4) # goes until ~week 300, further than we need to worry about
+    visit_day_offsets = [datetime.timedelta(days=int(x) * 7) for x in visit_week_numbers]
+    contents = ['blood (5), saliva'] * 70 # Only looking at up to 70 visits (which is 6 years, seems fine)
     days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
     emails = ['morgan.vankesteren@mssm.edu', 'jacob.mauldin@mssm.edu']
     crcs = ['Jessica', 'Jake']
     max_days = 28
-    crc_schedule = {} 
-
-    if len(sys.argv) != 2:
-        print("usage: python monthly_schedule.py MM-DD-YYYY")
-        exit(1)
-    else:
-        try:
-            start_date = parser.parse(sys.argv[1]).date()
-        except:
-            print("usage: python monthly_schedule.py MM-DD-YYYY")
-            exit(1)
-    
-    for val in range(0, max_days, 7):
-        first_day = start_date + datetime.timedelta(days=val)
-        crc_schedule[val] = [[] for _ in range(len(emails))]
-        ref = participants['Baseline / Day 0 / Week 0'].apply(lambda val: functor(first_day, val))
-        for week_num, day_diff, content in zip(raw_weeks, weeks, contents):
+    crc_schedule = {}
+    invalid_emails = set()
+    for week in range(0, max_days, 7):
+        first_day_in_week = start_monday + datetime.timedelta(days=week)
+        crc_schedule[week] = [[] for _ in range(len(crcs))]
+        days_from_baseline = participants['Baseline / Day 0 / Week 0'].apply(lambda baseline: day_difference(first_day_in_week, baseline))
+        for week_num, day_diff, content in zip(visit_week_numbers, visit_day_offsets, contents):
             for subj_id in participants.index:
-                delta = day_diff - ref.loc[subj_id]
-                for idx in range(5): #rename idx weekday for sake of understanding
+                delta = day_diff - days_from_baseline.loc[subj_id] # difference between participant day offset and day offset for current visit in loop
+                for weekday in range(5): #rename idx weekday for sake of understanding
                     try:
-                        if delta == datetime.timedelta(days=idx) and (participants.loc[subj_id, 'Schedule'] == '4 weeks'):
+                        if delta == datetime.timedelta(days=weekday) and (participants.loc[subj_id, 'Schedule'] == '4 weeks'):
                             crc_email = participants.loc[subj_id, 'CRC Email']
                             if crc_email in emails:
-                                crc_schedule[val][emails.index(crc_email)].append((subj_id, week_num, content, idx))
-                            print("{} was not added. This is controlled by the 'CRC Email' column in the 'Participant Details' tab".format(subj_id))
-                    except:
-                        print(subj_id)
-                        print(delta)
+                                crc_schedule[week][emails.index(crc_email)].append((subj_id, week_num, content, weekday))
+                            else:
+                                invalid_emails.add(crc_email)
+                    except Exception as err:
+                        print("Errored at", subj_id, "with time difference", delta, "for reason", err)
                         exit(1)
 
-    support_loc = util.clin_ops + 'PARIS/' + 'Scheduling Support PARIS 1 Month from {}.xlsx'.format(start_date)
-    writer = pd.ExcelWriter(support_loc)
+    print("Invalid CRC emails encountered:", invalid_emails)
+    support_loc = util.clin_ops + 'PARIS/' + 'Scheduling Support PARIS 1 Month from {}.xlsx'.format(start_monday)
     ls_col = 'Last Seen as of {}'.format(datetime.date.today())
-    completed.loc[:, ['Recently Seen']].to_excel(writer, sheet_name='May Need Reconsent')
-
-    for val in range(0, max_days, 7):
+    to_write = []
+    for week in range(0, max_days, 7):
         secret_table = {ls_col: [], 'Email': [], 'Name': [], 'Study': [], 'Week Details': [], 'NoF': [], 'ID': [], 'Location': [], 'Week Number': [], 'Day': [], 'Frequency': [], 'Notes': [] }
-        first_day = start_date + datetime.timedelta(days=val)
-        for i, subjs in enumerate(crc_schedule[val]):
+        first_day = start_monday + datetime.timedelta(days=week)
+        for i, subjs in enumerate(crc_schedule[week]):
             subjs = sorted(subjs, key=lambda tup: (tup[3], tup[0]))
             for k in secret_table.keys():
                 if k == 'Name':
@@ -94,11 +88,11 @@ if __name__ == '__main__':
                 secret_table['Notes'].append(participants.loc[subj_id, 'Scheduling Notes'])
             for k in secret_table.keys():
                 secret_table[k].append('')
-        print(secret_table)
-        pd.DataFrame.from_dict(secret_table).to_excel(writer, sheet_name='{}-{}'.format(first_day.strftime("%m.%d.%y"), (first_day + datetime.timedelta(days=4)).strftime("%m.%d.%y")), index=False)
-    else:
-        print(f"No data for val={val}") 
-        
-    writer.save()
+        sheet_name = '{}-{}'.format(first_day.strftime("%m.%d.%y"), (first_day + datetime.timedelta(days=4)).strftime("%m.%d.%y"))
+        to_write.append((sheet_name,
+                         pd.DataFrame.from_dict(secret_table)))
+    with pd.ExcelWriter(support_loc) as writer:
+        completed.loc[:, ['Recently Seen']].rename(columns={'Recently Seen': ls_col}).to_excel(writer, sheet_name='May Need Reconsent')
+        for sname, df in to_write:
+            df.to_excel(writer, sheet_name=sname, index=False)
     print("Written to", support_loc)
-    writer.close()
