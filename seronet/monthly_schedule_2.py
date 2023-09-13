@@ -7,7 +7,7 @@ import csv
 import sys
 import util
 
-def functor(first_day, val):
+def functor(first_day, val): #rename val to baseline
     if type(val) == datetime.time:
         print("Please make sure every participant has a baseline visit date in the tracker!")
         print("If they have not yet had their baseline visit, please disregard.")
@@ -50,7 +50,7 @@ if __name__ == '__main__':
         for week_num, day_diff, content in zip(raw_weeks, weeks, contents):
             for subj_id in participants.index:
                 delta = day_diff - ref.loc[subj_id]
-                for idx in range(5):
+                for idx in range(5): #rename idx weekday for sake of understanding
                     try:
                         if delta == datetime.timedelta(days=idx) and (participants.loc[subj_id, 'Schedule'] == '4 weeks'):
                             crc_email = participants.loc[subj_id, 'CRC Email']
