@@ -186,34 +186,45 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("print_type", choices=['SERONET', 'SERUM', 'STANDARD', 'SERONETPBMC', 'STANDARDPBMC'], help="Choose print type")
+    parser.add_argument('-seronet_full', type=int, default=0, help='Number of SERONET FULL rounds')
+    parser.add_argument('-serum', type=int, default=0, help='Number of SERUM rounds')
+    parser.add_argument('-standard', type=int, default=0, help='Number of STANDARD rounds')
+    parser.add_argument('-seronet_pbmc', type=int, default=0, help='Number of SERONET PBMC rounds')
+    parser.add_argument('-standard_pbmc', type=int, default=0, help='Number of STANDARD PBMC rounds')
     args = parser.parse_args()
 
-    # Input print_type (SERONET/SERUM/STANDARD/SERONETPBMC/STANDARDPBMC)
-    print_type = args.print_type
-    
-    # Box range
-    box_start, box_end = get_box_range(print_type)
-
-    # Map print_type to workbook_name & template_file & output_path
-    print_type_mapping = {
-        'SERONET': ('Seronet Full', 'SERONET FULL/SERONET FULL Template.xlsx', 'Future Sheets/SERONET FULL'),
-        'SERUM': ('Serum', 'SERUM/SERUM Template.xlsx', 'Future Sheets/SERUM'),
-        'STANDARD': ('Standard', 'STANDARD/STANDARD Template.xlsx', 'Future Sheets/STANDARD'),
-        'SERONETPBMC': ('Seronet Full', 'SERONET FULL/SERONET FULL PBMC Template.xlsx', 'Future Sheets/SERONET FULL'),
-        'STANDARDPBMC': ('Standard', 'STANDARD/STANDARD PBMC Template.xlsx', 'Future Sheets/STANDARD')
+    round_counts = {
+        'SERONET_FULL': args.seronet_full,
+        'SERUM': args.serum,
+        'STANDARD': args.standard,
+        'SERONETPBMC': args.seronet_pbmc,
+        'STANDARDPBMC': args.standard_pbmc,
     }
-    sheet_name, template_file, output_folder = print_type_mapping[print_type]
 
-    # Sample IDs within box range
-    assigned_sample_ids = get_sample_ids(sheet_name, box_start, box_end)
+    for print_type, rounds in round_counts.items():
+        if rounds > 0:
+            # Box range
+            box_start, box_end = get_box_range(print_type)
 
-    # Output
-    workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} from scripts"
-    template_path = os.path.join(util.tube_print, 'Future Sheets', template_file)
-    output_path = os.path.join(util.tube_print, output_folder, f"{workbook_name}.xlsx")
+            # Map print_type to workbook_name & template_file & output_path
+            print_type_mapping = {
+                'SERONET_FULL': ('Seronet Full', 'SERONET FULL/SERONET FULL Template.xlsx', 'Future Sheets/SERONET FULL'),
+                'SERUM': ('Serum', 'SERUM/SERUM Template.xlsx', 'Future Sheets/SERUM'),
+                'STANDARD': ('Standard', 'STANDARD/STANDARD Template.xlsx', 'Future Sheets/STANDARD'),
+                'SERONETPBMC': ('Seronet Full', 'SERONET FULL/SERONET FULL PBMC Template.xlsx', 'Future Sheets/SERONET FULL'),
+                'STANDARDPBMC': ('Standard', 'STANDARD/STANDARD PBMC Template.xlsx', 'Future Sheets/STANDARD')
+            }
+            sheet_name, template_file, output_folder = print_type_mapping[print_type]
 
-    generate_workbook(assigned_sample_ids, box_start, box_end, workbook_name, template_path, output_path, print_type)
+            # Sample IDs within box range
+            assigned_sample_ids = get_sample_ids(sheet_name, box_start, box_end)
 
-    print(f"'{workbook_name}' workbook generated in {output_folder}.")
+            # Output
+            workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} from scripts"
+            template_path = os.path.join(util.tube_print, 'Future Sheets', template_file)
+            output_path = os.path.join(util.tube_print, output_folder, f"{workbook_name}.xlsx")
+
+            generate_workbook(assigned_sample_ids, box_start, box_end, workbook_name, template_path, output_path, print_type)
+
+            print(f"'{workbook_name}' workbook generated in {output_folder}.")
 
