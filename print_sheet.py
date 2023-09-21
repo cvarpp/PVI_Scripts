@@ -4,7 +4,7 @@ import util
 import os
 
 
-def get_box_range(print_type):
+def get_box_range(print_type, round_num):
     # Rename Printing Log: Study - Kit Type
     plog = (pd.read_excel(util.print_log, sheet_name='LOG', header=0)
             .rename(columns={'Box numbers': 'Box Min', 'Unnamed: 4': 'Box Max', 'Study': 'Kit Type'})
@@ -24,6 +24,9 @@ def get_box_range(print_type):
         filtered_plog = plog[(plog['Kit Type'].isin(['SERONET', 'MIT (PBMCS)'])) & (plog['PBMCs'].astype(str).str.strip().str.lower() == 'yes')]
     elif print_type == 'STANDARDPBMC':
         filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].astype(str).str.strip().str.lower() == 'yes')]
+    else:
+        print(print_type, "is not a valid option. Exiting...")
+        exit(1)
 
     filtered_plog = filtered_plog.sort_values(by='Box Max', ascending=False).iloc[0]
     recent_box_max = filtered_plog['Box Max']
@@ -35,8 +38,8 @@ def get_box_range(print_type):
     'SERONETPBMC': 32,
     'STANDARDPBMC': 32,
     }
-    box_start = recent_box_max + 1
-    box_end = recent_box_max + box_range_mapping[print_type]
+    box_start = recent_box_max + 1 + round_num * box_range_mapping[print_type]
+    box_end = recent_box_max + box_range_mapping[print_type] + round_num * box_range_mapping[print_type]
     
     return int(box_start), int(box_end)
 
@@ -194,7 +197,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     round_counts = {
-        'SERONET_FULL': args.seronet_full,
+        'SERONET': args.seronet_full,
         'SERUM': args.serum,
         'STANDARD': args.standard,
         'SERONETPBMC': args.seronet_pbmc,
@@ -202,13 +205,13 @@ if __name__ == '__main__':
     }
 
     for print_type, rounds in round_counts.items():
-        for round_num in range(1, rounds + 1):
+        for round_num in range(0, rounds):
             # Box range
-            box_start, box_end = get_box_range(print_type)
+            box_start, box_end = get_box_range(print_type, round_num)
 
             # Map print_type to workbook_name & template_file & output_path
             print_type_mapping = {
-                'SERONET_FULL': ('Seronet Full', 'SERONET FULL/SERONET FULL Template.xlsx', 'Future Sheets/SERONET FULL'),
+                'SERONET': ('Seronet Full', 'SERONET FULL/SERONET FULL Template.xlsx', 'Future Sheets/SERONET FULL'),
                 'SERUM': ('Serum', 'SERUM/SERUM Template.xlsx', 'Future Sheets/SERUM'),
                 'STANDARD': ('Standard', 'STANDARD/STANDARD Template.xlsx', 'Future Sheets/STANDARD'),
                 'SERONETPBMC': ('Seronet Full', 'SERONET FULL/SERONET FULL PBMC Template.xlsx', 'Future Sheets/SERONET FULL'),
@@ -220,7 +223,7 @@ if __name__ == '__main__':
             assigned_sample_ids = get_sample_ids(sheet_name, box_start, box_end)
 
             # Output
-            workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} Round {round_num} from scripts"
+            workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} Round {round_num + 1} from scripts"
             template_path = os.path.join(util.tube_print, 'Future Sheets', template_file)
             output_path = os.path.join(util.tube_print, output_folder, f"{workbook_name}.xlsx")
 
