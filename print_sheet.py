@@ -202,29 +202,27 @@ if __name__ == '__main__':
     }
 
     for print_type, rounds in round_counts.items():
-        if rounds > 0:
-            # Box range
-            box_start, box_end = get_box_range(print_type)
+        # Box range
+        box_start, box_end = get_box_range(print_type)
 
-            # Map print_type to workbook_name & template_file & output_path
-            print_type_mapping = {
-                'SERONET_FULL': ('Seronet Full', 'SERONET FULL/SERONET FULL Template.xlsx', 'Future Sheets/SERONET FULL'),
-                'SERUM': ('Serum', 'SERUM/SERUM Template.xlsx', 'Future Sheets/SERUM'),
-                'STANDARD': ('Standard', 'STANDARD/STANDARD Template.xlsx', 'Future Sheets/STANDARD'),
-                'SERONETPBMC': ('Seronet Full', 'SERONET FULL/SERONET FULL PBMC Template.xlsx', 'Future Sheets/SERONET FULL'),
-                'STANDARDPBMC': ('Standard', 'STANDARD/STANDARD PBMC Template.xlsx', 'Future Sheets/STANDARD')
-            }
-            sheet_name, template_file, output_folder = print_type_mapping[print_type]
+        # Map print_type to workbook_name & template_file & output_path
+        print_type_mapping = {
+            'SERONET_FULL': ('Seronet Full', 'SERONET FULL/SERONET FULL Template.xlsx', 'Future Sheets/SERONET FULL'),
+            'SERUM': ('Serum', 'SERUM/SERUM Template.xlsx', 'Future Sheets/SERUM'),
+            'STANDARD': ('Standard', 'STANDARD/STANDARD Template.xlsx', 'Future Sheets/STANDARD'),
+            'SERONETPBMC': ('Seronet Full', 'SERONET FULL/SERONET FULL PBMC Template.xlsx', 'Future Sheets/SERONET FULL'),
+            'STANDARDPBMC': ('Standard', 'STANDARD/STANDARD PBMC Template.xlsx', 'Future Sheets/STANDARD')
+        }
+        sheet_name, template_file, output_folder = print_type_mapping[print_type]
 
-            # Sample IDs within box range
-            assigned_sample_ids = get_sample_ids(sheet_name, box_start, box_end)
+        # Sample IDs within box range
+        assigned_sample_ids = get_sample_ids(sheet_name, box_start, box_end)
 
-            # Output
-            workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} from scripts"
-            template_path = os.path.join(util.tube_print, 'Future Sheets', template_file)
-            output_path = os.path.join(util.tube_print, output_folder, f"{workbook_name}.xlsx")
+        # Output
+        workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} from scripts"
+        template_path = os.path.join(util.tube_print, 'Future Sheets', template_file)
+        output_path = os.path.join(util.tube_print, output_folder, f"{workbook_name}.xlsx")
 
-            generate_workbook(assigned_sample_ids, box_start, box_end, workbook_name, template_path, output_path, print_type)
+        generate_workbook(assigned_sample_ids, box_start, box_end, workbook_name, template_path, output_path, print_type)
 
-            print(f"'{workbook_name}' workbook generated in {output_folder}.")
-
+        print(f"'{workbook_name}' workbook generated in {output_folder}.")
