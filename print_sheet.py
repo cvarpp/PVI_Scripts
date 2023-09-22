@@ -9,45 +9,42 @@ def get_box_range(print_type, round_num):
     plog = (pd.read_excel(util.print_log, sheet_name='LOG', header=0)
             .rename(columns={'Box numbers': 'Box Min', 'Unnamed: 4': 'Box Max', 'Study': 'Kit Type'})
             .drop(1))
+    
+    plog[['Box Min', 'Box Max']] = plog[['Box Min', 'Box Max']].apply(pd.to_numeric, errors='coerce').dropna()
 
-    plog['Box Min'] = pd.to_numeric(plog['Box Min'], errors='coerce')
-    plog['Box Max'] = pd.to_numeric(plog['Box Max'], errors='coerce')
-    plog.dropna(subset=['Box Min', 'Box Max'], inplace=True)
+    filter = {
+        'SERONET': (plog['Kit Type'] == 'SERONET') & (plog['PBMCs'].str.strip().str.lower() == 'no'),
+        'SERUM': (plog['Kit Type'] == 'SERUM'),
+        'STANDARD': (plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].str.strip().str.lower() == 'no'),
+        'SERONETPBMC': (plog['Kit Type'].isin(['SERONET', 'MIT (PBMCS)'])) & (plog['PBMCs'].str.strip().str.lower() == 'yes'),
+        'STANDARDPBMC': (plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].str.strip().str.lower() == 'yes')
+    }
 
-    if print_type == 'SERONET':
-        filtered_plog = plog[(plog['Kit Type'] == 'SERONET') & (plog['PBMCs'].astype(str).str.strip().str.lower() == 'no')]
-    elif print_type == 'SERUM':
-        filtered_plog = plog[(plog['Kit Type'] == 'SERUM')]
-    elif print_type == 'STANDARD':
-        filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].astype(str).str.strip().str.lower() == 'no')]
-    elif print_type == 'SERONETPBMC':
-        filtered_plog = plog[(plog['Kit Type'].isin(['SERONET', 'MIT (PBMCS)'])) & (plog['PBMCs'].astype(str).str.strip().str.lower() == 'yes')]
-    elif print_type == 'STANDARDPBMC':
-        filtered_plog = plog[(plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].astype(str).str.strip().str.lower() == 'yes')]
-    else:
-        print(print_type, "is not a valid option. Exiting...")
+    if print_type not in filter:
+        print(f"{print_type} is not a valid option. Exiting...")
         exit(1)
 
-    filtered_plog = filtered_plog.sort_values(by='Box Max', ascending=False).iloc[0]
+    filtered_plog = plog[filter[print_type]].sort_values(by='Box Max', ascending=False).iloc[0]
     recent_box_max = filtered_plog['Box Max']
 
     box_range_mapping = {
-    'SERONET': 6,
-    'SERUM': 4,
-    'STANDARD': 6,
-    'SERONETPBMC': 32,
-    'STANDARDPBMC': 32,
+        'SERONET': 6,
+        'SERUM': 4,
+        'STANDARD': 6,
+        'SERONETPBMC': 32,
+        'STANDARDPBMC': 32,
     }
     box_start = recent_box_max + 1 + round_num * box_range_mapping[print_type]
     box_end = recent_box_max + box_range_mapping[print_type] + round_num * box_range_mapping[print_type]
-    
+
     return int(box_start), int(box_end)
 
 
 def get_sample_ids(sheet_name, box_start, box_end):
     print_planning_path = os.path.join(util.tube_print, 'Print Planning.xlsx')
     print_planning = pd.read_excel(print_planning_path, sheet_name=sheet_name)
-    box_range = print_planning['Box ID'].apply(lambda bid: box_start <= bid <= box_end) # Use column name and loc instead of iloc
+    # box_range = print_planning['Box ID'].apply(lambda bid: box_start <= bid <= box_end) # Use column name and loc instead of iloc
+    box_range = print_planning['Box ID'].between(box_start, box_end)
     sample_ids = print_planning.loc[box_range, 'Sample ID'].to_numpy()
 
     return sample_ids
@@ -112,8 +109,7 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
             elif print_type in ('SERONETPBMC', 'STANDARDPBMC'):
                 if 'Instructions' in sheet_name:
                     sheet_data.iloc[1:97, 21] = assigned_sample_ids
-                    box_numbers = [box for box in range(box_start, box_end + 1) for _ in range(3)]
-                    sheet_data.iloc[1:97, 22] = box_numbers
+                    sheet_data.iloc[1:97, 22] = [box for box in range(box_start, box_end + 1) for _ in range(3)]
                     sheet_data.iloc[4, 15] = "Box #" + str(box_start)
                     sheet_data.iloc[9, 15] = "Box #" + str(box_start + 5)
                     sheet_data.iloc[14, 15] = "Box #" + str(box_start + 10)
@@ -170,7 +166,7 @@ if __name__ == '__main__':
             assigned_sample_ids = get_sample_ids(sheet_name, box_start, box_end)
 
             # Output
-            workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} Round {round_num + 1} from scripts"
+            workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} Round {round_num + 1} by scripts"
             template_path = os.path.join(util.tube_print, 'Future Sheets', template_file)
             output_path = os.path.join(util.tube_print, output_folder, f"{workbook_name}.xlsx")
 
