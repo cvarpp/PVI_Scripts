@@ -146,3 +146,4 @@ dmypy.json
 # Local files
 local_cache/
 
+.DS_Store
