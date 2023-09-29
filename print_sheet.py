@@ -9,7 +9,6 @@ def get_box_range(print_type, round_num):
     plog = (pd.read_excel(util.print_log, sheet_name='LOG', header=0)
             .rename(columns={'Box numbers': 'Box Min', 'Unnamed: 4': 'Box Max', 'Study': 'Kit Type'})
             .drop(1))
-    
     plog[['Box Min', 'Box Max']] = plog[['Box Min', 'Box Max']].apply(pd.to_numeric, errors='coerce').dropna()
 
     filter = {
@@ -171,5 +170,4 @@ if __name__ == '__main__':
             output_path = os.path.join(util.tube_print, output_folder, f"{workbook_name}.xlsx")
 
             generate_workbook(assigned_sample_ids, box_start, box_end, workbook_name, template_path, output_path, print_type)
-
             print(f"'{workbook_name}' workbook generated in {output_folder}.")
