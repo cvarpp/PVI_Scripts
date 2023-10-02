@@ -164,6 +164,10 @@ if __name__ == '__main__':
             # Sample IDs within box range
             assigned_sample_ids = get_sample_ids(sheet_name, box_start, box_end)
 
+            if not assigned_sample_ids.any():
+                print(f"Need more assigned sample IDs for {print_type}. Skipping round {round_num + 1}.")
+                continue
+            
             # Output
             workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} Round {round_num + 1} by scripts"
             template_path = os.path.join(util.tube_print, 'Future Sheets', template_file)
