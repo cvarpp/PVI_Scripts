@@ -308,10 +308,13 @@ def write_clinical(input_df, output_fname, debug=False):
             for col in trans_cols[3:-2]:
                 if 'Date' in col:
                     cropped_col = col[:-20] # drop "Duration_From_Index"
-                    if source_df.loc[seronet_id, cropped_col] == "N/A":
+                    if str(source_df.loc[seronet_id, cropped_col]) == "N/A":
                         add_to[col].append("N/A")
                     else:
-                        add_to[col].append(int((source_df.loc[seronet_id, cropped_col].date() - index_date).days))
+                        try:
+                            add_to[col].append(int((pd.to_datetime(source_df.loc[seronet_id, cropped_col]).date() - index_date).days))
+                        except:
+                            add_to[col].append("N/A")
                 else:
                     add_to[col].append(source_df.loc[seronet_id, col])
             if visit == 'Baseline(1)':
