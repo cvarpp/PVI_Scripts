@@ -42,8 +42,8 @@ def write_clinical(input_df, output_fname, debug=False):
     all_samples = input_df[exclude_filter].copy()
     specimen_ids = all_samples['Biospecimen_ID'].unique() # samples to include 
     one_per = all_samples.drop_duplicates(subset=['Research_Participant_ID', 'Visit_Number'])
-    one_per['Serum'] = one_per.apply(lambda row: '{}_10{}'.format(row['Research_Participant_ID'], int(str(row['Visit_Number']).strip("bBaseline()"))) in specimen_ids, axis=1)
-    one_per['PBMC'] = one_per.apply(lambda row: '{}_20{}'.format(row['Research_Participant_ID'], int(str(row['Visit_Number']).strip("bBaseline()"))) in specimen_ids, axis=1)
+    one_per['Serum'] = one_per.apply(lambda row: '{}_1{}'.format(row['Research_Participant_ID'], str(row['Visit_Number']).strip("bBaseline()").zfill(2)) in specimen_ids, axis=1)
+    one_per['PBMC'] = one_per.apply(lambda row: '{}_2{}'.format(row['Research_Participant_ID'], str(row['Visit_Number']).strip("bBaseline()").zfill(2)) in specimen_ids, axis=1)
     one_per['Biospecimens_Collected'] = one_per.apply(specimenize, axis=1)
     one_per.set_index('Sample ID', inplace=True)
 
@@ -74,7 +74,7 @@ def write_clinical(input_df, output_fname, debug=False):
     for sample_id, row_outer in one_per.sort_values('Date').iterrows():
         seronet_id = row_outer['Research_Participant_ID']
         visit = row_outer['Visit_Number']
-        visit_date = row_outer['Date'].date()
+        visit_date = row_outer['Date']
         participant = row_outer['Participant ID']
         study = participant_study[participant]
         # index_date = row_outer['Index Date'].date()

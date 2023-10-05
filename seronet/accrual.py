@@ -8,11 +8,14 @@ from seronet.d4_all_data import pull_from_source
 from seronet.ecrabs import make_ecrabs
 from seronet.clinical_forms import write_clinical
 import os
+import sys
+import PySimpleGUI as sg
+from helpers import ValuesToClass
 
 def lost_calculate(row):
     if row['Date'] != row['Last_Date']:
         return 'No'
-    elif (datetime.date.today() - row['Date'].date()).days < 300:
+    elif (datetime.date.today() - row['Date']).days < 300:
         return 'No'
     else:
         return 'Unknown'
@@ -48,7 +51,7 @@ def yes_no(val):
 
 def accrue(args):
     intermediate = 'monthly_report'
-    if args.update:
+    if not args.use_cache:
         all_data = pull_from_source(args.debug).query('Date <= @args.report_end').copy()
         ecrabs = make_ecrabs(all_data, output_fname=intermediate, debug=args.debug)
         dfs_clin = write_clinical(pd.DataFrame(ecrabs['Biospecimen']), 'monthly_tmp', debug=args.debug)
@@ -65,7 +68,7 @@ def accrue(args):
     data_ppl = set(all_data['Seronet ID'].unique())
     ppl_cols = ['Research_Participant_ID', 'Age', 'Race', 'Ethnicity', 'Sex_At_Birth', 'Sunday_Prior_To_Visit_1']
     baseline_dates = all_data.drop_duplicates(subset='Seronet ID').set_index('Seronet ID').loc[:, 'Date']
-    baseline_sundays = baseline_dates - np.mod(baseline_dates.dt.weekday + 1, 7) * datetime.timedelta(days=1)
+    baseline_sundays = baseline_dates - np.mod(pd.to_datetime(baseline_dates).dt.weekday + 1, 7) * datetime.timedelta(days=1)
     ppl_data = (dfs_clin['Baseline']
                     .loc[:, ppl_cols[:-1]] # column subset
                     .query('Research_Participant_ID in @data_ppl') # row subset
@@ -77,7 +80,9 @@ def accrue(args):
     vax_cols = ['Research_Participant_ID', 'Visit_Number', 'Vaccination_Status', 'SARS-CoV-2_Vaccine_Type', 'SARS-CoV-2_Vaccination_Date_Duration_From_Visit1']
     orig_date = 'SARS-CoV-2_Vaccination_Date_Duration_From_Index'
     vax_data = dfs_clin['Vax'].loc[:, vax_cols[:-1] + [orig_date]].query('Research_Participant_ID in @data_ppl').copy()
-    vax_data['Visit_Number'] = vax_data['Visit_Number'].astype(str).str.strip('bBaseline()')
+    vax_visits = vax_data.drop_duplicates(subset=['Research_Participant_ID', 'Visit_Number']).groupby('Research_Participant_ID').cumcount() + 1
+    vax_visits.index = [(row['Research_Participant_ID'], row['Visit_Number']) for _, row in vax_data.drop_duplicates(subset=['Research_Participant_ID', 'Visit_Number']).iterrows()]
+    vax_data['Visit_Number'] = vax_data.apply(lambda row: vax_visits[(row['Research_Participant_ID'], row['Visit_Number'])], axis=1)
     index_to_baseline = all_data.drop_duplicates(subset='Seronet ID').set_index('Seronet ID').loc[:, 'Days from Index']
     vax_data[vax_cols[-1]] = vax_data[orig_date].apply(lambda val: 0 if val == 'N/A' else val) - vax_data['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
     vax_data.loc[(vax_data[orig_date] == 'N/A'), vax_cols[-1]] = 'N/A'
@@ -92,19 +97,16 @@ def accrue(args):
         '# of PBMC vials': 'Num_PBMC_Vials_For_FNL'
     }
     df_start = all_data.loc[:, keep_cols].rename(columns=col_map).query('Date <= @args.report_end').copy()
-    cohort_key = {'MARS': 'Cancer', 'IRIS': 'IBD', 'TITAN': 'Transplant', 'PRIORITY': 'Chronic Conditions', 'GAEA': 'Healthy Control'}
-    df_start['Primary_Cohort'] = df_start['Site_Cohort_Name'].apply(lambda val: cohort_key[val])
+    cohort_key = {'M': 'Cancer', 'I': 'IBD', 'T': 'Transplant', 'P': 'Chronic Conditions', 'G': 'Healthy Control'}
+    df_start['Primary_Cohort'] = df_start['Research_Participant_ID'].apply(lambda val: cohort_key[val[3:4]])
     df_start['Visit_Date_Duration_From_Visit_1'] = df_start['Days from Index'] - df_start['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
     df_start['Visit_Number'] = df_start.groupby('Research_Participant_ID').cumcount() + 1
     manifests = seronet_key['Aliquots Shipped'].assign(sample_id=lambda df: df['Sample ID'].astype(str))
-    # manifests['Sample Type'] = manifests['Aliquot_ID'].str[10]
     volcols = ['sample_id', 'Volume (mL)']
     pbmcs = manifests[manifests['Sample Type'] == 'PBMC'].loc[:, volcols].groupby('sample_id').sum()
     sera = manifests[manifests['Sample Type'] == 'Serum'].loc[:, volcols].groupby('sample_id').sum()
     df_start['Serum_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: min(sera.loc[val, 'Volume (mL)'], 4.5) if val in sera.index else 0)
     df_start['PBMC_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: pbmcs.loc[val, 'Volume (mL)'] if val in pbmcs.index else 0)
-    # df_start['Serum_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: "Yes" if val in sera.index else "No")
-    # df_start['PBMC_Shipped_To_FNL'] = df_start['Sample ID'].apply(lambda val: "Yes" if val in pbmcs.index else "No")
     df_start['Collected_In_This_Reporting_Period'] = (df_start['Date'] >= args.report_start).apply(lambda val: "Yes" if val else "No")
     cov_info = dfs_clin['COVID'].assign(sample_id=lambda df: df['Sample ID'].astype(str).str.strip().str.upper()).drop_duplicates(subset='sample_id', keep='last').set_index('sample_id')
     cov_map = {'Positive, Test Not Specified': 'Has Reported Infection',
@@ -119,17 +121,7 @@ def accrue(args):
                'No COVID event reported': 'Has Not Reported Infection',
                'No COVID data collected': 'Not Reported',
                '': 'Has Not Reported Infection'}
-    # this needs fixing, should be precise
     cov_map = {k.upper(): v for k, v in cov_map.items()}
-    # seen = set()
-    # for val in df_start['Sample ID'].astype(str):
-    #     if val.upper() in cov_info.index:
-    #         ret = cov_info.loc[val.upper(), 'COVID_Status']
-    #         if type(ret) != str:
-    #             print(val, ret)
-    #         else:
-    #             seen.add(ret)
-    # print(seen)
     df_start['SARS_CoV_2_Infection_Status'] = df_start['Sample ID'].astype(str).apply(lambda val: cov_map[cov_info.loc[val.strip().upper(), 'COVID_Status'].strip().upper()] if val.strip().upper() in cov_info.index else 'Not Reported')
     last_date = df_start.loc[:, ['Research_Participant_ID', 'Date']].groupby('Research_Participant_ID').max()
     baseline_date = df_start.loc[:, ['Research_Participant_ID', 'Date']].groupby('Research_Participant_ID').min()
@@ -137,7 +129,6 @@ def accrue(args):
     df_start['Baseline_Date'] = df_start['Research_Participant_ID'].apply(lambda val: baseline_date.loc[val, 'Date'])
     df_start['Lost_To_FollowUp'] = df_start.apply(lost_calculate, axis=1)
     df_start['Final_Visit'] = df_start['Lost_To_FollowUp']
-    # df_start[['Unscheduled_Visit', 'Unscheduled_Visit_Purpose']] = df_start.apply(unscheduled_calculate, axis=1, result_type='expand')
     df_start['Unscheduled_Visit'] = 'No'
     df_start['Unscheduled_Visit_Purpose'] = 'N/A'
     blanks_filter = df_start['Serum_Volume_For_FNL'] == ''
@@ -148,20 +139,53 @@ def accrue(args):
     df_start.loc[df_start['Serum_Volume_For_FNL'] == 0, 'Serum_Shipped_To_FNL'] = 'N/A'
     df_start.loc[df_start['PBMC_Shipped_To_FNL'] > 0, 'Num_PBMC_Vials_For_FNL'] = df_start.loc[df_start['PBMC_Shipped_To_FNL'] > 0, 'PBMC_Shipped_To_FNL']
     df_start['PBMC_Shipped_To_FNL'] = df_start['PBMC_Shipped_To_FNL'].apply(yes_no)
+    df_start['Num_PBMC_Vials_For_FNL'] = pd.to_numeric(df_start['Num_PBMC_Vials_For_FNL'], errors='coerce').fillna(0).astype(int)
+    df_start.loc[df_start['Num_PBMC_Vials_For_FNL'] > 2, 'Num_PBMC_Vials_For_FNL'] = 2
     df_start.loc[df_start['Num_PBMC_Vials_For_FNL'] == 0, 'PBMC_Shipped_To_FNL'] = 'N/A'
 
     if not args.debug:
         if not os.path.exists(output_inner):
             os.makedirs(output_inner)
-        ppl_data.to_excel(output_inner + 'Accrual_Participant_Info.xlsx', index=False, na_rep='N/A')
-        vax_data.drop(orig_date, axis=1).to_excel(output_inner + 'Accrual_Vaccination_Status.xlsx', index=False, na_rep='N/A')
-        df_start.loc[:, sample_cols].to_excel(output_inner + 'Accrual_Visit_Info.xlsx', index=False, na_rep='N/A')
+        with pd.ExcelFile(output_outer + 'GAEA_no_biospec.xlsx') as gaea_file:
+            gaea_ppl = gaea_file.parse(sheet_name='participant_info')
+            gaea_vax = gaea_file.parse(sheet_name='vaccination_status')
+            gaea_samples = gaea_file.parse(sheet_name='visit_info')
+        pd.concat([ppl_data, gaea_ppl]).to_excel(output_inner + 'Accrual_Participant_Info.xlsx', index=False, na_rep='N/A')
+        pd.concat([vax_data.drop(orig_date, axis='columns'), gaea_vax]).to_excel(output_inner + 'Accrual_Vaccination_Status.xlsx', index=False, na_rep='N/A')
+        pd.concat([df_start.loc[:, sample_cols], gaea_samples]).to_excel(output_inner + 'Accrual_Visit_Info.xlsx', index=False, na_rep='N/A')
+        df_start.loc[:, sample_cols + ['Sample ID']].to_excel(output_outer + 'Latest_Accrual_SIDs.xlsx', index=False, na_rep='N/A')
 
 if __name__ == '__main__':
-    argParser = argparse.ArgumentParser(description='Make files for monthly data submission.')
-    argParser.add_argument('-u', '--update', action='store_true')
-    argParser.add_argument('-s', '--report_start', action='store', required=True, type=pd.to_datetime)
-    argParser.add_argument('-e', '--report_end', action='store', required=True, type=pd.to_datetime)
-    argParser.add_argument('-d', '--debug', action='store_true')
-    args = argParser.parse_args()
-    accrue(args)
+
+    if len(sys.argv) != 1:
+        
+        argParser = argparse.ArgumentParser(description='Make files for monthly data submission.')
+        argParser.add_argument('-c', '--use_cache', action='store_true')
+        argParser.add_argument('-s', '--report_start', action='store', type=pd.to_datetime)
+        argParser.add_argument('-e', '--report_end', action='store', type=pd.to_datetime)
+        argParser.add_argument('-d', '--debug', action='store_true')
+        args = argParser.parse_args()
+    
+    else:
+        sg.theme('Dark Blue 17')
+
+        layout = [[sg.Text('Accrual')],
+                  [sg.Checkbox("Use Cache", key='use_cache', default=False), \
+                    sg.Checkbox("debug", key='debug', default=False)],
+                  [sg.Text('Start date'), sg.Input(key='report_start', default_text='1/1/2021'), sg.CalendarButton(button_text="choose date",close_when_date_chosen=True, target="report_start", format='%m/%d/%Y')],
+                        [sg.Text('End date'), sg.Input(key='report_end', default_text='12/31/2025'), sg.CalendarButton(button_text="choose date",close_when_date_chosen=True, target="report_end", format='%m/%d/%Y')],
+                    [sg.Submit(), sg.Cancel()]]
+
+        window = sg.Window("Accrual Generation Script", layout)
+
+        event, values = window.read()
+        window.close()
+
+        if event =='Cancel':
+            quit()
+        else:
+            values['report_start'] = pd.to_datetime(values['report_start'])
+            values['report_end'] = pd.to_datetime(values['report_start'])
+            args = ValuesToClass(values)
+        
+        accrue(args)

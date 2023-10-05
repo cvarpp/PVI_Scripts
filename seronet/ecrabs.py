@@ -5,37 +5,19 @@ import argparse
 import util
 import PySimpleGUI as sg
 from seronet.d4_all_data import pull_from_source
-
-class ValuesToClass(object):
-        def __init__(self, values):
-            for key in values:
-                setattr(self, key, values[key])
+from helpers import clean_sample_id, ValuesToClass
 
 def process_lots():
-    lots = pd.read_excel(util.dscf, sheet_name='Lot # Sheet')
-    lot_log = {}
-    for _, row in lots.sort_values('Date Used').iterrows():
-        mat = row['Material']
-        open_date = row['Date Used'].date()
-        lot = row['Lot Number']
-        exp = row['EXP Date']
-        cat = row['Catalog Number']
-        if mat not in lot_log.keys():
-            lot_log[mat] = [(open_date, lot, exp, cat)]
-        else:
-            lot_log[mat].append((open_date, lot, exp, cat))
-    return lot_log
+    equip_lots = pd.read_excel(util.proc + 'script_data/lots_by_dates.xlsx').set_index(['Date Used', 'Material'])
+    return equip_lots
 
 def get_catalog_lot_exp(coll_date, material, lot_log):
     unknown = ("Please enter into Lot Sheet", "-", "-", "-")
-    if material not in lot_log.keys():
+    if (pd.to_datetime(coll_date), material.title()) not in lot_log.index:
         return unknown
     else:
-        lots = list(filter(lambda vals: vals[0] <= coll_date, lot_log[material]))
-        if len(lots) > 0:
-            return lots[-1]
-        else:
-            return unknown
+        row = lot_log.loc[(pd.to_datetime(coll_date), material.title()), :]
+        return [row['odate'], row['Lot Number'], row['EXP Date'], row['Catalog Number']]
 
 def time_diff_wrapper(t_start, t_end, annot):
     try:
@@ -78,18 +60,25 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
     future_output['Biospecimen'] = {col: [] for col in biospec_cols}
     future_output['Shipping Manifest'] = {col: [] for col in ship_cols}
     participant_visits = {}
+    sample_visits = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Source').drop_duplicates(subset='Sample ID').assign(sample_id=clean_sample_id).set_index('sample_id')
+    sample_visits['Visit Num'] = sample_visits['Biospecimen_ID'].str[-2:].apply(lambda val: int(val) if val[-1].isdigit() else val)
     for _, row in source.iterrows():
         participant = row['Participant ID']
-        sample_id = row['Sample ID']
+        sample_id = str(row['Sample ID'])
         seronet_id = row['Seronet ID']
         cohort = row['Cohort']
         if participant in exclude_ppl or seronet_id in exclude_ids:
             continue
-        if participant not in participant_visits.keys():
-            participant_visits[participant] = 1
+        if sample_id in sample_visits.index:
+            visit_num = sample_visits.loc[sample_id, 'Visit Num']
         else:
-            participant_visits[participant] += 1
-        visit_num = participant_visits[participant]
+            visit_num = 0
+        if type(visit_num) == int:
+            if participant not in participant_visits.keys():
+                participant_visits[participant] = 1
+            else:
+                participant_visits[participant] += 1
+            visit_num = participant_visits[participant]
         if visit_num == 1:
             visit = 'Baseline(1)'
         else:
@@ -155,7 +144,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
                 add_to['Biospecimen_ID'].append(cells_id)
                 add_to['Equipment_ID'].append(mat_row['Equipment_ID'])
                 add_to['Equipment_Type'].append(mat_row['Equipment_Type'])
-                add_to['Equipment_Calibration_Due_Date'].append(mat_row['Equipment_Calibration_Due_Date'])
+                add_to['Equipment_Calibration_Due_Date'].append('N/A')
                 add_to['Comments'].append(mat_row['Comments'])
         '''
         Consumables Next
@@ -381,7 +370,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
     if not debug:
         with pd.ExcelWriter(util.proc_d4 + '{}.xlsx'.format(output_fname)) as writer:
             for sname, df in output.items():
-                df[df['Date'].apply(lambda val: first_date <= val.date() <= last_date)].to_excel(writer, sheet_name=sname, index=False)
+                df[df['Date'].apply(lambda val: first_date <= val <= last_date)].to_excel(writer, sheet_name=sname, index=False)
         source.to_excel(util.script_output + 'SERONET_In_Window_Data_biospecimen_companion.xlsx', index=False)
         with open(util.script_output + 'trouble.csv', 'w+') as f:
             print("Sample ID", file=f)
@@ -394,7 +383,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
 if __name__ == '__main__':
     if len(sys.argv) !=1 :
         argParser = argparse.ArgumentParser(description='Create processing information sheets for SERONET data submissions.')
-        argParser.add_argument('-u', '--update', action='store_true')
+        argParser.add_argument('-c', '--use_cache', action='store_true')
         argParser.add_argument('-o', '--output_file', action='store', default='tmp')
         argParser.add_argument('-s', '--start', action='store', type=pd.to_datetime, default=pd.to_datetime('1/1/2021'))
         argParser.add_argument('-e', '--end', action='store', type=pd.to_datetime, default=pd.to_datetime('12/31/2025'))
@@ -405,7 +394,7 @@ if __name__ == '__main__':
         sg.theme('Dark Blue 17')
 
         layout = [[sg.Text('ECRABS')],
-                  [sg.Checkbox("Update", key='update', default=False), \
+                  [sg.Checkbox("Use Cache", key='use_cache', default=False), \
                    sg.Checkbox("override", key='override', default=False), \
                     sg.Checkbox("debug", key='debug', default=False)],
                   [sg.Text('Output file'), sg.Input(key='output_file')],
@@ -433,10 +422,17 @@ if __name__ == '__main__':
             make_ecrabs(args.override, start_date, end_date, args.output_file, args.debug)
 
 
-    if args.update == True:
+    if not args.use_cache == True:
         source = pull_from_source(args.debug)
     else:
         source = pd.read_excel(util.unfiltered)
+    
+    try:
+        make_ecrabs(source, args.start, args.end, args.output_file, args.debug)
+    except:
+        start_date = pd.to_datetime(args.start)
+        end_date = pd.to_datetime(args.end)
+        make_ecrabs(source, start_date, end_date, args.output_file, args.debug)
     
     try:
         make_ecrabs(source, args.start, args.end, args.output_file, args.debug)
