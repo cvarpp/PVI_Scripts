@@ -125,6 +125,10 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                     sheet_data.iloc[:96, 1] = assigned_sample_ids
                 if ('PBMC Tops' in sheet_name or 'PBMC Sides' in sheet_name) and print_type == 'STANDARDPBMC':
                     sheet_data.iloc[:288, 2] = [sid for sid in assigned_sample_ids for _ in range(3)]
+                if '4.5mL Tops' in sheet_name and print_type == 'SERONETPBMC':
+                    sheet_data.iloc[:96, 2] = assigned_sample_ids
+                if '4.5mL Sides' in sheet_name and print_type == 'SERONETPBMC':
+                    sheet_data.iloc[:96, 1] = assigned_sample_ids
 
             sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
 
