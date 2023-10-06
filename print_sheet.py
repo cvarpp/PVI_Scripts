@@ -77,10 +77,6 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                     sheet_data.iloc[7:25, 7] = assigned_sample_ids
                     sheet_data.iloc[1:19, 12] = assigned_sample_ids
                     sheet_data.iloc[1:19, 13] = [box for box in range(box_start, box_end + 1) for _ in range(3)]
-                if '4.5 mL Tops' in sheet_name:
-                    sheet_data.iloc[:18, 2] = assigned_sample_ids
-                if '4.5 mL Sides' in sheet_name:
-                    sheet_data.iloc[:18, 1] = assigned_sample_ids
                 if '1-Box Top round1' in sheet_name:
                     sheet_data.iloc[:6, 7] = assigned_sample_ids[:6]
                     sheet_data.iloc[:90, 1] = [sid for sid in assigned_sample_ids[:6] for _ in range(15)]
