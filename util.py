@@ -7,6 +7,8 @@ dscf = proc + 'Data Sample Collection Form.xlsx'
 proc_ntbk = proc + 'Processing Notebook.xlsx'
 inventory_input = proc + 'New Import Sheet.xlsx'
 
+psp = onedrive + 'Simon Lab - Pathogen Surveillance/'
+
 tracking = onedrive + 'Simon Lab - Sample Tracking/'
 shared_samples = tracking + 'Released Samples/Collaborator Samples Tracker.xlsx'
 intake = tracking + 'Sample Intake Log Historian.xlsx'
