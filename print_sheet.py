@@ -2,7 +2,7 @@ import pandas as pd
 import argparse
 import util
 import os
-
+import warnings
 
 def get_box_range(print_type, round_num):
     # Rename Printing Log: Study - Kit Type
@@ -130,6 +130,7 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
 
 
 if __name__ == '__main__':
+    warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
     parser = argparse.ArgumentParser()
     parser.add_argument('-seronet_full', type=int, default=0, help='Number of SERONET FULL rounds')
     parser.add_argument('-serum', type=int, default=0, help='Number of SERUM rounds')
