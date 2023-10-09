@@ -21,10 +21,10 @@ if __name__ == '__main__':
 
         layout = [[sg.Text('Excel File'), sg.Input(key='input_excel'), sg.FolderBrowse()],
                   [sg.Text('Filtering Column'), sg.Input(key='filter_col')],
-                  [sg.Text('Filtering Values'), sg.Input(key='filter_vals')]
+                  [sg.Text('Filtering Values'), sg.Input(key='filter_vals')],
                   [sg.Submit(), sg.Cancel()]]
         
-        window = sg.Window('CSV Conversion Script', layout)
+        window = sg.Window('Filter Sheets', layout)
 
         event,  values = window.read()
         window.close()
