@@ -3,6 +3,11 @@ import numpy as np
 import util
 import os
 
+class ValuesToClass(object):
+    def __init__(self,values):
+        for key in values:
+            setattr(self, key, values[key])
+
 def try_convert(val):
     '''
     Converts number values to floating point and converts 0s to 1s.

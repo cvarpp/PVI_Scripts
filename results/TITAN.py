@@ -2,7 +2,9 @@ import pandas as pd
 import numpy as np
 import util
 import argparse
-from helpers import try_datediff, query_dscf, query_intake, query_research, map_dates
+import sys
+import PySimpleGUI as sg
+from helpers import try_datediff, query_dscf, query_intake, query_research, map_dates, ValuesToClass
 
 def make_timepoint(days):
     tps = [30, 90, 180, 300]
@@ -191,10 +193,31 @@ def titanify(df):
     ))
 
 if __name__ == '__main__':
-    argParser = argparse.ArgumentParser(description='Generate report for TITAN samples')
-    argParser.add_argument('-c', '--use_cache', action='store_true', help='Use cached results instead of pulling from source sheets')
-    argParser.add_argument('-d', '--debug', action='store_true', help="Print to the command line but do not write to file")
-    args = argParser.parse_args()
+    if len(sys.argv) !=1:
+
+        argParser = argparse.ArgumentParser(description='Generate report for TITAN samples')
+        argParser.add_argument('-c', '--use_cache', action='store_true', help='Use cached results instead of pulling from source sheets')
+        argParser.add_argument('-d', '--debug', action='store_true', help="Print to the command line but do not write to file")
+        args = argParser.parse_args()
+    
+    else:
+        sg.theme('Dark Blue 17')
+
+        layout = [[sg.Text('TITAN Result Generation Script')],
+                  [sg.Checkbox('Use Cache?', key='use_cache', default=False)],
+                  [sg.Text('Output File Name:'),sg.Input(key='output_file')],
+                  [sg.Submit(), sg.Cancel()]]
+        
+        window = sg.Window('Titan Results Script', layout)
+
+        event,  values = window.read()
+        window.close()
+
+        if event=='Cancel':
+            quit()
+        else:
+            args = ValuesToClass(values)
+
     if not args.use_cache:
         titanify(pull_data())
     else:
