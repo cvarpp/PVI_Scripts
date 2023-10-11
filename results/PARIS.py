@@ -75,7 +75,7 @@ if __name__ == '__main__':
     else:
         sg.theme('Dark Blue 17')
 
-        layout = [[sg.Text('MARS Result Generation Script')],
+        layout = [[sg.Text('PARIS Result Generation Script')],
                   [sg.Checkbox('Debug?', key='debug', default=False)],
                   [sg.Text('Output File Name:'),sg.Input(key='output_file')],
                   [sg.Submit(), sg.Cancel()]]
