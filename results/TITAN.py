@@ -205,7 +205,7 @@ if __name__ == '__main__':
 
         layout = [[sg.Text('TITAN Result Generation Script')],
                   [sg.Checkbox('Use Cache?', key='use_cache', default=False)],
-                  [sg.Text('Output File Name:'),sg.Input(key='output_file')],
+                  [sg.Checkbox('Debug?', key='debug', default=False)],
                   [sg.Submit(), sg.Cancel()]]
         
         window = sg.Window('Titan Results Script', layout)
