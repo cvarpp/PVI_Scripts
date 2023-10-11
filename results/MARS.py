@@ -3,7 +3,9 @@ import numpy as np
 from bisect import bisect_left
 import argparse
 import util
-from helpers import query_dscf, query_research, query_intake, clean_sample_id, try_datediff
+import sys
+import PySimpleGUI as sg
+from helpers import query_dscf, query_research, query_intake, clean_sample_id, try_datediff, ValuesToClass
 
 def lookup_query(row, source, latest_date, coi):
     doi = row['Date Collected']
@@ -138,10 +140,29 @@ def mars_report(args):
     return source_df
 
 if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(description='Generate report for all MARS samples')
-    argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="Prefix for the output file (in addition to current date)")
-    argparser.add_argument('-d', '--debug', action='store_true', help="Print to the command line but do not write to file")
-    args = argparser.parse_args()
+    if len(sys.argv) != 1:
+        argparser = argparse.ArgumentParser(description='Generate report for all MARS samples')
+        argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="Prefix for the output file (in addition to current date)")
+        argparser.add_argument('-d', '--debug', action='store_true', help="Print to the command line but do not write to file")
+        args = argparser.parse_args()
+
+    else:
+        sg.theme('Dark Blue 17')
+
+        layout = [[sg.Text('MARS Result Generation Script')],
+                  [sg.Checkbox('Debug?', key='debug', default=False)],
+                  [sg.Text('Output File Name:'),sg.Input(key='output_file')],
+                  [sg.Submit(), sg.Cancel()]]
+        
+        window = sg.Window('MARS Results Script', layout)
+
+        event,  values = window.read()
+        window.close()
+
+        if event=='Cancel':
+            quit()
+        else:
+            args = ValuesToClass(values)
 
     source_df = mars_report(args)
     print("{} samples from {} participants.".format(
