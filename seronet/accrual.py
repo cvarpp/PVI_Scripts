@@ -158,14 +158,12 @@ def accrue(args):
 
 if __name__ == '__main__':
     if len(sys.argv) != 1:
-        
         argParser = argparse.ArgumentParser(description='Make files for monthly data submission.')
         argParser.add_argument('-c', '--use_cache', action='store_true')
         argParser.add_argument('-s', '--report_start', action='store', type=pd.to_datetime)
         argParser.add_argument('-e', '--report_end', action='store', type=pd.to_datetime)
         argParser.add_argument('-d', '--debug', action='store_true')
         args = argParser.parse_args()
-    
     else:
         sg.theme('Dark Blue 17')
 
@@ -187,5 +185,4 @@ if __name__ == '__main__':
             values['report_start'] = pd.to_datetime(values['report_start'])
             values['report_end'] = pd.to_datetime(values['report_start'])
             args = ValuesToClass(values)
-        
-        accrue(args)
+    accrue(args)
