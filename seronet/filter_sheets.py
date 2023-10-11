@@ -6,22 +6,23 @@ import PySimpleGUI as sg
 class ValuesToClass(object):
     def __init__(self,values):
         for key in values:
-            setattr(self, key, values[key])
+            if key == 'filter_vals':
+                setattr(self, key, pd.read_excel(values[key]))
+            else:
+                setattr(self, key, values[key])
 
 if __name__ == '__main__':
     if len(sys.argv) != 1:
         argParser = argparse.ArgumentParser(description='Filter all sheets in an excel file based on a given column and value set.')
         argParser.add_argument('-i', '--input_excel', action='store', required=True)
         argParser.add_argument('-f', '--filter_col', action='store', required=True)
-        argParser.add_argument('-v', '--filter_vals', action='store', required=True, type=lambda path: pd.read_excel(path))
+        argParser.add_argument('-v', '--filter_vals', action='store', required=True, type=pd.read_excel)
         args = argParser.parse_args()
-
     else:
         sg.theme('Dark Blue 17')
-
-        layout = [[sg.Text('Excel File'), sg.Input(key='input_excel'), sg.FolderBrowse()],
-                  [sg.Text('Filtering Column'), sg.Input(key='filter_col')],
-                  [sg.Text('Filtering Values'), sg.Input(key='filter_vals')],
+        layout = [[sg.Text('Excel File with Sheets to Filter'), sg.Input(key='input_excel'), sg.FileBrowse()],
+                  [sg.Text('Column to Filter On'), sg.Input(key='filter_col')],
+                  [sg.Text('Excel File with Values to Include'), sg.Input(key='filter_vals'), sg.FileBrowse()],
                   [sg.Submit(), sg.Cancel()]]
         
         window = sg.Window('Filter Sheets', layout)
