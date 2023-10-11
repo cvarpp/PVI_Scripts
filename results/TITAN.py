@@ -103,7 +103,7 @@ def query_titan():
         participant_data[k] = participant_data['TITAN ID'].apply(lambda val: titan_fifth.loc[val, k])
     return participant_data.pipe(map_dates, date_cols)
 
-def pull_data():
+def pull_data(args):
     participant_data = query_titan()
     participants = [p for p in participant_data.index]
     participant_samples = query_intake(participants).drop(['Order #', 'PVI #'], axis='columns')
@@ -122,7 +122,8 @@ def pull_data():
         day_col = 'Days from ' + date_col[:-5]
         df[day_col] = df.apply(lambda row: try_datediff(row[date_col], row['Date']), axis=1)
     df.dropna(subset=['AUC'], inplace=True)
-    df.to_excel(util.script_folder + 'data/titan_intermediate.xlsx')
+    if not args.debug:
+        df.to_excel(util.script_folder + 'data/titan_intermediate.xlsx')
     return df
 
 def titanify(df):
@@ -219,6 +220,6 @@ if __name__ == '__main__':
             args = ValuesToClass(values)
 
     if not args.use_cache:
-        titanify(pull_data())
+        titanify(pull_data(args))
     else:
         titanify(pd.read_excel(util.script_folder + 'data/titan_intermediate.xlsx', index_col='sample_id'))
