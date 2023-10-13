@@ -18,7 +18,7 @@ if __name__ == '__main__':
     next_unprinted = df[df['Printed?'].pipe(clean_strings) != 'YES'].head(6)['Rack number'].to_numpy()
     next_unaliquoted = df[df['Aliquoted?'].pipe(clean_strings) != 'YES'].head(6)['Rack number'].to_numpy()
     all_todo = np.concatenate((next_unlinked, next_unprinted, next_unaliquoted))
-    out_df = pd.DataFrame({'Rack': all_todo}).drop_duplicates().set_index('Rack')
+    out_df = pd.DataFrame({'Rack': all_todo}).drop_duplicates().sort_values(by='Rack').set_index('Rack')
     for col in ['Linking Initials', 'Linking Weekday',
                 'Printing Initials', 'Printing Weekday',
                 'Aliquoting Initials', 'Aliquoting Weekday']:
