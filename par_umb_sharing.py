@@ -7,9 +7,9 @@ import datetime
 from dateutil import parser
 from helpers import query_intake, ValuesToClass
 import argparse
+import os
 import sys
 import PySimpleGUI as sg
-
 
 def not_shared(val):
     return pd.isna(val) or val == 'No' or val == ''
@@ -32,7 +32,12 @@ def make_report(use_cache=False):
     pemail = paris_info[['Subject ID', 'E-mail']].rename(columns={'E-mail': 'Email'})
     uemail = umbrella_info[['Subject ID', 'Email']]
     temail = titan_info[['Umbrella Corresponding Participant ID', 'Email (From EPIC)']].rename(columns={'Umbrella Corresponding Participant ID': 'Subject ID', 'Email (From EPIC)': 'Email'})
-    emails = (pd.concat([pemail, temail, uemail])
+    lk_sheet = util.cross_project + 'Lock & Key/Lock and Key - KDS.xlsx'
+    if os.path.exists(lk_sheet):
+        lkemail = pd.read_excel(lk_sheet, sheet_name='Link L&K').rename(columns={'Participant ID': 'Subject ID'})[['Subject ID', 'Email']]
+    else:
+        lkemail = uemail
+    emails = (pd.concat([lkemail, pemail, temail, uemail])
                 .assign(pid=lambda df: df['Subject ID'].str.strip())
                 .drop_duplicates(subset='pid').set_index('pid'))
 
