@@ -6,6 +6,7 @@ from helpers import query_dscf
 import argparse
 import sys
 from results.PARIS import paris_results
+from cam_convert import transform_cam
 
 if __name__ == '__main__':
     df = paris_results().sort_values(by=['Participant ID', 'Date'])
@@ -31,7 +32,12 @@ if __name__ == '__main__':
     per_person['Last Post-XBB Days'] = per_person['Participant ID'].apply(lambda pid: df_last_postvax.loc[pid, 'Days to Last Known Vaccine'] if pid in postvax_available else np.nan)
     postvax_count = dfoi[dfoi['Days to Last Known Vaccine'] > 0].groupby('Participant ID').count()
     per_person['Post-XBB Sample Count'] = per_person['Participant ID'].apply(lambda pid: postvax_count.loc[pid, 'Sample ID'] if pid in postvax_available else 0)
+    postvax_days = dfoi[dfoi['Days to Last Known Vaccine'] > 0].groupby('Participant ID')['Days to Last Known Vaccine'].agg(lambda s: ', '.join(s.astype(str)))
+    per_person['Post-XBB Days'] = per_person['Participant ID'].apply(lambda pid: postvax_days[pid] if pid in postvax_available else 'N/A')
     df_for_sids = dfoi.set_index('Sample ID').copy()
+    cam_info = transform_cam(debug=True).drop_duplicates(subset='Participant ID').set_index('Participant ID')
+    cam_available = cam_info.index.to_numpy()
+    per_person['Latest Scheduled Visit'] = per_person['Participant ID'].apply(lambda pid: cam_info.loc[pid, 'Date'] if pid in cam_available else 'N/A')
     for col, new_name in zip(proc_cols, proc_names):
         per_person[new_name + ' Pre'] = per_person['Last Pre-XBB Sample ID'].apply(lambda sid: df_for_sids.loc[sid, col] if sid != 'N/A' else 'N/A')
         per_person[new_name + ' Post'] = per_person['Last Post-XBB Sample ID'].apply(lambda sid: df_for_sids.loc[sid, col] if sid != 'N/A' else 'N/A')
