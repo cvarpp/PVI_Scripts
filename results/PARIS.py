@@ -40,9 +40,7 @@ def paris_results():
     dose_dates = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Boost 3 Date']
     inf_dates = ['Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date']
     sample_info['Date'] = sample_info['Date Collected']
-    sample_info = (sample_info[~sample_info['Qualitative'].astype(str).str.strip().isin(['-', '']) &
-                              ~sample_info['Qualitative'].apply(pd.isna)]
-                              .join(dems.loc[:, dem_cols], on='participant_id')
+    sample_info = (sample_info.join(dems.loc[:, dem_cols], on='participant_id')
                               .join(paris_data.loc[:, shared_cols + date_cols], on='participant_id')
                               .reset_index().copy())
     baseline_data = sample_info.sort_values(by='Date').drop_duplicates(subset='participant_id').set_index('participant_id')
