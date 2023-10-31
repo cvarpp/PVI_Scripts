@@ -42,11 +42,11 @@ def pull_archive(output_fname=util.clin_ops + 'CAM Archive/Archive Long.xlsx'):
             date_dfs = [df_week.iloc[:, col_num:col_num + 11] for col_num, col in enumerate(df_week.columns) if type(col) == str and 'date' in col.lower()]
             for df in date_dfs:
                 df.columns = shared_header_1
-            sheet_dfs.extend(date_dfs)
+            sheet_df_arch.extend(date_dfs)
         else:
             df_week.columns = df_week.iloc[14, :]
             date_df = df_week.loc[:, shared_header_2].copy()
-            sheet_dfs.append(date_df)
+            sheet_df_arch.append(date_df)
         # df_week.columns = df_week.iloc[6, :]
         # date_dfs = [df_week.iloc[:, col_num:col_num + 11].copy() for col_num, col in enumerate(df_week.columns) if type(col) == str and 'date' in col.strip().lower()]
         # for df in date_dfs:
