@@ -1,10 +1,8 @@
 import pandas as pd
 import numpy as np
-import seaborn as sns
 import util
 from helpers import query_dscf
-import argparse
-import sys
+import datetime
 from results.PARIS import paris_results
 from cam_convert import transform_cam
 
@@ -37,11 +35,12 @@ if __name__ == '__main__':
     df_for_sids = dfoi.set_index('Sample ID').copy()
     cam_info = transform_cam(debug=True).drop_duplicates(subset='Participant ID').set_index('Participant ID')
     cam_available = cam_info.index.to_numpy()
+    per_person['Day 7 Due'] = per_person['Last Known Vaccine Date'] + datetime.timedelta(days=7)
+    per_person['Day 28 Due'] = per_person['Last Known Vaccine Date'] + datetime.timedelta(days=28)
     per_person['Latest Scheduled Visit'] = per_person['Participant ID'].apply(lambda pid: cam_info.loc[pid, 'Date'] if pid in cam_available else 'N/A')
     for col, new_name in zip(proc_cols, proc_names):
         per_person[new_name + ' Pre'] = per_person['Last Pre-XBB Sample ID'].apply(lambda sid: df_for_sids.loc[sid, col] if sid != 'N/A' else 'N/A')
         per_person[new_name + ' Post'] = per_person['Last Post-XBB Sample ID'].apply(lambda sid: df_for_sids.loc[sid, col] if sid != 'N/A' else 'N/A')
-    # per_person['Pre-XBB PBMC Count'] = per_person['Last Pre-XBB Sample ID'].apply(lambda sid: df_for_sids.loc[sid, ''])
 
     with pd.ExcelWriter(output_filename) as writer:
         dfoi.to_excel(writer, sheet_name='By Sample', index=False)
