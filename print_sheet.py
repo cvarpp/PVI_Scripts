@@ -13,11 +13,11 @@ def get_box_range(print_type, round_num):
     plog[['Box Min', 'Box Max']] = plog[['Box Min', 'Box Max']].apply(pd.to_numeric, errors='coerce').dropna()
 
     filter = {
-        'SERONET': (plog['Kit Type'] == 'SERONET') & (plog['PBMCs'].str.strip().str.lower() == 'no'),
-        'SERUM': (plog['Kit Type'] == 'SERUM'),
-        'STANDARD': (plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].str.strip().str.lower() == 'no'),
-        'SERONETPBMC': (plog['Kit Type'].isin(['SERONET', 'MIT (PBMCS)'])) & (plog['PBMCs'].str.strip().str.lower() == 'yes'),
-        'STANDARDPBMC': (plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].str.strip().str.lower() == 'yes')
+        'SERONET': (plog['Kit Type'].str.strip().str.upper() == 'SERONET') & (plog['PBMCs'].str.strip().str.lower() == 'no'),
+        'SERUM': (plog['Kit Type'].str.strip().str.upper() == 'SERUM'),
+        'STANDARD': (plog['Kit Type'].str.strip().str.upper() == 'STANDARD') & (plog['PBMCs'].str.strip().str.lower() == 'no'),
+        'SERONETPBMC': (plog['Kit Type'].str.strip().str.upper().isin(['SERONET', 'MIT (PBMCS)'])) & (plog['PBMCs'].str.strip().str.lower() == 'yes'),
+        'STANDARDPBMC': (plog['Kit Type'].str.strip().str.upper() == 'STANDARD') & (plog['PBMCs'].str.strip().str.lower() == 'yes')
     }
 
     if print_type not in filter:
