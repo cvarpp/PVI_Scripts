@@ -52,12 +52,13 @@ def yes_no(val):
 
 def accrue(args):
     intermediate = 'monthly_report'
+    cutoff_date = datetime.date(2023,9,30)
     if not args.use_cache:
-        all_data = pull_from_source(args.debug).query('Date <= @args.report_end').copy()
+        all_data = pull_from_source(args.debug).query('Date <= @args.report_end and Date <= @cutoff_date').copy()
         ecrabs = make_ecrabs(all_data, output_fname=intermediate, debug=args.debug)
         dfs_clin = write_clinical(pd.DataFrame(ecrabs['Biospecimen']), 'monthly_tmp', debug=args.debug)
     else:
-        all_data = pd.read_excel(util.unfiltered, keep_default_na=False).query('Date <= @args.report_end').copy()
+        all_data = pd.read_excel(util.unfiltered, keep_default_na=False).query('Date <= @args.report_end and Date <= @cutoff_date').copy()
         dfs_clin = pd.read_excel(util.cross_d4 + 'monthly_tmp.xlsx', sheet_name = None, keep_default_na=False)
     seronet_key = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name=None)
     exclusions = seronet_key['Exclusions']
