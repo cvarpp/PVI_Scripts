@@ -83,25 +83,25 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                     sheet_data.iloc[:18, 1] = assigned_sample_ids
                 if '1-Box Top round1' in sheet_name:
                     sheet_data.iloc[:6, 7] = assigned_sample_ids[:6]
-                    sheet_data.iloc[:90, 1] = [sid for sid in assigned_sample_ids[:6] for _ in range(15)]
+                    sheet_data.iloc[:90, 2] = [sid for sid in assigned_sample_ids[:6] for _ in range(15)]
                 if '2-Box Side round1' in sheet_name:
                     sheet_data.iloc[:6, 7] = assigned_sample_ids[:6]
                     sheet_data.iloc[:90, 11] = [sid for sid in assigned_sample_ids[:6] for _ in range(15)]
-                    sheet_data[1] = sheet_data[12] + " " + sheet_data[11]
+                    sheet_data[2] = sheet_data[12] + " " + sheet_data[11]
                 if '3-Box Top round2' in sheet_name:
                     sheet_data.iloc[:6, 7] = assigned_sample_ids[6:12]
-                    sheet_data.iloc[:90, 1] = [sid for sid in assigned_sample_ids[6:12] for _ in range(15)]
+                    sheet_data.iloc[:90, 2] = [sid for sid in assigned_sample_ids[6:12] for _ in range(15)]
                 if '4-Box Side round2' in sheet_name:
                     sheet_data.iloc[:6, 7] = assigned_sample_ids[6:12]
                     sheet_data.iloc[:90, 11] = [sid for sid in assigned_sample_ids[6:12] for _ in range(15)]
-                    sheet_data[1] = sheet_data[12] + " " + sheet_data[11]
+                    sheet_data[2] = sheet_data[12] + " " + sheet_data[11]
                 if '5-Box Top round3' in sheet_name:
                     sheet_data.iloc[:6, 7] = assigned_sample_ids[12:]
-                    sheet_data.iloc[:90, 1] = [sid for sid in assigned_sample_ids[12:] for _ in range(15)]
+                    sheet_data.iloc[:90, 2] = [sid for sid in assigned_sample_ids[12:] for _ in range(15)]
                 if '6-Box Side round3' in sheet_name:
                     sheet_data.iloc[:6, 7] = assigned_sample_ids[12:]
                     sheet_data.iloc[:90, 11] = [sid for sid in assigned_sample_ids[12:] for _ in range(15)]
-                    sheet_data[1] = sheet_data[12] + " " + sheet_data[11]
+                    sheet_data[2] = sheet_data[12] + " " + sheet_data[11]
                 if '7-Kits' in sheet_name:
                     sheet_data.iloc[:90, 1] = [sid for i in range(0, len(assigned_sample_ids), 2) for sid in [assigned_sample_ids[i], assigned_sample_ids[i + 1]] * 5]
 
