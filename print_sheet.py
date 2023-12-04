@@ -2,6 +2,7 @@ import pandas as pd
 import argparse
 import util
 import os
+import warnings
 
 
 def get_box_range(print_type, round_num):
@@ -42,7 +43,6 @@ def get_box_range(print_type, round_num):
 def get_sample_ids(sheet_name, box_start, box_end):
     print_planning_path = os.path.join(util.tube_print, 'Print Planning.xlsx')
     print_planning = pd.read_excel(print_planning_path, sheet_name=sheet_name)
-    # box_range = print_planning['Box ID'].apply(lambda bid: box_start <= bid <= box_end) # Use column name and loc instead of iloc
     box_range = print_planning['Box ID'].between(box_start, box_end)
     sample_ids = print_planning.loc[box_range, 'Sample ID'].to_numpy()
 
@@ -77,10 +77,6 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                     sheet_data.iloc[7:25, 7] = assigned_sample_ids
                     sheet_data.iloc[1:19, 12] = assigned_sample_ids
                     sheet_data.iloc[1:19, 13] = [box for box in range(box_start, box_end + 1) for _ in range(3)]
-                # if '4.5 mL Tops' in sheet_name:
-                #     sheet_data.iloc[:18, 2] = assigned_sample_ids
-                # if '4.5 mL Sides' in sheet_name:
-                #     sheet_data.iloc[:18, 1] = assigned_sample_ids
                 if '1-Box Top round1' in sheet_name:
                     sheet_data.iloc[:6, 7] = assigned_sample_ids[:6]
                     sheet_data.iloc[:90, 2] = [sid for sid in assigned_sample_ids[:6] for _ in range(15)]
@@ -136,6 +132,7 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
 
 
 if __name__ == '__main__':
+    warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
     parser = argparse.ArgumentParser()
     parser.add_argument('-seronet_full', type=int, default=0, help='Number of SERONET FULL rounds')
     parser.add_argument('-serum', type=int, default=0, help='Number of SERUM rounds')
