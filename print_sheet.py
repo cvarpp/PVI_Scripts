@@ -4,6 +4,7 @@ import util
 import os
 import warnings
 
+
 def get_box_range(print_type, round_num):
     # Rename Printing Log: Study - Kit Type
     plog = (pd.read_excel(util.print_log, sheet_name='LOG', header=0)
@@ -42,7 +43,6 @@ def get_box_range(print_type, round_num):
 def get_sample_ids(sheet_name, box_start, box_end):
     print_planning_path = os.path.join(util.tube_print, 'Print Planning.xlsx')
     print_planning = pd.read_excel(print_planning_path, sheet_name=sheet_name)
-    # box_range = print_planning['Box ID'].apply(lambda bid: box_start <= bid <= box_end) # Use column name and loc instead of iloc
     box_range = print_planning['Box ID'].between(box_start, box_end)
     sample_ids = print_planning.loc[box_range, 'Sample ID'].to_numpy()
 
@@ -79,25 +79,25 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                     sheet_data.iloc[1:19, 13] = [box for box in range(box_start, box_end + 1) for _ in range(3)]
                 if '1-Box Top round1' in sheet_name:
                     sheet_data.iloc[:6, 7] = assigned_sample_ids[:6]
-                    sheet_data.iloc[:90, 1] = [sid for sid in assigned_sample_ids[:6] for _ in range(15)]
+                    sheet_data.iloc[:90, 2] = [sid for sid in assigned_sample_ids[:6] for _ in range(15)]
                 if '2-Box Side round1' in sheet_name:
                     sheet_data.iloc[:6, 7] = assigned_sample_ids[:6]
                     sheet_data.iloc[:90, 11] = [sid for sid in assigned_sample_ids[:6] for _ in range(15)]
-                    sheet_data[1] = sheet_data[12] + " " + sheet_data[11]
+                    sheet_data[2] = sheet_data[12] + " " + sheet_data[11]
                 if '3-Box Top round2' in sheet_name:
                     sheet_data.iloc[:6, 7] = assigned_sample_ids[6:12]
-                    sheet_data.iloc[:90, 1] = [sid for sid in assigned_sample_ids[6:12] for _ in range(15)]
+                    sheet_data.iloc[:90, 2] = [sid for sid in assigned_sample_ids[6:12] for _ in range(15)]
                 if '4-Box Side round2' in sheet_name:
                     sheet_data.iloc[:6, 7] = assigned_sample_ids[6:12]
                     sheet_data.iloc[:90, 11] = [sid for sid in assigned_sample_ids[6:12] for _ in range(15)]
-                    sheet_data[1] = sheet_data[12] + " " + sheet_data[11]
+                    sheet_data[2] = sheet_data[12] + " " + sheet_data[11]
                 if '5-Box Top round3' in sheet_name:
                     sheet_data.iloc[:6, 7] = assigned_sample_ids[12:]
-                    sheet_data.iloc[:90, 1] = [sid for sid in assigned_sample_ids[12:] for _ in range(15)]
+                    sheet_data.iloc[:90, 2] = [sid for sid in assigned_sample_ids[12:] for _ in range(15)]
                 if '6-Box Side round3' in sheet_name:
                     sheet_data.iloc[:6, 7] = assigned_sample_ids[12:]
                     sheet_data.iloc[:90, 11] = [sid for sid in assigned_sample_ids[12:] for _ in range(15)]
-                    sheet_data[1] = sheet_data[12] + " " + sheet_data[11]
+                    sheet_data[2] = sheet_data[12] + " " + sheet_data[11]
                 if '7-Kits' in sheet_name:
                     sheet_data.iloc[:90, 1] = [sid for i in range(0, len(assigned_sample_ids), 2) for sid in [assigned_sample_ids[i], assigned_sample_ids[i + 1]] * 5]
 
@@ -117,14 +117,16 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                     sheet_data.iloc[4:7, 19] = assigned_sample_ids[45:48]
                     sheet_data.iloc[9:12, 19] = assigned_sample_ids[60:63]
                     sheet_data.iloc[14:17, 19] = assigned_sample_ids[75:78]
-                if ('PBMC Tops' in sheet_name or 'PBMC Sides' in sheet_name) and print_type == 'SERONETPBMC':
-                    sheet_data.iloc[:96, 1] = assigned_sample_ids
-                if ('PBMC Tops' in sheet_name or 'PBMC Sides' in sheet_name) and print_type == 'STANDARDPBMC':
-                    sheet_data.iloc[:288, 2] = [sid for sid in assigned_sample_ids for _ in range(3)]
-                if '4.5mL Tops' in sheet_name and print_type == 'SERONETPBMC':
-                    sheet_data.iloc[:96, 2] = assigned_sample_ids
-                if '4.5mL Sides' in sheet_name and print_type == 'SERONETPBMC':
-                    sheet_data.iloc[:96, 1] = assigned_sample_ids
+
+                if print_type == 'SERONETPBMC':
+                    if 'PBMC Tops' in sheet_name or '4.5mL Tops' in sheet_name:
+                        sheet_data.iloc[:96, 2] = assigned_sample_ids
+                    if 'PBMC Sides' in sheet_name or '4.5mL Sides' in sheet_name:
+                        sheet_data.iloc[:96, 1] = assigned_sample_ids
+        
+                if print_type == 'STANDARDPBMC':
+                    if 'PBMC Tops' in sheet_name or 'PBMC Sides' in sheet_name:
+                        sheet_data.iloc[:288, 2] = [sid for sid in assigned_sample_ids for _ in range(3)]
 
             sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
 
