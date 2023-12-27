@@ -28,8 +28,8 @@ def transform_sample_data(sheet, box_file_name):
         transformed_data['Box'].append(box_name)
         transformed_data['Position'].append(tube_position)
         transformed_data['ALIQUOT'].append(sample_id)
-        transformed_data['Tube Barcode'].append(row['Tube ID'])
-        transformed_data['Plate Barcode'].append(row['Rack ID'])
+        transformed_data['Barcode'].append(row['Tube ID'])
+        transformed_data['Original Plate Barcode'].append(row['Rack ID'])
     return transformed_data
 
 if __name__ == '__main__':
@@ -43,8 +43,8 @@ if __name__ == '__main__':
     inventory_box = pd.read_excel(input_file, sheet_name=None)
 
     data = {'Name': [], 'Sample ID': [], 'Sample Type': [], 'Volume': [], 'Freezer': [], 'Level1': [], 
-            'Level2': [], 'Level3': [], 'Box': [], 'Position': [], 'ALIQUOT': [], 'Tube Barcode': [], 
-            'Plate Barcode': []}
+            'Level2': [], 'Level3': [], 'Box': [], 'Position': [], 'ALIQUOT': [], 'Barcode': [], 
+            'Original Plate Barcode': []}
     
     for name, sheet in inventory_box.items():
         transformed_sample_data = transform_sample_data(sheet, box_file_name)
