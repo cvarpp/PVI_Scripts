@@ -11,7 +11,7 @@ def convert_tube_position(position):
     return f"{number}/{letter}"
 
 def transform_sample_data(sheet, box_file_name):
-    '''Transforms each row of the sample sheet'''
+    '''Transforms each row of the scanned sheet'''
     transformed_data = deepcopy(data)
     for idx, row in sheet.iterrows():
         tube_position = convert_tube_position(row['Tube Position'])
@@ -20,6 +20,7 @@ def transform_sample_data(sheet, box_file_name):
         transformed_data['Name'].append(sample_id)
         transformed_data['Sample ID'].append(sample_id)
         transformed_data['Sample Type'].append('Serum Micronic')
+        transformed_data['Volume'].append('0.4')
         transformed_data['Freezer'].append('Annenberg 18')
         transformed_data['Level1'].append('Freezer 1 (Eiffel Tower)')
         transformed_data['Level2'].append('Shelf 4')
@@ -27,7 +28,8 @@ def transform_sample_data(sheet, box_file_name):
         transformed_data['Box'].append(box_name)
         transformed_data['Position'].append(tube_position)
         transformed_data['ALIQUOT'].append(sample_id)
-        transformed_data['Tube ID'].append(row['Tube ID'])
+        transformed_data['Tube Barcode'].append(row['Tube ID'])
+        transformed_data['Plate Barcode'].append(row['Rack ID'])
     return transformed_data
 
 if __name__ == '__main__':
@@ -35,12 +37,14 @@ if __name__ == '__main__':
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=96)
     args = argParser.parse_args()
 
-    input_file = util.project_ws + 'CRP aliquoting/' + 'CRP Micronics Files/' + 'CRP Micronics Plate 8.xlsx'
-    box_file_name = os.path.splitext(os.path.basename(input_file))[0]
+    input_file = util.project_ws + 'CRP aliquoting/' + 'CRP Micronics Files/' + 'CRP Micronics Plate 08 A1462 A0941.xlsx'
+    file_name_parts = os.path.splitext(os.path.basename(input_file))[0].split()
+    box_file_name = ' '.join(file_name_parts[:4])
     inventory_box = pd.read_excel(input_file, sheet_name=None)
 
-    data = {'Name': [], 'Sample ID': [], 'Sample Type': [], 'Freezer': [], 'Level1': [], 
-            'Level2': [], 'Level3': [], 'Box': [], 'Position': [], 'ALIQUOT': [], 'Tube ID': []}
+    data = {'Name': [], 'Sample ID': [], 'Sample Type': [], 'Volume': [], 'Freezer': [], 'Level1': [], 
+            'Level2': [], 'Level3': [], 'Box': [], 'Position': [], 'ALIQUOT': [], 'Tube Barcode': [], 
+            'Plate Barcode': []}
     
     for name, sheet in inventory_box.items():
         transformed_sample_data = transform_sample_data(sheet, box_file_name)
