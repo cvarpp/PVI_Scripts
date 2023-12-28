@@ -3,6 +3,7 @@ import argparse
 import util
 import os
 from copy import deepcopy
+from datetime import datetime
 
 def convert_tube_position(position):
     '''Converts Tube Position from 'A01' to '1/A' format'''
@@ -34,23 +35,27 @@ def transform_sample_data(sheet, box_file_name):
 
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Transform micronics data for FP upload')
+    argParser.add_argument('filename', nargs='+', type=str, help='Filename of the input Excel file')
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=96)
     args = argParser.parse_args()
 
-    input_file = util.project_ws + 'CRP aliquoting/' + 'CRP Micronics Files/' + 'CRP Micronics Plate 08 A1462 A0941.xlsx'
-    file_name_parts = os.path.splitext(os.path.basename(input_file))[0].split()
-    box_file_name = ' '.join(file_name_parts[:4])
-    inventory_box = pd.read_excel(input_file, sheet_name=None)
+    today_date = datetime.now().strftime("%Y.%m.%d")
 
     data = {'Name': [], 'Sample ID': [], 'Sample Type': [], 'Volume': [], 'Freezer': [], 'Level1': [], 
             'Level2': [], 'Level3': [], 'Box': [], 'Position': [], 'ALIQUOT': [], 'Barcode': [], 
             'Original Plate Barcode': []}
-    
-    for name, sheet in inventory_box.items():
-        transformed_sample_data = transform_sample_data(sheet, box_file_name)
-        for key in data:
-            data[key].extend(transformed_sample_data[key]) 
 
-    output_file = util.project_ws + 'CRP aliquoting/' + 'CRP Micronics Files/' + 'micronics_fp_upload TEST.xlsx'
+    for filename in args.filename:
+        input_file = os.path.join(util.project_ws, 'CRP aliquoting/CRP Micronics Files/', filename)
+        file_name_parts = os.path.splitext(os.path.basename(input_file))[0].split()
+        box_file_name = ' '.join(file_name_parts[:4])
+        inventory_box = pd.read_excel(input_file, sheet_name=None)
+
+        for name, sheet in inventory_box.items():
+            transformed_sample_data = transform_sample_data(sheet, box_file_name)
+            for key in data:
+                data[key].extend(transformed_sample_data[key])
+    
+    output_file = os.path.join(util.project_ws, 'CRP aliquoting/CRP Micronics Files/', f'micronics_fp_upload {today_date}.xlsx')
     pd.DataFrame(data).to_excel(output_file, index=False)
     print(f"output is saved to {output_file}.")
