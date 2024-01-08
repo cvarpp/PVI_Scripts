@@ -10,7 +10,10 @@ from results.PARIS import paris_results
 
 
 if __name__ == '__main__':
+    exclusions = pd.read_excel(util.paris + 'datasets/HALP/final list/selection.xlsx',
+                                sheet_name='Participants')['Participant ID'].unique()
     df = paris_results().reset_index().sort_values(by=['Participant ID', 'Date'])
+    df = df[~df['Participant ID'].isin(exclusions)].copy()
     baselines = df.drop_duplicates(subset='Participant ID').set_index('Participant ID')
     df['Days from Baseline'] = df.apply(lambda row: int((row['Date'] - baselines.loc[row['Participant ID'], 'Date']).days), axis=1)
     participant_info = df.drop_duplicates(subset='Participant ID', keep='last').loc[:, ['Participant ID', 'Days from Baseline', 'Infection Pre-Vaccine?', 'Age', 'Gender']].rename(columns={'Days from Baseline': 'Days to Last Follow-Up'})
@@ -26,15 +29,19 @@ if __name__ == '__main__':
     selection = participant_info[length_followed_filter & number_of_visits_filter &
                                  age_filter & infection_filter].copy()
     print(selection.groupby(['Gender', 'Infection Pre-Vaccine?']).count().iloc[:, :1])
-    assert selection[(selection['Gender'] == 'Male') & (selection['Infection Pre-Vaccine?'] == 'no')].shape[0] == 14
+    assert selection[(selection['Gender'] == 'Male') & (selection['Infection Pre-Vaccine?'] == 'no')].shape[0] == 13
     assert selection[(selection['Gender'] == 'Male') & (selection['Infection Pre-Vaccine?'] == 'yes')].shape[0] == 6
-    male_naive = selection[(selection['Gender'] == 'Male') & (selection['Infection Pre-Vaccine?'] == 'no')]['Participant ID'].unique()
-    male_hybrid = selection[(selection['Gender'] == 'Male') & (selection['Infection Pre-Vaccine?'] == 'yes')]['Participant ID'].unique()
+    assert selection[(selection['Gender'] == 'Female') & (selection['Infection Pre-Vaccine?'] == 'no')].shape[0] == 23
+    assert selection[(selection['Gender'] == 'Female') & (selection['Infection Pre-Vaccine?'] == 'yes')].shape[0] == 10
+    potential_male_naive = selection[(selection['Gender'] == 'Male') & (selection['Infection Pre-Vaccine?'] == 'no')]['Participant ID'].unique()
+    potential_male_hybrid = selection[(selection['Gender'] == 'Male') & (selection['Infection Pre-Vaccine?'] == 'yes')]['Participant ID'].unique()
     potential_female_naive = selection[(selection['Gender'] == 'Female') & (selection['Infection Pre-Vaccine?'] == 'no')]['Participant ID'].unique()
     potential_female_hybrid = selection[(selection['Gender'] == 'Female') & (selection['Infection Pre-Vaccine?'] == 'yes')]['Participant ID'].unique()
     rng = np.random.default_rng(seed=874178436837243)
-    female_naive = rng.choice(potential_female_naive, 14, replace=False)
-    female_hybrid = rng.choice(potential_female_hybrid, 6, replace=False)
+    female_naive = rng.choice(potential_female_naive, 10, replace=False)
+    female_hybrid = rng.choice(potential_female_hybrid, 10, replace=False)
+    male_naive = rng.choice(potential_male_naive, 5, replace=False)
+    male_hybrid = rng.choice(potential_male_hybrid, 5, replace=False)
     pids = np.concatenate((male_naive, male_hybrid, female_naive, female_hybrid))
     final = selection[selection['Participant ID'].isin(pids)]
     all_samples = df[df['Participant ID'].isin(pids)]
