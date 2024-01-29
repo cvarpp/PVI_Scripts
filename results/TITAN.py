@@ -41,10 +41,12 @@ def query_titan():
         '2nd Dose Date': 'Vaccine #2 Date',
         '3rd Dose Date': '3rd Dose Vaccine Date',
         '3rd Dose Vaccine': '3rd Dose Vaccine Type',
-        'Boost Date': 'First Booster Dose Date',
-        'Boost Vaccine': 'First Booster Vaccine Type',
-        'Boost 2 Date': 'Second Booster Dose Date',
-        'Boost 2 Vaccine': 'Second Booster Vaccine Type',
+        'Boost Date': 'First Booster Dose Date (#4)',
+        'Boost Vaccine': 'First Booster Vaccine Type (#4)',
+        'Boost 2 Date': 'Second Booster Dose Date (#5)',
+        'Boost 2 Vaccine': 'Second Booster Vaccine Type (#5)',
+        'Boost 3 Date': 'Third Booster\nDose Date (#6)',
+        'Boost 3 Vaccine': 'Third Booster\nVaccine Type (#6)',
         'COVID Pre-Enrollment': 'Had Prior COVID (qualiying dose)?',
         'COVID Pre-Enrollment Date': 'Date of PCR positive',
         'Transplant Group': 'Transplant Group',
@@ -78,29 +80,41 @@ def query_titan():
         'Monoclonal Post-Boost 2': 'moAb?',
         'Monoclonal Post-Boost 2 Date': 'moAb Date',
     }
+    post6_covid_renamer = {
+        'COVID Post-Boost 3': 'COVID 19 since second booster dose?',
+        'COVID Post-Boost 3 Date': 'Date of + PCR',
+        'Monoclonal Post-Boost 3': 'moAb?',
+        'Monoclonal Post-Boost 3 Date': 'moAb Date',
+    }
     all_converters = titan_convert | post3_covid_renamer | post4_covid_renamer | post5_covid_renamer
     date_cols = [col for col in all_converters.keys() if 'Date' in col]
     reverse_post3 = {v: k for k, v in post3_covid_renamer.items()}
     reverse_post4 = {v: k for k, v in post4_covid_renamer.items()}
     reverse_post5 = {v: k for k, v in post5_covid_renamer.items()}
+    reverse_post6 = {v: k for k, v in post6_covid_renamer.items()}
     titan_third = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Third Dose', header=1).dropna(subset=['Umbrella Participant ID']).set_index('TITAN ID').rename(columns=reverse_post3)
     titan_third['Full Meds'] = titan_third.loc[:, 'Maintenance immunosuppresion at time of third dose '].fillna("") + ":" + titan_third.loc[:, 'Other, Specify'].fillna("")
-    titan_fourth = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Booster Dose #1', header=1).dropna(subset=['Umbrella Participant ID']).set_index('TITAN ID').rename(columns=reverse_post4)
+    titan_fourth = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='First Booster Dose (#4)', header=1).dropna(subset=['Umbrella Participant ID']).set_index('TITAN ID').rename(columns=reverse_post4)
     titan_fourth['Full Meds'] = titan_fourth.loc[:, 'Maintenance immunosuppresion at time of first booster dose '].fillna("") + ":" + titan_fourth.loc[:, 'Other, Specify'].fillna("")
-    titan_fifth = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Booster Dose #2', header=1).dropna(subset=['Umbrella Participant ID']).set_index('TITAN ID').rename(columns=reverse_post5)
+    titan_fifth = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Second Booster Dose (#5)', header=1).dropna(subset=['Umbrella Participant ID']).set_index('TITAN ID').rename(columns=reverse_post5)
     titan_fifth['Full Meds'] = titan_fifth.loc[:, 'Maintenance immunosuppresion at time of second booster dose '].fillna("") + ":" + titan_fifth.loc[:, 'Other, Specify'].fillna("")
+    titan_sixth = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Third Booster Dose (#6)', header=1).dropna(subset=['Umbrella Participant ID']).set_index('TITAN ID').rename(columns=reverse_post6)
+    titan_sixth['Full Meds'] = titan_fifth.loc[:, 'Maintenance immunosuppresion at time of second booster dose '].fillna("") + ":" + titan_fifth.loc[:, 'Other, Specify'].fillna("")
     participant_data['Meds at third dose'] = participant_data['TITAN ID'].apply(lambda val: titan_third.loc[val, 'Full Meds'])
     participant_data['AM'] = participant_data['Meds at third dose'].apply(lambda val: "Yes" if "AM" in str(val) else "No")
     participant_data['Prednisone'] = participant_data['Meds at third dose'].apply(lambda val: "Yes" if "Pred" in str(val) else "No")
     participant_data['CNI'] = participant_data['Meds at third dose'].apply(lambda val: "Yes" if "CNI" in str(val) else "No")
     participant_data['Meds at first booster dose'] = participant_data['TITAN ID'].apply(lambda val: titan_fourth.loc[val, 'Full Meds'])
     participant_data['Meds at second booster dose'] = participant_data['TITAN ID'].apply(lambda val: titan_fifth.loc[val, 'Full Meds'])
+    participant_data['Meds at third booster dose'] = participant_data['TITAN ID'].apply(lambda val: titan_sixth.loc[val, 'Full Meds'])
     for k in post3_covid_renamer:
         participant_data[k] = participant_data['TITAN ID'].apply(lambda val: titan_third.loc[val, k])
     for k in post4_covid_renamer:
         participant_data[k] = participant_data['TITAN ID'].apply(lambda val: titan_fourth.loc[val, k])
     for k in post5_covid_renamer:
         participant_data[k] = participant_data['TITAN ID'].apply(lambda val: titan_fifth.loc[val, k])
+    for k in post6_covid_renamer:
+        participant_data[k] = participant_data['TITAN ID'].apply(lambda val: titan_sixth.loc[val, k])
     return participant_data.pipe(map_dates, date_cols)
 
 def pull_data(args):
