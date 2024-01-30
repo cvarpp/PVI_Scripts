@@ -2,7 +2,6 @@ import pandas as pd
 import argparse
 import util
 import os
-from copy import deepcopy
 from datetime import datetime
 
 def convert_tube_position(position):
@@ -33,9 +32,10 @@ def transform_sample_data(sheet, box_file_name, data):
     return data
 
 if __name__ == '__main__':
+    micronics_folder = os.path.join(util.project_ws, 'CRP aliquoting/CRP Micronics Files/')
     argParser = argparse.ArgumentParser(description='Transform micronics data for FP upload')
-    argParser.add_argument('filename', nargs='+', type=str, help='Filename of the input Excel file')
-    argParser.add_argument('-m', '--min_count', action='store', type=int, default=96)
+    argParser.add_argument('filename', nargs='+', type=str, help=f'Filename of the input Excel file in the folder: {micronics_folder}')
+    argParser.add_argument('-m', '--min_count', action='store', type=int, default=96, help='Minimum number of tubes for a plate to be considered inventory-ready')
     args = argParser.parse_args()
 
     today_date = datetime.now().strftime("%Y.%m.%d")
@@ -45,14 +45,14 @@ if __name__ == '__main__':
             'Original Plate Barcode': []}
 
     for filename in args.filename:
-        input_file = os.path.join(util.project_ws, 'CRP aliquoting/CRP Micronics Files/', filename)
-        file_name_parts = os.path.splitext(os.path.basename(input_file))[0].split()
+        input_file = os.path.join(micronics_folder, filename)
+        file_name_parts = os.path.splitext(filename)[0].split()
         box_file_name = ' '.join(file_name_parts[:4])
         inventory_box = pd.read_excel(input_file, sheet_name=None)
 
         for name, sheet in inventory_box.items():
             transform_sample_data(sheet, box_file_name, data)
     
-    output_file = os.path.join(util.project_ws, 'CRP aliquoting/CRP Micronics Files/', f'micronics_fp_upload {today_date}.xlsx')
+    output_file = os.path.join(micronics_folder, f'micronics_fp_upload {today_date}.xlsx')
     pd.DataFrame(data).to_excel(output_file, index=False)
-    print(f"output is saved to {output_file}.")
+    print(f"Output saved to {output_file}.")
