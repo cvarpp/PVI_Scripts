@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import argparse
 import util
 import os
@@ -34,7 +35,7 @@ def transform_sample_data(sheet, box_file_name, data):
 if __name__ == '__main__':
     micronics_folder = os.path.join(util.project_ws, 'CRP aliquoting/CRP Micronics Files/')
     argParser = argparse.ArgumentParser(description='Transform micronics data for FP upload')
-    argParser.add_argument('filename', nargs='+', type=str, help=f'Filename of the input Excel file in the folder: {micronics_folder}')
+    argParser.add_argument('filenames', nargs='+', type=str, help=f'Names of input Excel files in the folder: {micronics_folder}')
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=96, help='Minimum number of tubes for a plate to be considered inventory-ready')
     args = argParser.parse_args()
 
@@ -44,7 +45,8 @@ if __name__ == '__main__':
             'Level2': [], 'Level3': [], 'Box': [], 'Position': [], 'ALIQUOT': [], 'Barcode': [], 
             'Original Plate Barcode': []}
 
-    for filename in args.filename:
+    assert np.unique(np.array(args.filenames)).size == len(args.filenames), "Duplicate filenames provided as arguments"
+    for filename in args.filenames:
         input_file = os.path.join(micronics_folder, filename)
         file_name_parts = os.path.splitext(filename)[0].split()
         box_file_name = ' '.join(file_name_parts[:4])
