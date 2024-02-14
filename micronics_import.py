@@ -11,11 +11,10 @@ def convert_tube_position(position):
     number = int(position[1:])
     return f"{number}/{letter}"
 
-def transform_sample_data(sheet, box_file_name, data):
+def transform_sample_data(sheet, box_name, data):
     '''Transforms each row of the scanned sheet'''
     for idx, row in sheet.iterrows():
         tube_position = convert_tube_position(row['Tube Position'])
-        box_name = box_file_name
         sample_id = str(row['Sample ID'])
         data['Name'].append(sample_id)
         data['Sample ID'].append(sample_id)
@@ -35,7 +34,6 @@ def transform_sample_data(sheet, box_file_name, data):
 if __name__ == '__main__':
     micronics_folder = os.path.join(util.project_ws, 'CRP aliquoting/CRP Micronics Files/')
     argParser = argparse.ArgumentParser(description='Transform micronics data for FP upload')
-    argParser.add_argument('filenames', nargs='+', type=str, help=f'Names of input Excel files in the folder: {micronics_folder}')
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=96, help='Minimum number of tubes for a plate to be considered inventory-ready')
     args = argParser.parse_args()
 
@@ -45,16 +43,15 @@ if __name__ == '__main__':
             'Level2': [], 'Level3': [], 'Box': [], 'Position': [], 'ALIQUOT': [], 'Barcode': [], 
             'Original Plate Barcode': []}
 
-    assert np.unique(np.array(args.filenames)).size == len(args.filenames), "Duplicate filenames provided as arguments"
-    for filename in args.filenames:
-        input_file = os.path.join(micronics_folder, filename)
-        file_name_parts = os.path.splitext(filename)[0].split()
-        box_file_name = ' '.join(file_name_parts[:4])
-        inventory_box = pd.read_excel(input_file, sheet_name=None)
-
-        for name, sheet in inventory_box.items():
-            transform_sample_data(sheet, box_file_name, data)
-    
+    box_dfs = pd.read_excel(micronics_folder + 'CRP Micronics Import.xlsx', sheet_name=None)
+    completed_boxes = box_dfs['Uploaded (Tabs to Delete)']['Plate Name'].unique()
+    for box_name, box_df in box_dfs.items():
+        if 'Serum' in box_name and box_name not in completed_boxes and 'Sample ID' in box_df.columns:
+            transform_sample_data(box_df, box_name, data)
+    output_df = pd.DataFrame(data)
     output_file = os.path.join(micronics_folder, f'micronics_fp_upload {today_date}.xlsx')
-    pd.DataFrame(data).to_excel(output_file, index=False)
+    output_df.to_excel(output_file, index=False)
     print(f"Output saved to {output_file}.")
+    print("Boxes to upload:")
+    for box_name in output_df['Box'].unique():
+        print(box_name)
