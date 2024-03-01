@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
 # %%
     
-    outfile = args.outpath + args.outfilename + '.xlsx'
+    outfile = args.outpath + '/' + args.outfilename + '.xlsx'
 
     try:
         book = opx.Workbook()
