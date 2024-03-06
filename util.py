@@ -40,7 +40,7 @@ titan_folder = umbrella + 'TITAN/'
 mars_folder = umbrella + 'MARS/'
 gaea_folder = umbrella + 'GAEA/'
 prio_folder = clin_ops + 'PRIORITY/'
-
+apollo_folder = clin_ops + 'APOLLO/' 
 crp_folder = umbrella + 'Critical Reference Panel/'
 
 umbrella_tracker = umbrella + "Patient Tracker - Umbrella Virology Protocol.xlsx"
