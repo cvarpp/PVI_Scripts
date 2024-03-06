@@ -57,6 +57,7 @@ filtered = script_output + 'SERONET_In_Window_Data.xlsx'
 report_form = script_output + 'SERONET.csv'
 
 cross_project = clin_ops + 'Cross-Project/'
+sample_query = cross_project + 'Sample ID Query/'
 sharing = cross_project + 'Result Sharing/'
 cross_d4 = cross_project + 'Seronet Task D4/'
 seronet_data = cross_d4 + 'Data/'
