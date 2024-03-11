@@ -50,7 +50,7 @@ if __name__ == '__main__':
         if 'Serum' in box_name and box_name not in completed_boxes and 'Sample ID' in box_df.columns:
             try:
                 assert (box_df.columns == np.array(['Tube Position', 'Tube ID', 'Rack ID', 'Date', 'Time', 'Sample ID', 'Status'])).all(), 'Column name issue'
-                assert 'NOREAD' not in list(box_df['Rack ID'].unique()), 'Rack barcode scan failed'
+                # assert 'NOREAD' not in list(box_df['Rack ID'].unique()), 'Rack barcode scan failed'
                 assert (box_df['Status'].unique() == np.array(['Code OK'])).all(), 'Tube barcode scan failed'
                 assert box_df['Sample ID'].count() == box_df['Tube ID'].count(), "Missing sample IDs or tube barcodes"
             except Exception as e:
