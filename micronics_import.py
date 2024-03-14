@@ -28,7 +28,7 @@ def transform_sample_data(sheet, box_name, data):
         data['Position'].append(tube_position)
         data['ALIQUOT'].append(sample_id)
         data['Barcode'].append(row['Tube ID'])
-        data['Original Plate Barcode'].append(row['Rack ID'])
+        # data['Original Plate Barcode'].append(row['Rack ID'])
     return data
 
 if __name__ == '__main__':
@@ -40,8 +40,7 @@ if __name__ == '__main__':
     today_date = datetime.now().strftime("%Y.%m.%d")
 
     data = {'Name': [], 'Sample ID': [], 'Sample Type': [], 'Volume': [], 'Freezer': [], 'Level1': [], 
-            'Level2': [], 'Level3': [], 'Box': [], 'Position': [], 'ALIQUOT': [], 'Barcode': [], 
-            'Original Plate Barcode': []}
+            'Level2': [], 'Level3': [], 'Box': [], 'Position': [], 'ALIQUOT': [], 'Barcode': []}
 
     box_dfs = pd.read_excel(micronics_folder + 'CRP Micronics Import.xlsx', sheet_name=None)
     completed_boxes = box_dfs['Uploaded (Tabs to Delete)']['Plate Name'].unique()
