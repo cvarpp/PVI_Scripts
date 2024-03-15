@@ -31,18 +31,17 @@ def paris_results():
                 'Infection Pre-Vaccine?', 'Number of SARS-CoV-2 Infections', 'Infection on Study',
                 'First Dose Date', 'Second Dose Date', 'Days to 2nd', 'Boost Date', 'Boost 2 Date',
                 'Days to Boost 2', 'Boost 2 Type', 'Boost 3 Date', 'Days to Boost 3', 'Boost 3 Type',
+                'Boost 4 Date', 'Days to Boost 4', 'Boost 4 Type', 'Boost 5 Date', 'Days to Boost 5', 'Boost 5 Type',
                 'Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date', 'Most Recent Infection',
                 'Most Recent Vax', 'Post-Baseline', 'Visit Type', 'Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
     dem_cols = ['Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
-    shared_cols = ['Infection Pre-Vaccine?', 'Vaccine Type', 'Number of SARS-CoV-2 Infections', 'Infection Timing', 'Boost Type', 'Boost 2 Type', 'Boost 3 Type']
-    date_cols = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Boost 3 Date', 'Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date']
-    day_cols = ['Days to 1st Vaccine Dose', 'Days to 2nd', 'Days to Boost', 'Days to Boost 2', 'Days to Boost 3', 'Days to Infection 1', 'Days to Infection 2', 'Days to Infection 3']
-    dose_dates = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Boost 3 Date']
+    shared_cols = ['Infection Pre-Vaccine?', 'Vaccine Type', 'Number of SARS-CoV-2 Infections', 'Infection Timing', 'Boost Type', 'Boost 2 Type', 'Boost 3 Type', 'Boost 4 Type', 'Boost 5 Type']
+    date_cols = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Boost 3 Date', 'Boost 4 Date', 'Boost 5 Date', 'Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date']
+    day_cols = ['Days to 1st Vaccine Dose', 'Days to 2nd', 'Days to Boost', 'Days to Boost 2', 'Days to Boost 3', 'Days to Boost 4', 'Days to Boost 5', 'Days to Infection 1', 'Days to Infection 2', 'Days to Infection 3']
+    dose_dates = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Boost 3 Date', 'Boost 4 Date', 'Boost 5 Date']
     inf_dates = ['Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date']
     sample_info['Date'] = sample_info['Date Collected']
-    sample_info = (sample_info[~sample_info['Qualitative'].astype(str).str.strip().isin(['-', '']) &
-                              ~sample_info['Qualitative'].apply(pd.isna)]
-                              .join(dems.loc[:, dem_cols], on='participant_id')
+    sample_info = (sample_info.join(dems.loc[:, dem_cols], on='participant_id')
                               .join(paris_data.loc[:, shared_cols + date_cols], on='participant_id')
                               .reset_index().copy())
     baseline_data = sample_info.sort_values(by='Date').drop_duplicates(subset='participant_id').set_index('participant_id')

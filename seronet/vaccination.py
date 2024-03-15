@@ -67,7 +67,10 @@ if __name__ == '__main__':
         boost = iris_data.loc[participant, 'Third Dose Type']
         if type(date_3) in [datetime.datetime, pd.Timestamp]:
             vaccine_stuff['Participant ID'].append(participant)
-            vaccine_stuff['Timepoint'].append('Dose 3')
+            if type(vaccine) == str and vaccine[:2].upper() == 'JO':
+                vaccine_stuff['Timepoint'].append('Dose 2')
+            else:
+                vaccine_stuff['Timepoint'].append('Dose 3')
             vaccine_stuff['Vaccine Type'].append(boost)
             vaccine_stuff['Vaccine Date'].append(date_3)
         boost_cols = [['Fourth Dose Date', 'Fourth Dose Type'], ['Fifth Dose Date', 'Fifth Dose Type']]
@@ -108,25 +111,37 @@ if __name__ == '__main__':
             vaccine_stuff['Participant ID'].append(participant)
             if type(vaccine) == str and vaccine[:2].upper() == 'JO':
                 vaccine_stuff['Timepoint'].append('Dose 1 of 1')
+                vaccine_stuff['Vaccine Type'].append('Johnson & Johnson')
             else:
                 vaccine_stuff['Timepoint'].append('Dose 1 of 2')
-            vaccine_stuff['Vaccine Type'].append(vaccine)
+                vaccine_stuff['Vaccine Type'].append(str(vaccine).capitalize().strip())
             vaccine_stuff['Vaccine Date'].append(date_1)
         date_2 = titan_data.loc[participant, 'Vaccine #2 Date']
         if type(date_2) in [datetime.datetime, pd.Timestamp]:
             vaccine_stuff['Participant ID'].append(participant)
             vaccine_stuff['Timepoint'].append('Dose 2 of 2')
-            vaccine_stuff['Vaccine Type'].append(vaccine)
+            vaccine_stuff['Vaccine Type'].append(str(vaccine).capitalize().strip())
             vaccine_stuff['Vaccine Date'].append(date_2)
         date_3 = titan_data.loc[participant, '3rd Dose Vaccine Date']
         boost = titan_data.loc[participant, '3rd Dose Vaccine Type']
         if type(date_3) in [datetime.datetime, pd.Timestamp]:
             vaccine_stuff['Participant ID'].append(participant)
-            vaccine_stuff['Timepoint'].append('Dose 3')
+            if 'bivalent' in str(boost).lower():
+                boost = boost.split()[0]
+                addendum = ':Bivalent'
+            elif 'monovalent' in str(boost).lower():
+                boost = boost.split()[0]
+                addendum = ':Monovalent XBB.1.5'
+            else:
+                addendum = ''
+            if type(vaccine) == str and vaccine[:2].upper() == 'JO':
+                vaccine_stuff['Timepoint'].append('Dose 2' + addendum)
+            else:
+                vaccine_stuff['Timepoint'].append('Dose 3' + addendum)
             vaccine_stuff['Vaccine Type'].append(boost)
             vaccine_stuff['Vaccine Date'].append(date_3)
-        boost_cols = [['First Booster Dose Date', 'First Booster Vaccine Type'], ['Second Booster Dose Date', 'Second Booster Vaccine Type']]
-        timepoint_cols = ['Booster 1', 'Booster 2']
+        boost_cols = [['First Booster Dose Date (#4)', 'First Booster Vaccine Type (#4)'], ['Second Booster Dose Date (#5)', 'Second Booster Vaccine Type (#5)'], ['Third Booster\nDose Date (#6)', 'Third Booster\nVaccine Type (#6)']]
+        timepoint_cols = ['Booster 1', 'Booster 2', 'Booster 3']
         for i, vals in enumerate(boost_cols):
             dt, tp = vals
             date_boost = titan_data.loc[participant, dt]
@@ -134,14 +149,33 @@ if __name__ == '__main__':
             if 'bivalent' in str(boost_type).lower():
                 boost_type = boost_type.split()[0]
                 addendum = ':Bivalent'
+            elif 'monovalent' in str(boost_type).lower():
+                boost_type = boost_type.split()[0]
+                addendum = ':Monovalent XBB.1.5'
             else:
                 addendum = ''
             if type(date_boost) in [datetime.datetime, pd.Timestamp]:
                 vaccine_stuff['Participant ID'].append(participant)
                 vaccine_stuff['Timepoint'].append(timepoint_cols[i] + addendum)
-                vaccine_stuff['Vaccine Type'].append(boost_type)
+                vaccine_stuff['Vaccine Type'].append(str(boost_type).capitalize().strip())
                 vaccine_stuff['Vaccine Date'].append(date_boost)
-    pd.DataFrame(vaccine_stuff).to_excel(util.seronet_vax + 'titan_vaccines.xlsx', index=False)
+    from_tracker = pd.DataFrame(vaccine_stuff).rename(columns={'Timepoint': 'Vaccination_Status'}).set_index(['Participant ID', 'Vaccination_Status'])
+    from_long = pd.read_excel(titan_folder + 'TITAN for D4 Long.xlsx', sheet_name='COVID Vaccinations').set_index(['Participant ID', 'Vaccination_Status'])
+    in_both = from_long.join(from_tracker, how='inner', lsuffix='_long', rsuffix='_tracker')
+    in_both_correct = in_both[(in_both['SARS-CoV-2_Vaccination_Date'] == in_both['Vaccine Date']) &
+                                (in_both['SARS-CoV-2_Vaccine_Type'] == in_both['Vaccine Type'])]
+    date_issue = in_both[(in_both['SARS-CoV-2_Vaccination_Date'] != in_both['Vaccine Date'])]
+    type_issue = in_both[(in_both['SARS-CoV-2_Vaccine_Type'] != in_both['Vaccine Type'])]
+    add_to_tracker = from_long[~from_long.index.isin(from_tracker.index)]
+    add_to_long = from_tracker[~from_tracker.index.isin(from_long.index)]
+    with pd.ExcelWriter(util.seronet_vax + 'titan_vaccines.xlsx') as writer:
+        add_to_long.reset_index().to_excel(writer, sheet_name='Add to Long', index=False)
+        date_issue.reset_index().to_excel(writer, sheet_name='Date Discrepancy', index=False)
+        type_issue.reset_index().to_excel(writer, sheet_name='Type Discrepancy', index=False)
+        add_to_tracker.reset_index().to_excel(writer, sheet_name='Add to Tracker', index=False)
+        in_both_correct.reset_index().to_excel(writer, sheet_name='In Both (agreed)', index=False)
+        from_tracker.reset_index().to_excel(writer, sheet_name='Tracker Source', index=False)
+        from_long.reset_index().to_excel(writer, sheet_name='Long D4 Source', index=False)
     """
     MARS Stuff
     """
@@ -163,18 +197,20 @@ if __name__ == '__main__':
             vaccine_stuff['Participant ID'].append(participant)
             if type(vaccine) == str and vaccine[:2].upper() == 'JO':
                 vaccine_stuff['Timepoint'].append('Dose 1 of 1')
+                vaccine_stuff['Vaccine Type'].append('Johnson & Johnson')
             else:
                 vaccine_stuff['Timepoint'].append('Dose 1 of 2')
-            vaccine_stuff['Vaccine Type'].append(vaccine)
+                vaccine_stuff['Vaccine Type'].append(str(vaccine).capitalize().strip())
             vaccine_stuff['Vaccine Date'].append(date_1)
         date_2 = mars_data.loc[participant, 'Vaccine #2 Date']
         if type(date_2) in [datetime.datetime, pd.Timestamp]:
             vaccine_stuff['Participant ID'].append(participant)
             vaccine_stuff['Timepoint'].append('Dose 2 of 2')
-            vaccine_stuff['Vaccine Type'].append(vaccine)
+            vaccine_stuff['Vaccine Type'].append(str(vaccine).capitalize().strip())
             vaccine_stuff['Vaccine Date'].append(date_2)
-        boost_cols = [['3rd Vaccine', '3rd Vaccine Type '], ['4th vaccine', '4th Vaccine Type'], ['5th vaccine', '5th Vaccine Type']]
-        timepoint_cols = ['Dose 3', 'Booster 1', 'Booster 2']
+        boost_cols = [['3rd Vaccine', '3rd Vaccine Type '], ['4th vaccine', '4th Vaccine Type'], ['5th vaccine', '5th Vaccine Type'],
+                      ['6th vaccine', '6th vaccine type'], ['7th vaccine', '7th vaccine type'], ['8th vaccine', '8th vaccine type']]
+        timepoint_cols = ['Dose 3', 'Booster 1', 'Booster 2', 'Booster 3', 'Booster 4', 'Booster 5']
         for i, vals in enumerate(boost_cols):
             dt, tp = vals
             date_boost = mars_data.loc[participant, dt]
@@ -182,14 +218,40 @@ if __name__ == '__main__':
             if 'bivalent' in str(boost_type).lower():
                 boost_type = boost_type.split()[0]
                 addendum = ':Bivalent'
+            elif 'XBB' in str(boost_type).upper():
+                boost_type = boost_type.split()[0]
+                addendum = ':Monovalent XBB.1.5'
             else:
                 addendum = ''
             if type(date_boost) in [datetime.datetime, pd.Timestamp]:
+                if type(boost_type) == str and boost_type[:2].upper() == 'JO':
+                    vaccine_stuff['Vaccine Type'].append('Johnson & Johnson')
+                else:
+                    vaccine_stuff['Vaccine Type'].append(str(boost_type).capitalize().strip())
                 vaccine_stuff['Participant ID'].append(participant)
-                vaccine_stuff['Timepoint'].append(timepoint_cols[i] + addendum)
-                vaccine_stuff['Vaccine Type'].append(boost_type)
+                if type(vaccine) == str and vaccine[:2].upper() == 'JO' and timepoint_cols[i] == 'Dose 3':
+                    vaccine_stuff['Timepoint'].append('Dose 2' + addendum)
+                else:
+                    vaccine_stuff['Timepoint'].append(timepoint_cols[i] + addendum)
                 vaccine_stuff['Vaccine Date'].append(date_boost)
-    pd.DataFrame(vaccine_stuff).to_excel(util.seronet_vax + 'mars_vaccines.xlsx', index=False)
+    # pd.DataFrame(vaccine_stuff).to_excel(util.seronet_vax + 'mars_vaccines.xlsx', index=False)
+    from_tracker = pd.DataFrame(vaccine_stuff).rename(columns={'Timepoint': 'Vaccination_Status'}).set_index(['Participant ID', 'Vaccination_Status'])
+    from_long = pd.read_excel(mars_folder + 'MARS for D4 Long.xlsx', sheet_name='COVID Vaccinations').set_index(['Participant ID', 'Vaccination_Status'])
+    in_both = from_long.join(from_tracker, how='inner', lsuffix='_long', rsuffix='_tracker')
+    in_both_correct = in_both[(in_both['SARS-CoV-2_Vaccination_Date'] == in_both['Vaccine Date']) &
+                                (in_both['SARS-CoV-2_Vaccine_Type'] == in_both['Vaccine Type'])]
+    date_issue = in_both[(in_both['SARS-CoV-2_Vaccination_Date'] != in_both['Vaccine Date'])]
+    type_issue = in_both[(in_both['SARS-CoV-2_Vaccine_Type'] != in_both['Vaccine Type'])]
+    add_to_tracker = from_long[~from_long.index.isin(from_tracker.index)]
+    add_to_long = from_tracker[~from_tracker.index.isin(from_long.index)]
+    with pd.ExcelWriter(util.seronet_vax + 'mars_vaccines.xlsx') as writer:
+        add_to_long.reset_index().to_excel(writer, sheet_name='Add to Long', index=False)
+        date_issue.reset_index().to_excel(writer, sheet_name='Date Discrepancy', index=False)
+        type_issue.reset_index().to_excel(writer, sheet_name='Type Discrepancy', index=False)
+        add_to_tracker.reset_index().to_excel(writer, sheet_name='Add to Tracker', index=False)
+        in_both_correct.reset_index().to_excel(writer, sheet_name='In Both (agreed)', index=False)
+        from_tracker.reset_index().to_excel(writer, sheet_name='Tracker Source', index=False)
+        from_long.reset_index().to_excel(writer, sheet_name='Long D4 Source', index=False)
     """
     PRIORITY Stuff
     """
