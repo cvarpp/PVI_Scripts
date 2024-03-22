@@ -53,11 +53,6 @@ if __name__ == '__main__':
     aliquot_counts = {}
 
     for name, sheet in inventory_boxes.items():
-        box_type = ""
-        if 'APOLLO RESEARCH' in name:
-            box_type = "RESEARCH"
-        elif 'APOLLO NIH' in name:
-            box_type = "NIH"
         try:
             box_number = int(name.split()[-1])
         except:
@@ -74,7 +69,7 @@ if __name__ == '__main__':
         else:
             team = 'PVI'
         sample_type = 'N/A'
-        if 'APOLLO' in name:
+        if team == 'APOLLO':
             sample_type = 'Serum'
         else:
             for val in sample_types:
@@ -101,18 +96,18 @@ if __name__ == '__main__':
         box_sample_type = sample_type
         sheet = sheet.assign(sample_id=clean_sample_id).set_index('sample_id')
         for kind in box_kinds:
-            if 'APOLLO' in team:
-                box_name = f"{team} {box_type} {box_number}"
+            if team == 'APOLLO':
+                box_name = f"{team} {kind} {box_number}"
             elif box_sample_type in ['PBMC', 'HT', '4.5 mL Tube']:
-                box_name = "{} {} {}".format(team, box_sample_type, box_number)
+                box_name = f"{team} {box_sample_type} {box_number}"
             else:
-                box_name = "{} {} {} {}".format(team, box_sample_type, kind, box_number)
+                box_name = f"{team} {box_sample_type} {kind} {box_number}"
             if box_name not in box_counts.keys():
                 box_counts[box_name] = 0
             freezer = 'Annenberg 18'
             level1 = 'Freezer 1 (Eiffel Tower)'
             level2 = 'Shelf 2'
-            if 'APOLLO' in team:
+            if team == 'APOLLO':
                 level3 = 'APOLLO Rack'
             elif box_sample_type == 'Saliva' or box_sample_type == 'Pellet':
                 level3 = '{} Lab/FF Rack'.format(box_sample_type)
