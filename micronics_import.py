@@ -45,28 +45,31 @@ if __name__ == '__main__':
     box_dfs = pd.read_excel(micronics_folder + 'CRP Micronics Import.xlsx', sheet_name=None)
     completed_boxes = box_dfs['Uploaded (Tabs to Delete)']['Plate Name'].unique()
     box_with_duplicate_barcodes = []
+
     for box_name, box_df in box_dfs.items():
         box_df = box_df.rename(columns={'Free Text': 'Sample ID'})
         if 'Serum' in box_name and box_name not in completed_boxes and 'Sample ID' in box_df.columns:
             try:
                 assert (box_df.columns == np.array(['Tube Position', 'Tube ID', 'Rack ID', 'Date', 'Time', 'Sample ID', 'Status'])).all(), 'Column name issue'
                 # assert 'NOREAD' not in list(box_df['Rack ID'].unique()), 'Rack barcode scan failed'
-                assert (box_df['Status'].unique() == np.array(['Code OK'])).all(), 'Tube barcode scan failed'
+                assert (box_df.dropna(subset='Tube ID')['Status'].unique() == np.array(['Code OK'])).all(), 'Tube barcode scan failed'
                 assert box_df['Sample ID'].count() == box_df['Tube ID'].count(), "Missing sample IDs or tube barcodes"
+                
                 if box_df['Tube ID'].duplicated().any():
                     box_with_duplicate_barcodes.append(box_name)
                     raise ValueError('Duplicate Tube ID barcodes found')
+                
             except Exception as e:
                 print(box_name, e)
                 continue
-            if box_df['Sample ID'].count() >= args.min_count:
-                transform_sample_data(box_df, box_name, data)
+
+            print(box_name, "is valid. Transforming...")
+            transform_sample_data(box_df, box_name, data)
+
     output_df = pd.DataFrame(data)
     output_file = os.path.join(micronics_folder, f'micronics_fp_upload {today_date}.xlsx')
     output_df.to_excel(output_file, index=False)
     print(f"Output saved to {output_file}.")
-    for box_name in box_with_duplicate_barcodes:
-        print(f"Duplicate 'Tube ID' barcodes found in box: {box_name}")
     print("Boxes to upload:")
     for box_name in output_df['Box'].unique():
         print(box_name)
