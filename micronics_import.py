@@ -34,7 +34,6 @@ def transform_sample_data(sheet, box_name, data):
 if __name__ == '__main__':
     micronics_folder = os.path.join(util.project_ws, 'CRP aliquoting/CRP Micronics Files/')
     argParser = argparse.ArgumentParser(description='Transform micronics data for FP upload')
-    argParser.add_argument('-m', '--min_count', action='store', type=int, default=96, help='Minimum number of tubes for a plate to be considered inventory-ready')
     args = argParser.parse_args()
 
     today_date = datetime.now().strftime("%Y.%m.%d")
@@ -70,6 +69,8 @@ if __name__ == '__main__':
     output_file = os.path.join(micronics_folder, f'micronics_fp_upload {today_date}.xlsx')
     output_df.to_excel(output_file, index=False)
     print(f"Output saved to {output_file}.")
+    for box_name in box_with_duplicate_barcodes:
+        print(f"Duplicate 'Tube ID' barcodes found in box: {box_name}")
     print("Boxes to upload:")
     for box_name in output_df['Box'].unique():
         print(box_name)
