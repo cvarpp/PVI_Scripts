@@ -37,7 +37,8 @@ def transform_data(sheet_name, df):
     box_name = f"PSP_NPS_{box_type}_{number}"
 
     if df['sample id'].duplicated().any():
-        print(f"Duplicate 'Sample ID' found in box: {box_name}.")
+        print(f"Duplicate 'Sample ID' found in box: {box_name}. Skipping...")
+        return [], "", 0
 
     transformed_rows = []
     for idx, row in df.iterrows():
