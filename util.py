@@ -17,7 +17,6 @@ pvi = onedrive + 'Simon Lab - PVI - Personalized Virology Initiative/'
 clin_ops = pvi + 'Clinical Research Study Operations/'
 umbrella = clin_ops + 'Umbrella Viral Sample Collection Protocol/'
 secret_charles = pvi + 'Secret Sheets/Charles/'
-
 project_ws = onedrive + 'Simon Lab - Project Workspace/'
 
 reports = pvi + 'Reports & Data/'
@@ -59,6 +58,11 @@ cross_d4 = cross_project + 'Seronet Task D4/'
 seronet_data = cross_d4 + 'Data/'
 seronet_qc = cross_d4 + 'QC/'
 seronet_vax = cross_d4 + 'Vax/'
+
+shipping = seronet_data + 'Shipping/'
+pbmc_shipping = shipping + 'PBMC Shipping/'
+serum_shipping = shipping + 'Serum Shipping/'
+
 
 fp_url = 'https://mssm-simonlab.freezerpro.com/api/v2/'
 
