@@ -1,11 +1,12 @@
+import util
 import hashlib as hlib
 from codecs import encode
+from codecs import decode
+import zipfile as zf
 import pandas as pd
 import numpy as np
 import util
 import os
-
-idset=['0406c79a0b6ea2c8a31f150b21585d6c9ddab384a877db727010369906f53b1b','eb807ee5a8682e082b6bacb74ed394e05cd7099404a92dd91aca7c7a3fbd3036']
 
 class ValuesToClass(object):
     def __init__(self,values):
@@ -293,6 +294,11 @@ def map_dates(df, date_cols):
 
 
 def corned_beef(userid, userkey):
+    try:
+        locked = zf.ZipFile(util.script_folder + 'Corned_Beef_reference.zip', 'r')
+        idset = locked.read("Corned_Beef_reference.txt")
+    except:
+        return("Not Clinical Access")
     h = hlib.sha256()
     uid = encode(userid)
     pid = encode(userkey)
@@ -300,6 +306,7 @@ def corned_beef(userid, userkey):
     h.update(pid)
     hash = h.hexdigest()
     print(hash)
-    if hash in idset:
+    print(idset)
+    if hash in decode(idset):
         return("Validated")
     
