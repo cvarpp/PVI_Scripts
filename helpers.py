@@ -1,7 +1,11 @@
+import hashlib as hlib
+from codecs import encode
 import pandas as pd
 import numpy as np
 import util
 import os
+
+idset=['0406c79a0b6ea2c8a31f150b21585d6c9ddab384a877db727010369906f53b1b']
 
 class ValuesToClass(object):
     def __init__(self,values):
@@ -286,3 +290,15 @@ def map_dates(df, date_cols):
     for col in date_cols:
         df[col] = df[col].apply(coerce_date)
     return df
+
+def corned_beef(userid, userkey):
+    h = hlib.sha256()
+    uid = encode(userid)
+    pid = encode(userkey)
+    h.update(uid)
+    h.update(pid)
+    hash = h.hexdigest()
+    print(hash)
+    if hash in idset:
+        return("Validated")
+    
