@@ -12,14 +12,22 @@ import PySimpleGUI as sg
 outfile = "~/Documents/Test.xlsx"
 Split_2=[]
 x = True
+y = True
+check=''
 #%%
 
 if __name__ == '__main__':
-   
+    login = 0
+
     sg.theme('Dark Blue 17')
 
-    layout = [[sg.Text('Enter 2 files to compare')],
-            [sg.Radio('External File?', 'RADIO1',key='Infile',default=True), sg.Radio('Text List?', 'RADIO1', key='Text_list'), sg.Checkbox('Clinical Compliant?', enable_events=True, key='clinical')],
+    layout_password = [[sg.Text("Are you Really Clincally Compliant?")],
+                       [sg.Text("ID"),sg.Input(key='userid')],
+                       [sg.Text("Password"), sg.Input(key='password')],
+                       [sg.Submit(), sg.Cancel()]]
+
+    layout_main = [[sg.Text('Sample ID Cohort Consolidator: SICC')],
+            [sg.Radio('External File?', 'RADIO1', enable_events=True, key='Infile', default=True), sg.Radio('Text List?', 'RADIO1', enable_events=True, key='Text_list'), sg.Checkbox('Clinical Compliant?', enable_events=True, key='clinical')],
             [sg.Checkbox('MRN', disabled=True, visible=False, key='MRN'), sg.Checkbox('Tracker Info', enable_events=True, disabled=True, visible=False, key='tracker'), sg.Checkbox("Research", disabled=True, visible=False, key="research")],
             [sg.Checkbox("All", enable_events=True, visible=False, key='all_trackers' ), sg.Checkbox('Umbrella Info', disabled=True, visible=False, key='umbrella'), sg.Checkbox('Paris Info', disabled=True, visible=False, key='paris'),
                 sg.Checkbox('CRP Info', disabled=True, visible=False, key='crp'), sg.Checkbox('MARS Info', disabled=True, visible=False, key='mars')], 
@@ -27,92 +35,140 @@ if __name__ == '__main__':
                 sg.Checkbox('APOLLO Info', disabled=True, visible=False, key='apollo'), sg.Checkbox('DOVE Info', disabled=True, visible=False, key='dove')],
             [sg.Text('File\nName', size=(9, 2)), sg.Input(key='filepath'), sg.FileBrowse()],
             [sg.Text('Sheet\nName', size=(9, 2)), sg.Input(key='sheetname')], [sg.Text("Sample ID", size=(9,2)), sg.Input(default_text="Sample ID", key='sampleid')],
-            [sg.Text('Sample\nList', size=(9,2)), sg.Multiline(key="Sample_List",size=(30,7))],
+            [sg.Text('Sample\nList', size=(9,2)), sg.Multiline(key="Sample_List", disabled=True, size=(40,10))],
             [sg.Text('Outfile Name'), sg.Input(key='outfilename')],                  
             [sg.Submit(), sg.Cancel()]]
 
-    window = sg.Window('Sample Query', layout)
+    window_main = sg.Window('Sample Query', layout_main)
+    window_password = sg.Window('SICC Login', layout_password)
     
     while x == True:
-        event, values = window.read()
+        event_main, values = window_main.read()
 
-        if event == 'clinical':
-            if window['clinical'].get() == True:
-                window['MRN'].update(disabled=False, visible=True)
-                window['tracker'].update(disabled=False, visible=True)
-                window['research'].update(disabled=False, visible=True)
+        if event_main == 'Text_list':
+            window_main['filepath'].update(disabled=True)
+            window_main['sheetname'].update(disabled=True)
+            window_main['sampleid'].update(disabled=True)
+            window_main['Sample_List'].update(disabled=False)
+
+        if event_main == 'Infile':
+            window_main['filepath'].update(disabled=False)
+            window_main['sheetname'].update(disabled=False)
+            window_main['sampleid'].update(disabled=False)
+            window_main['Sample_List'].update(disabled=True)
+
+        if event_main == 'clinical':
+                if check =='Validated':
+                    if window_main['clinical'].get() == True:
+                        window_main['MRN'].update(disabled=False, visible=True)
+                        window_main['tracker'].update(disabled=False, visible=True)
+                        window_main['research'].update(disabled=False, visible=True)
+                    else:
+                        window_main['MRN'].update(disabled=True, visible=False, value = False)
+                        window_main['tracker'].update(disabled=True, visible=False, value = False)
+                        window_main['research'].update(disabled=True, visible=False, value = False)
+                        window_main['all_trackers'].update(visible=False)
+                        window_main['umbrella'].update(visible=False)
+                        window_main['paris'].update(visible=False)
+                        window_main['crp'].update(visible=False)
+                        window_main['mars'].update(visible=False)
+                        window_main['titan'].update(visible=False)
+                        window_main['gaea'].update(visible=False)
+                        window_main['robin'].update(visible=False)
+                        window_main['apollo'].update(visible=False)
+                        window_main['dove'].update(visible=False)
+                else:
+                        event_password, values_password = window_password.read()
+                        if event_password == 'Cancel':
+                            window_main['clinical'].update(value=False)
+                            window_password.close()
+                
+                        elif event_password == sg.WIN_CLOSED:
+                            window_main['clinical'].update(value=False)
+                            window_password.close()
+
+
+                        if event_password == 'Submit':
+                            check = helpers.corned_beef(values_password["userid"],values_password['password'])
+
+                            if check == "Validated":
+                                if window_main['clinical'].get() == True:
+                                    window_main['MRN'].update(disabled=False, visible=True)
+                                    window_main['tracker'].update(disabled=False, visible=True)
+                                    window_main['research'].update(disabled=False, visible=True)
+                                else:
+                                    window_main['MRN'].update(disabled=True, visible=False, value = False)
+                                    window_main['tracker'].update(disabled=True, visible=False, value = False)
+                                    window_main['research'].update(disabled=True, visible=False, value = False)
+                                    window_main['all_trackers'].update(visible=False)
+                                    window_main['umbrella'].update(visible=False)
+                                    window_main['paris'].update(visible=False)
+                                    window_main['crp'].update(visible=False)
+                                    window_main['mars'].update(visible=False)
+                                    window_main['titan'].update(visible=False)
+                                    window_main['gaea'].update(visible=False)
+                                    window_main['robin'].update(visible=False)
+                                    window_main['apollo'].update(visible=False)
+                                    window_main['dove'].update(visible=False)
+
+                                window_password.close()
+
+        if event_main == 'tracker':
+            if window_main['tracker'].get() == True:
+                window_main['all_trackers'].update(disabled=False, visible=True, value=True)
+                window_main['umbrella'].update(visible=True, value=True)
+                window_main['paris'].update(visible=True, value=True)
+                window_main['crp'].update(visible=True, value=True)
+                window_main['mars'].update(visible=True, value=True)
+                window_main['titan'].update(visible=True, value=True)
+                window_main['gaea'].update(visible=True, value=True)
+                window_main['robin'].update(visible=True, value=True)
+                window_main['apollo'].update(visible=True, value=True)
+                window_main['dove'].update(visible=True, value=True)
             else:
-                window['MRN'].update(disabled=True, visible=False, value = False)
-                window['tracker'].update(disabled=True, visible=False, value = False)
-                window['research'].update(disabled=True, visible=False, value = False)
-                window['all_trackers'].update(visible=False)
-                window['umbrella'].update(visible=False)
-                window['paris'].update(visible=False)
-                window['crp'].update(visible=False)
-                window['mars'].update(visible=False)
-                window['titan'].update(visible=False)
-                window['gaea'].update(visible=False)
-                window['robin'].update(visible=False)
-                window['apollo'].update(visible=False)
-                window['dove'].update(visible=False)
+                window_main['all_trackers'].update(disabled=True, visible=False, value=False)
+                window_main['umbrella'].update(disabled=True, visible=False, value=False)
+                window_main['paris'].update(disabled=True, visible=False, value=False)
+                window_main['crp'].update(disabled=True, visible=False, value=False)
+                window_main['mars'].update(disabled=True, visible=False, value=False)
+                window_main['titan'].update(disabled=True, visible=False, value=False)
+                window_main['gaea'].update(disabled=True, visible=False, value=False)
+                window_main['robin'].update(disabled=True, visible=False, value=False)
+                window_main['apollo'].update(disabled=True, visible=False, value=False)
+                window_main['dove'].update(disabled=True, visible=False, value=False)
 
-        
-        if event == 'tracker':
-            if window['tracker'].get() == True:
-                window['all_trackers'].update(disabled=False, visible=True, value=True)
-                window['umbrella'].update(visible=True, value=True)
-                window['paris'].update(visible=True, value=True)
-                window['crp'].update(visible=True, value=True)
-                window['mars'].update(visible=True, value=True)
-                window['titan'].update(visible=True, value=True)
-                window['gaea'].update(visible=True, value=True)
-                window['robin'].update(visible=True, value=True)
-                window['apollo'].update(visible=True, value=True)
-                window['dove'].update(visible=True, value=True)
+        if event_main == 'all_trackers':
+            if window_main['all_trackers'].get() == True:
+                window_main['umbrella'].update(disabled=True, value=True)
+                window_main['paris'].update(disabled=True, value=True)
+                window_main['crp'].update(disabled=True, value=True)
+                window_main['mars'].update(disabled=True, value=True)
+                window_main['titan'].update(disabled=True, value=True)
+                window_main['gaea'].update(disabled=True, value=True)
+                window_main['robin'].update(disabled=True, value=True)
+                window_main['apollo'].update(disabled=True, value=True)
+                window_main['dove'].update(disabled=True, value=True)
             else:
-                window['all_trackers'].update(disabled=True, visible=False, value=False)
-                window['umbrella'].update(disabled=True, visible=False, value=False)
-                window['paris'].update(disabled=True, visible=False, value=False)
-                window['crp'].update(disabled=True, visible=False, value=False)
-                window['mars'].update(disabled=True, visible=False, value=False)
-                window['titan'].update(disabled=True, visible=False, value=False)
-                window['gaea'].update(disabled=True, visible=False, value=False)
-                window['robin'].update(disabled=True, visible=False, value=False)
-                window['apollo'].update(disabled=True, visible=False, value=False)
-                window['dove'].update(disabled=True, visible=False, value=False)
-
-        if event == 'all_trackers':
-            if window['all_trackers'].get() == True:
-                window['umbrella'].update(disabled=True, value=True)
-                window['paris'].update(disabled=True, value=True)
-                window['crp'].update(disabled=True, value=True)
-                window['mars'].update(disabled=True, value=True)
-                window['titan'].update(disabled=True, value=True)
-                window['gaea'].update(disabled=True, value=True)
-                window['robin'].update(disabled=True, value=True)
-                window['apollo'].update(disabled=True, value=True)
-                window['dove'].update(disabled=True, value=True)
-            else:
-                window['umbrella'].update(disabled=False)
-                window['paris'].update(disabled=False)
-                window['crp'].update(disabled=False)
-                window['mars'].update(disabled=False)
-                window['titan'].update(disabled=False)
-                window['gaea'].update(disabled=False)
-                window['robin'].update(disabled=False)
-                window['apollo'].update(disabled=False)
-                window['dove'].update(disabled=False)
+                window_main['umbrella'].update(disabled=False)
+                window_main['paris'].update(disabled=False)
+                window_main['crp'].update(disabled=False)
+                window_main['mars'].update(disabled=False)
+                window_main['titan'].update(disabled=False)
+                window_main['gaea'].update(disabled=False)
+                window_main['robin'].update(disabled=False)
+                window_main['apollo'].update(disabled=False)
+                window_main['dove'].update(disabled=False)
 
 
-        elif event == 'Cancel':
+        elif event_main == 'Cancel':
             quit()
         
-        elif event == sg.WIN_CLOSED:
+        elif event_main == sg.WIN_CLOSED:
             quit()
         
-        if event == "Submit":
+        if event_main == "Submit":
             args = helpers.ValuesToClass(values)
-            window.close()
+            window_main.close()
             x=False
 
 
@@ -154,7 +210,15 @@ if __name__ == '__main__':
         tracker_names=[]
 
         if args.paris == True:
-            PARIS = pd.read_excel(util.paris_tracker, sheet_name="Main", header=8).query("@partID in `Subject ID`")
+            paris_part1 = pd.read_excel(util.paris_tracker, sheet_name="Subgroups", header=4).query("@partID in `Subject ID`")
+            paris_part2 = pd.read_excel(util.paris_tracker, sheet_name="Participant details", header=0).query("@partID in `Subject ID`")
+            paris_part3 = pd.read_excel(util.paris_tracker, sheet_name="Flu Vaccine Information", header=0).query("@partID in `Participant ID`")
+
+            paris_part3['Subject ID'] == paris_part3['Participant ID']
+            paris_part3.drop('Participant ID', inplace=True)
+
+            PARIS = pd.concat([paris_part1,paris_part2,paris_part3])
+            
             tracker_list.append(PARIS)
             tracker_names.append("PARIS")
         
@@ -188,14 +252,10 @@ if __name__ == '__main__':
             tracker_list.append(UMBRELLA)
             tracker_names.append("UMBRELLA")
 
+        tracker_combined = pd.concat(tracker_list)
+
         #ROBIN AND DOVE ARE WEIRD DEAL WITH LATER!
 
-        if args.mrn == False:
-            for item in tracker_list:
-                try:
-                    item.drop('MRN', axis=0)
-                except:
-                    continue
 # %%
     if args.clinical== True:
         outfile = util.sample_query + args.outfilename + '.xlsx'
