@@ -42,7 +42,7 @@ if __name__ == '__main__':
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=78)
     args = argParser.parse_args()
     inventory_boxes = pd.read_excel(util.inventory_input, sheet_name=None)
-    sample_types = ['Plasma', 'Serum', 'Pellet', 'Saliva', 'PBMC', 'HT', '4.5 mL Tube', 'All']
+    sample_types = ['Plasma', 'Serum', 'Pellet', 'Saliva', 'PBMC', 'HT', '4.5 mL Tube', 'NPS', 'All']
     data = {'Name': [], 'Sample ID': [], 'Sample Type': [],'Freezer': [],'Level1': [],'Level2': [],'Level3': [],'Box': [],'Position': [], 'ALIQUOT': []}
     samples_data = {st: deepcopy(data) for st in sample_types if st != 'HT'}
     samples_data['Serum']['Heat treated?'] = []
@@ -62,6 +62,9 @@ if __name__ == '__main__':
             continue
         if re.search('APOLLO RESEARCH \d+', name) or re.search('APOLLO NIH \d+', name):
             team = 'APOLLO'
+        elif re.search('PSP_NPS', name) and (re.search('Lab', name) or re.search('FF', name)):
+            team = 'PSP_NPS'
+            box_kinds = re.findall('Lab|FF', name)
         elif re.search('PSP', name):
             team = 'PSP'
         elif timp_check(name):
@@ -71,6 +74,8 @@ if __name__ == '__main__':
         sample_type = 'N/A'
         if team == 'APOLLO':
             sample_type = 'Serum'
+        elif team == 'PSP_NPS':
+            sample_type = 'NPS'
         else:
             for val in sample_types:
                 if re.search(str(val).upper().split()[0], name.upper()):
@@ -98,6 +103,8 @@ if __name__ == '__main__':
         for kind in box_kinds:
             if team == 'APOLLO':
                 box_name = f"{team} {kind} {box_number}"
+            elif team == 'PSP_NPS':
+                box_name = f"{team}_{kind}_{box_number}"
             elif box_sample_type in ['PBMC', 'HT', '4.5 mL Tube']:
                 box_name = f"{team} {box_sample_type} {box_number}"
             else:
@@ -109,6 +116,11 @@ if __name__ == '__main__':
             level2 = 'Shelf 2'
             if team == 'APOLLO':
                 level3 = 'APOLLO Rack'
+            elif box_sample_type == 'NPS':
+                freezer = 'Temporary PSP NPS'
+                level1 = 'freezer_nps'
+                level2 = 'shelf_nps'
+                level3 = 'rack_nps'
             elif box_sample_type == 'Saliva' or box_sample_type == 'Pellet':
                 level3 = '{} Lab/FF Rack'.format(box_sample_type)
             elif box_sample_type == 'PBMC':
