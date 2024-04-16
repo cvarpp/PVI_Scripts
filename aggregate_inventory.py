@@ -25,17 +25,6 @@ def filter_box(box_name, uploaded, args, box_df=None):
         return False
     return (box_name not in uploaded) and ((args.min_count <= box_df.set_index('Name').loc[box_name, 'Tube Count'] <= 81) or (box_name in full_des))
 
-def timp_check(name):
-    '''
-    Returns True if the box is for a SERONET study
-    '''
-    mit = "MIT" in name.upper()
-    mars = "MARS" in name.upper()
-    iris = "IRIS" in name.upper()
-    titan = "TITAN" in name.upper()
-    prio = "PRIORITY" in name.upper()
-    return mit or mars or iris or titan or prio
-
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Aggregate inventory of each sample type for FP upload')
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=78)
@@ -61,9 +50,9 @@ if __name__ == '__main__':
             continue
         if re.search('APOLLO RESEARCH \d+', name) or re.search('APOLLO NIH \d+', name):
             team = 'APOLLO'
-        if re.search('PSP', name):
+        elif re.search('PSP', name):
             team = 'PSP'
-        elif timp_check(name):
+        elif re.match("MIT|MARS|IRIS|TITAN|PRIORITY", name.upper()) is not None:
             team = 'PVI ' + name.split()[0]
         else:
             team = 'PVI'
