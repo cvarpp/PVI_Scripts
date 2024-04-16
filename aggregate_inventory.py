@@ -62,7 +62,7 @@ if __name__ == '__main__':
         if re.search('APOLLO RESEARCH \d+', name) or re.search('APOLLO NIH \d+', name):
             team = 'APOLLO'
         elif re.search('PSP_NPS', name) and (re.search('Lab', name) or re.search('FF', name)):
-            team = 'PSP_NPS'
+            team = 'PSP'
         elif re.search('PSP', name):
             team = 'PSP'
         elif timp_check(name):
