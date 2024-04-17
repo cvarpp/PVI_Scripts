@@ -59,8 +59,6 @@ if __name__ == '__main__':
         sample_type = 'N/A'
         if team == 'APOLLO':
             sample_type = 'Serum'
-        elif team == 'PSP':
-            sample_type = 'NPS'
         else:
             for val in sample_types:
                 if re.search(str(val).upper().split()[0], name.upper()):
@@ -78,7 +76,7 @@ if __name__ == '__main__':
         box_sample_type = sample_type
         sheet = sheet.assign(sample_id=clean_sample_id).set_index('sample_id')
         for kind in box_kinds:
-            if team in ['APOLLO', 'PSP']:
+            if team == 'APOLLO':
                 box_name = f"{team} {kind} {box_number}"
             elif box_sample_type in ['PBMC', 'HT', '4.5 mL Tube']:
                 box_name = f"{team} {box_sample_type} {box_number}"
