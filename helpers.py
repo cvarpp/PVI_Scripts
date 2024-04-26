@@ -305,8 +305,6 @@ def corned_beef(userid, userkey):
     h.update(uid)
     h.update(pid)
     hash = h.hexdigest()
-    print(hash)
-    print(idset)
     if hash in decode(idset):
         return("Validated")
     
