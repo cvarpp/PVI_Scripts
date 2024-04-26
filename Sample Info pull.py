@@ -12,12 +12,11 @@ import PySimpleGUI as sg
 outfile = "~/Documents/Test.xlsx"
 Split_2=[]
 x = True
-y = True
 check=''
+n=1
 #%%
 
 if __name__ == '__main__':
-    login = 0
 
     sg.theme('Dark Blue 17')
 
@@ -58,36 +57,43 @@ if __name__ == '__main__':
             window_main['Sample_List'].update(disabled=True)
 
         if event_main == 'clinical':
-                if check =='Validated':
-                    if window_main['clinical'].get() == True:
-                        window_main['MRN'].update(disabled=False, visible=True)
-                        window_main['tracker'].update(disabled=False, visible=True)
-                        window_main['research'].update(disabled=False, visible=True)
-                    else:
-                        window_main['MRN'].update(disabled=True, visible=False, value = False)
-                        window_main['tracker'].update(disabled=True, visible=False, value = False)
-                        window_main['research'].update(disabled=True, visible=False, value = False)
-                        window_main['all_trackers'].update(visible=False)
-                        window_main['umbrella'].update(visible=False)
-                        window_main['paris'].update(visible=False)
-                        window_main['crp'].update(visible=False)
-                        window_main['mars'].update(visible=False)
-                        window_main['titan'].update(visible=False)
-                        window_main['gaea'].update(visible=False)
-                        window_main['robin'].update(visible=False)
-                        window_main['apollo'].update(visible=False)
-                        window_main['dove'].update(visible=False)
+                if n==0:
+                    n+=1
                 else:
+                    if check =='Validated':
+                        if window_main['clinical'].get() == True:
+                            window_main['MRN'].update(disabled=False, visible=True)
+                            window_main['tracker'].update(disabled=False, visible=True)
+                            window_main['research'].update(disabled=False, visible=True)
+                        else:
+                            window_main['MRN'].update(disabled=True, visible=False, value = False)
+                            window_main['tracker'].update(disabled=True, visible=False, value = False)
+                            window_main['research'].update(disabled=True, visible=False, value = False)
+                            window_main['all_trackers'].update(visible=False)
+                            window_main['umbrella'].update(visible=False)
+                            window_main['paris'].update(visible=False)
+                            window_main['crp'].update(visible=False)
+                            window_main['mars'].update(visible=False)
+                            window_main['titan'].update(visible=False)
+                            window_main['gaea'].update(visible=False)
+                            window_main['robin'].update(visible=False)
+                            window_main['apollo'].update(visible=False)
+                            window_main['dove'].update(visible=False)
+                    
+                    else:
+                        
                         event_password, values_password = window_password.read()
+
                         if event_password == 'Cancel':
+                            n=0
                             window_main['clinical'].update(value=False)
                             window_password.close()
-                
+                        
                         elif event_password == sg.WIN_CLOSED:
+                            n=0
                             window_main['clinical'].update(value=False)
                             window_password.close()
-
-
+                        
                         if event_password == 'Submit':
                             check = helpers.corned_beef(values_password["userid"],values_password['password'])
 
@@ -112,6 +118,11 @@ if __name__ == '__main__':
                                     window_main['dove'].update(visible=False)
 
                                 window_password.close()
+                            else:
+                                n=0
+                                window_main['clinical'].update(value=False)
+                                window_password.close()
+
 
         if event_main == 'tracker':
             if window_main['tracker'].get() == True:
@@ -202,6 +213,11 @@ if __name__ == '__main__':
 
     Processing = helpers.query_dscf(sid_list=Samples)
 
+    Processing2 = Processing[Processing.columns.drop(list(Processing.filter(regex='Unnamed')))]
+    Processing_Serum_Plasma = Processing2.filter(regex=r"(Plasma|plasma|PLASMA|Serum|SERUM|serum)")
+    Processing_Cells = Processing2.filter(regex=r"(cell|Cell|CELL|PBMC)")
+    Processing_Saliva = Processing2.filter(regex=r"(Saliva|saliva|SALIVA)")
+   
     if args.research == True:
         Research = helpers.query_research(sid_list=Samples)
 
