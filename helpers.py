@@ -7,7 +7,6 @@ import pandas as pd
 import numpy as np
 import util
 import os
-
 class ValuesToClass(object):
     def __init__(self,values):
         for key in values:
@@ -295,7 +294,7 @@ def map_dates(df, date_cols):
 
 def corned_beef(userid, userkey):
     try:
-        locked = zf.ZipFile(util.script_folder + 'Corned_Beef_reference.zip', 'r')
+        locked = zf.ZipFile(util.script_folder + 'data/Corned_Beef_reference.zip', 'r')
         idset = locked.read("Corned_Beef_reference.txt")
     except:
         return("Not Clinical Access")
