@@ -8,6 +8,7 @@ import openpyxl as opx
 import util
 import helpers
 import PySimpleGUI as sg
+import difflib as dl
 
 outfile = "~/Documents/Test.xlsx"
 Split_2=[]
@@ -211,13 +212,21 @@ if __name__ == '__main__':
 
     partID = Intake2['participant_id'].to_list()
 
-    Processing = helpers.query_dscf(sid_list=Samples)
+    Processing = helpers.query_dscf(sid_list=Samples, broad_rename=True)
 
     Processing2 = Processing[Processing.columns.drop(list(Processing.filter(regex='Unnamed')))]
-    Processing_Serum_Plasma = Processing2.filter(regex=r"(Plasma|plasma|PLASMA|Serum|SERUM|serum)")
-    Processing_Cells = Processing2.filter(regex=r"(cell|Cell|CELL|PBMC)")
+    Processing_Serum = Processing2.filter(regex=r"(Serum|SERUM|serum)")
+    Processing_Cells_Plasma = Processing2.filter(regex=r"(Plasma|plasma|PLASMA|cell|Cell|CELL|PBMC)")
     Processing_Saliva = Processing2.filter(regex=r"(Saliva|saliva|SALIVA)")
    
+    Sub_frame_list = [Processing_Serum, Processing_Saliva, Processing_Cells_Plasma]
+    
+    # for i , Frame in enumerate(Sub_frame_list):
+    #     Frame.dropna(axis=1, how="all", inplace=True)
+    #     for col in enumerate(Frame.columns):
+    #         if dl.SequenceMatcher(None, col, "Volume of serum (mL)") >= 0.5
+    #             print(Frame[col])
+
     if args.research == True:
         Research = helpers.query_research(sid_list=Samples)
 
@@ -263,7 +272,7 @@ if __name__ == '__main__':
             tracker_list.append(GAEA)
             tracker_names.append("GAEA")
 
-        if args.Umbrella == True:
+        if args.umbrella == True:
             UMBRELLA = pd.read_excel(util.umbrella_tracker, sheet_name="Summary").query("@partID in `Subject ID`")
             tracker_list.append(UMBRELLA)
             tracker_names.append("UMBRELLA")
@@ -290,3 +299,5 @@ if __name__ == '__main__':
             Processing.to_excel( writer , sheet_name='DSCF Info')
 
         print('exported to: ', outfile)
+
+# %%
