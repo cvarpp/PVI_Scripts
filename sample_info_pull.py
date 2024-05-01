@@ -11,8 +11,6 @@ import PySimpleGUI as sg
 import difflib as dl
 from copy import deepcopy
 
-outfile = "~/Documents/Test.xlsx"
-Split_2=[]
 #%%
 
 def parse_input():
@@ -132,18 +130,7 @@ if __name__ == '__main__':
 
 #%%
     if args.Text_list == True:
-        Split_1=re.split('\n', args.Sample_List)
-        for sample in Split_1:
-            if '\r' in sample:
-                quick_split=re.split('\r', sample)
-                quick_split = [i for i in quick_split if i]
-                for value in quick_split:
-                    Split_2.append(value)
-            else:
-                quick_split=sample
-                Split_2.append(quick_split)
-            print(Split_2)
-            Samples=Split_2
+        Samples=re.split(r'\r?\n', args.Sample_List)
     if args.Infile == True:
         Sample_List = pd.read_excel(args.filepath, sheet_name=args.sheetname)
         Samples=Sample_List[args.sampleid].tolist()
