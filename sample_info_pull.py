@@ -206,7 +206,7 @@ if __name__ == '__main__':
                     df.to_excel(writer, sheet_name=tracker_names[i])
         print('exported to:', outfile)
     else:
-        outfile = util.tracking + args.outfilename + '.xlsx'
+        outfile = util.tracking + 'Sample ID Query/' + args.outfilename + '.xlsx'
         with pd.ExcelWriter(outfile, engine='openpyxl') as writer:
             Intake2.to_excel( writer , sheet_name='Intake Info')
             Processing.to_excel( writer , sheet_name='DSCF Info')
