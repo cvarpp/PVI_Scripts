@@ -131,16 +131,36 @@ if __name__ == '__main__':
 #%%
     if args.Text_list == True:
         Samples=re.split(r'\r?\n', args.Sample_List)
+    
     if args.Infile == True:
         Sample_List = pd.read_excel(args.filepath, sheet_name=args.sheetname)
         Samples=Sample_List[args.sampleid].tolist()
+    
     Intake = helpers.query_intake(include_research=True)
     Intake2 = Intake.query("@Samples in `sample_id`")
+    
     partID = Intake2['participant_id'].to_list()
+    
     Processing = helpers.query_dscf(sid_list=Samples, broad_rename=True)
     Processing2 = Processing[Processing.columns.drop(list(Processing.filter(regex='Unnamed')))]
+    
+    col_renames=[]
     Processing_Serum = Processing2.filter(regex=r"(?i)(Serum)")
+
+    serum_vol = Processing_Serum['Total volume of serum (mL)'].append(Processing_Serum['Total volume of serum (ml)'].append(Processing_Serum['Volume of Serum Collected (mL)']))
+    serum_init = Processing_Serum['Aliquoted by: SERUM'].append(Processing_Serum["Serum Aliquoted by"])
+    serum_freeze = Processing_Serum['Serum Freeze Time'].append(Processing_Serum['serum_freeze_time'])
+
+    for item in col_renames:
+            item.dropna(inplace=True)
+            item = item.reset_index()
+            item.drop_duplicates(subset='sample_id', keep='last', inplace=True)
+
+
+
+
     Processing_Cells_Plasma = Processing2.filter(regex=r"(?i)(Plasma|Cell|PBMC)")
+    
     Processing_Saliva = Processing2.filter(regex=r"(?i)(Saliva)")
 
     Sub_frame_list = [Processing_Serum, Processing_Saliva, Processing_Cells_Plasma]
@@ -152,6 +172,7 @@ if __name__ == '__main__':
 
     if args.research == True:
         Research = helpers.query_research(sid_list=Samples)
+    
     if args.tracker == True:
         tracker_list=[]
         tracker_names=[]
