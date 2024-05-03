@@ -110,7 +110,7 @@ def fallible(f, default=np.nan):
             return default
     return tmp
 
-def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=False, broad_rename=False):
+def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=False):
     '''
     Retrieve processing data (volumes, cell counts, and times) for all samples.
     Aggregates across 3 separate files and multiple tabs.
@@ -150,18 +150,6 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=Fals
         new_samples = pd.read_excel(util.proc + 'Processing Notebook.xlsx', sheet_name='Specimen Dashboard', header=1).rename(columns=correct_new)
         
         dataframe_list = [bsl2p_archive, bsl2_archive, bsl2p_samples, bsl2_samples, crp_samples, new_samples]
-
-        if broad_rename == True:
-            broad_rename_dict={}
-            col_convert=pd.read_excel(util.script_folder + 'data/DSCF Column Names.xlsx', header=0)
-            for i, val in enumerate(col_convert['Source Column Names']):
-                broad_rename_dict.update({val:col_convert['Cleaned Column Names'][i]})
-            
-            for df in dataframe_list:
-                try:
-                    df = df.rename(columns=broad_rename_dict)
-                except:
-                    continue
         
         all_samples = (pd.concat(dataframe_list)
                         .assign(sample_id=clean_sample_id)
