@@ -1,14 +1,11 @@
 #%%
 import pandas as pd
 import re
-import sys
 import argparse
 import numpy as np
-import openpyxl as opx
 import util
 import helpers
 import PySimpleGUI as sg
-import difflib as dl
 from copy import deepcopy
 
 #%%
@@ -18,7 +15,7 @@ def parse_input():
     check = ''
     sg.theme('Dark Blue 17')
 
-    layout_password = [[sg.Text("Are you Really Clincally Compliant?")],
+    layout_password = [[sg.Text("Clinical Access Check")],
                        [sg.Text("ID"),sg.Input(key='userid')],
                        [sg.Text("Password"), sg.Input(key='password', password_char='*')],
                        [sg.Submit(), sg.Cancel()]]
@@ -32,7 +29,7 @@ def parse_input():
                 sg.Checkbox('APOLLO Info', disabled=True, visible=False, key='apollo'), sg.Checkbox('DOVE Info', disabled=True, visible=False, key='dove')],
             [sg.Text('File\nName', size=(9, 2), key='filepath_text'), sg.Input(key='filepath'), sg.FileBrowse(key='filepath_browse')],
             [sg.Text('Sheet\nName', size=(9, 2), key='sheetname_text'), sg.Input(key='sheetname')], [sg.Text("Sample ID", size=(9,2), key='sampleid_text'), sg.Input(default_text="Sample ID", key='sampleid')],
-            [sg.Text('Sample\nList', size=(9,2), key='sample_list_text', visible=False), sg.Multiline(key="Sample_List", disabled=True, size=(40,10), visible=False)],
+            [sg.Text('Sample\nList', size=(9,2), key='sample_list_text', visible=False), sg.Multiline(key="sample_list", disabled=True, size=(40,10), visible=False)],
             [sg.Text('Outfile Name'), sg.Input(key='outfilename')],                  
             [sg.Submit(), sg.Cancel()]]
 
@@ -49,7 +46,7 @@ def parse_input():
             window_main['sheetname_text'].update(visible=False)
             window_main['sampleid'].update(disabled=True, visible=False)
             window_main['sampleid_text'].update(visible=False)
-            window_main['Sample_List'].update(disabled=False, visible=True)
+            window_main['sample_list'].update(disabled=False, visible=True)
             window_main['sample_list_text'].update(visible=True)
         elif event_main == 'Infile':
             window_main['filepath'].update(disabled=False, visible=True)
@@ -59,7 +56,7 @@ def parse_input():
             window_main['sheetname_text'].update(visible=True)
             window_main['sampleid'].update(disabled=False, visible=True)
             window_main['sampleid_text'].update(visible=True)
-            window_main['Sample_List'].update(disabled=True, visible=False)
+            window_main['sample_list'].update(disabled=True, visible=False)
             window_main['sample_list_text'].update(visible=False)
         elif event_main == 'clinical':
             if check =='Validated':
@@ -130,48 +127,30 @@ if __name__ == '__main__':
 
 #%%
     if args.Text_list == True:
-        Samples=re.split(r'\r?\n', args.Sample_List)
+        samples=re.split(r'\r?\n', args.sample_list)
     
     if args.Infile == True:
-        Sample_List = pd.read_excel(args.filepath, sheet_name=args.sheetname)
-        Samples=Sample_List[args.sampleid].tolist()
+        sample_list = pd.read_excel(args.filepath, sheet_name=args.sheetname)
+        samples=sample_list[args.sampleid].tolist()
     
-    Intake = helpers.query_intake(include_research=True)
-    Intake2 = Intake.query("@Samples in `sample_id`")
+    intake = helpers.query_intake(include_research=True).query("@samples in `sample_id`")
     
-    partID = Intake2['participant_id'].to_list()
+    partID = intake['participant_id'].to_list()
     
-    Processing = helpers.query_dscf(sid_list=Samples, broad_rename=True)
-    Processing2 = Processing[Processing.columns.drop(list(Processing.filter(regex='Unnamed')))]
-    
-    col_renames=[]
-    Processing_Serum = Processing2.filter(regex=r"(?i)(Serum)")
+    processing = helpers.query_dscf(sid_list=samples)
 
-    serum_vol = Processing_Serum['Total volume of serum (mL)'].append(Processing_Serum['Total volume of serum (ml)'].append(Processing_Serum['Volume of Serum Collected (mL)']))
-    serum_init = Processing_Serum['Aliquoted by: SERUM'].append(Processing_Serum["Serum Aliquoted by"])
-    serum_freeze = Processing_Serum['Serum Freeze Time'].append(Processing_Serum['serum_freeze_time'])
-
-    for item in col_renames:
-            item.dropna(inplace=True)
-            item = item.reset_index()
-            item.drop_duplicates(subset='sample_id', keep='last', inplace=True)
-
-
-
-
-    Processing_Cells_Plasma = Processing2.filter(regex=r"(?i)(Plasma|Cell|PBMC)")
-    
-    Processing_Saliva = Processing2.filter(regex=r"(?i)(Saliva)")
-
-    Sub_frame_list = [Processing_Serum, Processing_Saliva, Processing_Cells_Plasma]
-    # for i , Frame in enumerate(Sub_frame_list):
-    #     Frame.dropna(axis=1, how="all", inplace=True)
-    #     for col in enumerate(Frame.columns):
-    #         if dl.SequenceMatcher(None, col, "Volume of serum (mL)") >= 0.5
-    #             print(Frame[col])
+    dscf_cols = pd.read_excel(util.script_folder + 'data/DSCF Column Names.xlsx', header=0)
+    cols_of_interest = dscf_cols['Cleaned Column Names'].unique()
+    for col in cols_of_interest:
+        source_cols = dscf_cols[dscf_cols['Cleaned Column Names'] == col]['Source Column Names']
+        if col not in processing.columns:
+            processing[col] = np.nan
+        for source_col in source_cols:
+            processing[col] = processing[col].fillna(processing[source_col])
+    processing_cleaned = processing.loc[:, cols_of_interest].copy()
 
     if args.research == True:
-        Research = helpers.query_research(sid_list=Samples)
+        Research = helpers.query_research(sid_list=samples)
     
     if args.tracker == True:
         tracker_list=[]
@@ -214,23 +193,26 @@ if __name__ == '__main__':
             tracker_names.append("UMBRELLA")
         tracker_combined = pd.concat(tracker_list)
 
-        #ROBIN AND DOVE ARE WEIRD DEAL WITH LATER!
+        # DEAL WITH ROBIN AND DOVE LATER!
+        # Also missing primary SHIELD info
 
 # %%
     if args.clinical == True:
         outfile = util.sample_query + args.outfilename + '.xlsx'
         with pd.ExcelWriter(outfile, engine='openpyxl') as writer:
-            Intake2.to_excel(writer , sheet_name='Intake Info')
-            Processing.to_excel(writer , sheet_name='DSCF Info')
-            for i, df in enumerate(tracker_list):
-                if df.shape[0] != 0:
-                    df.to_excel(writer, sheet_name=tracker_names[i])
+            processing_cleaned.to_excel(writer, sheet_name='Processing Short-Form')
+            intake.to_excel(writer , sheet_name='Intake Info')
+            processing.to_excel(writer , sheet_name='DSCF Info')
+            for tracker_name, tracker_df in zip(tracker_names, tracker_list):
+                if tracker_df.shape[0] != 0:
+                    tracker_df.to_excel(writer, sheet_name=tracker_name)
         print('exported to:', outfile)
     else:
         outfile = util.tracking + 'Sample ID Query/' + args.outfilename + '.xlsx'
         with pd.ExcelWriter(outfile, engine='openpyxl') as writer:
-            Intake2.to_excel( writer , sheet_name='Intake Info')
-            Processing.to_excel( writer , sheet_name='DSCF Info')
+            processing_cleaned.to_excel(writer, sheet_name='Processing Short-Form')
+            intake.to_excel(writer, sheet_name='Intake Info')
+            processing.to_excel(writer, sheet_name='DSCF Info')
         print('exported to:', outfile)
 
 # %%
