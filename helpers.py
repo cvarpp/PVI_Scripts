@@ -159,7 +159,7 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=Fals
             
             for df in dataframe_list:
                 try:
-                    df.rename(columns=broad_rename_dict)
+                    df = df.rename(columns=broad_rename_dict)
                 except:
                     continue
         
