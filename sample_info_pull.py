@@ -22,10 +22,10 @@ def parse_input():
 
     layout_main = [[sg.Text('Sample ID Cohort Consolidator: SICC')],
             [sg.Radio('External File?', 'RADIO1', enable_events=True, key='Infile', default=True), sg.Radio('Text List?', 'RADIO1', enable_events=True, key='Text_list'), sg.Checkbox('Clinical Compliant?', enable_events=True, key='clinical')],
-            [sg.Checkbox('MRN', disabled=True, visible=False, key='MRN'), sg.Checkbox('Tracker Info', enable_events=True, disabled=True, visible=False, key='tracker'), sg.Checkbox("Research", disabled=True, visible=False, key="research")],
+            [sg.Checkbox('MRN', disabled=True, visible=False, key='MRN'), sg.Checkbox('Tracker Info', enable_events=True, disabled=True, visible=False, key='tracker'), sg.Checkbox("Contact info", disabled=True, visible=False, key="contact")],
             [sg.Checkbox("All", enable_events=True, visible=False, key='all_trackers' ), sg.Checkbox('Umbrella Info', disabled=True, visible=False, key='umbrella'), sg.Checkbox('Paris Info', disabled=True, visible=False, key='paris'),
                 sg.Checkbox('CRP Info', disabled=True, visible=False, key='crp'), sg.Checkbox('MARS Info', disabled=True, visible=False, key='mars')], 
-            [sg.Checkbox('TITAN Info', disabled=True, visible=False, key='titan'), sg.Checkbox('GAEA Info', disabled=True, visible=False, key='gaea'), sg.Checkbox('ROBIN Info', disabled=True, visible=False, key='robin'),\
+            [sg.Checkbox('titan Info', disabled=True, visible=False, key='titan'), sg.Checkbox('GAEA Info', disabled=True, visible=False, key='gaea'), sg.Checkbox('ROBIN Info', disabled=True, visible=False, key='robin'),\
                 sg.Checkbox('APOLLO Info', disabled=True, visible=False, key='apollo'), sg.Checkbox('DOVE Info', disabled=True, visible=False, key='dove')],
             [sg.Text('File\nName', size=(9, 2), key='filepath_text'), sg.Input(key='filepath'), sg.FileBrowse(key='filepath_browse')],
             [sg.Text('Sheet\nName', size=(9, 2), key='sheetname_text'), sg.Input(key='sheetname')], [sg.Text("Sample ID", size=(9,2), key='sampleid_text'), sg.Input(default_text="Sample ID", key='sampleid')],
@@ -63,11 +63,11 @@ def parse_input():
                 if window_main['clinical'].get() == True:
                     window_main['MRN'].update(disabled=False, visible=True)
                     window_main['tracker'].update(disabled=False, visible=True)
-                    window_main['research'].update(disabled=False, visible=True)
+                    window_main['contact'].update(disabled=False, visible=True)
                 else:
                     window_main['MRN'].update(disabled=True, visible=False, value = False)
                     window_main['tracker'].update(disabled=True, visible=False, value = False)
-                    window_main['research'].update(disabled=True, visible=False, value = False)
+                    window_main['contact'].update(disabled=True, visible=False, value = False)
                     window_main['all_trackers'].update(visible=False)
                     for study in study_keys:
                         window_main[study].update(visible=False)
@@ -86,11 +86,11 @@ def parse_input():
                         if window_main['clinical'].get() == True:
                             window_main['MRN'].update(disabled=False, visible=True)
                             window_main['tracker'].update(disabled=False, visible=True)
-                            window_main['research'].update(disabled=False, visible=True)
+                            window_main['contact'].update(disabled=False, visible=True)
                         else:
                             window_main['MRN'].update(disabled=True, visible=False, value = False)
                             window_main['tracker'].update(disabled=True, visible=False, value = False)
-                            window_main['research'].update(disabled=True, visible=False, value = False)
+                            window_main['contact'].update(disabled=True, visible=False, value = False)
                             window_main['all_trackers'].update(visible=False)
                             for study in study_keys:
                                 window_main[study].update(visible=False)
@@ -125,7 +125,7 @@ def parse_input():
 if __name__ == '__main__':
     args = parse_input()
 
-#%%
+#%%""
     if args.Text_list == True:
         samples=re.split(r'\r?\n', args.sample_list)
     
@@ -139,23 +139,26 @@ if __name__ == '__main__':
     
     processing = helpers.query_dscf(sid_list=samples)
 
-    dscf_cols = pd.read_excel(util.script_folder + 'data/DSCF Column Names.xlsx', header=0)
-    cols_of_interest = dscf_cols['Cleaned Column Names'].unique()
-    for col in cols_of_interest:
+    dscf_cols = pd.read_excel(util.script_folder + 'data/DSCF Column Names.xlsx',sheet_name="DSCF Column Names", header=0)
+    tracker_cols = pd.read_excel(util.script_folder + 'data/DSCF Column Names.xlsx',sheet_name="Tracker Columns", header=0)
+
+    dscf_cols_of_interest = dscf_cols['Cleaned Column Names'].unique()
+    tracker_cols_of_interest = tracker_cols['Cleaned Column Names'].unique()
+
+    for col in dscf_cols_of_interest:
         source_cols = dscf_cols[dscf_cols['Cleaned Column Names'] == col]['Source Column Names']
         if col not in processing.columns:
             processing[col] = np.nan
         for source_col in source_cols:
             processing[col] = processing[col].fillna(processing[source_col])
-    processing_cleaned = processing.loc[:, cols_of_interest].copy()
-
-    if args.research == True:
-        Research = helpers.query_research(sid_list=samples)
+    processing_cleaned = processing.loc[:, dscf_cols_of_interest].copy()
     
     if args.tracker == True:
         tracker_list=[]
         tracker_names=[]
+
         if args.paris == True:
+            
             paris_part1 = pd.read_excel(util.paris_tracker, sheet_name="Subgroups", header=4).query("@partID in `Participant ID`")
             paris_part2 = pd.read_excel(util.paris_tracker, sheet_name="Participant details", header=0).query("@partID in `Subject ID`")
             paris_part3 = pd.read_excel(util.paris_tracker, sheet_name="Flu Vaccine Information", header=0).query("@partID in `Participant ID`")
@@ -163,35 +166,62 @@ if __name__ == '__main__':
             paris_part2['Participant ID'] = paris_part2['Subject ID']
             paris_part2.drop('Subject ID', inplace=True, axis='columns')
 
-            PARIS = pd.concat([paris_part1,paris_part2,paris_part3])
-            
-            tracker_list.append(PARIS)
+            paris = pd.concat([paris_part1,paris_part2,paris_part3])
+            tracker_list.append(paris)
             tracker_names.append("PARIS")
+
         if args.titan == True:
-            TITAN = pd.read_excel(util.titan_tracker, sheet_name="Tracker", header=4).query("@partID in `Umbrella Corresponding Participant ID`")     
-            tracker_list.append(TITAN)
-            tracker_names.append("TITAN")
+            titan = pd.read_excel(util.titan_tracker, sheet_name="Tracker", header=4).query("@partID in `Umbrella Corresponding Participant ID`")     
+            tracker_list.append(titan)
+            tracker_names.append("titan")
         if args.mars == True:
-            MARS =  pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name="Pt List", header=0).query("@partID in `Participant ID`")
-            tracker_list.append(MARS)        
-            tracker_names.append("MARS")
+            mars =  pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name="Pt List", header=0).query("@partID in `Participant ID`")
+            tracker_list.append(mars)        
+            tracker_names.append("mars")
         if args.crp == True:
-            CRP = pd.read_excel(util.crp_folder + "CRP Patient Tracker.xlsx", sheet_name="Tracker", header=4).query("@partID in `Participant ID`")
-            tracker_list.append(CRP)        
-            tracker_names.append("CRP")
+            crp = pd.read_excel(util.crp_folder + "CRP Patient Tracker.xlsx", sheet_name="Tracker", header=4).query("@partID in `Participant ID`")
+            tracker_list.append(crp)        
+            tracker_names.append("crp")
         if args.apollo == True:
-            APOLLO = pd.read_excel(util.apollo_folder + "APOLLO Participant Tracker.xlsx", sheet_name="Summary", header=0).query("@partID in `Participant ID`")
-            tracker_list.append(APOLLO)
-            tracker_names.append("APOLLO")
+            apollo = pd.read_excel(util.apollo_folder + "APOLLO Participant Tracker.xlsx", sheet_name="Summary", header=0).query("@partID in `Participant ID`")
+            tracker_list.append(apollo)
+            tracker_names.append("apollo")
         if args.gaea == True:
-            GAEA = pd.read_excel(util.gaea_folder + "GAEA Tracker.xlsx", sheet_name="Summary", header=0).query("@partID in `Participant ID`")
-            tracker_list.append(GAEA)
-            tracker_names.append("GAEA")
+            gaea = pd.read_excel(util.gaea_folder + "GAEA Tracker.xlsx", sheet_name="Summary", header=0).query("@partID in `Participant ID`")
+            tracker_list.append(gaea)
+            tracker_names.append("gaea")
         if args.umbrella == True:
-            UMBRELLA = pd.read_excel(util.umbrella_tracker, sheet_name="Summary").query("@partID in `Subject ID`")
-            tracker_list.append(UMBRELLA)
-            tracker_names.append("UMBRELLA")
+            umbrella = pd.read_excel(util.umbrella_tracker, sheet_name="Summary").query("@partID in `Subject ID`")
+            tracker_list.append(umbrella)
+            tracker_names.append("umbrella")
+
+        tracker_cleaned=[]
+
+        for tracker_name, tracker_df in zip(tracker_names, tracker_list):
+            tracker_df['indicator'] = tracker_name
+            
+            if args.MRN == False:
+                for df in tracker_list:
+                    df.drop(df.filter(regex=r'(!?)(MRN)').columns, axis=1)
+
+            for col in tracker_cols_of_interest:
+                source_cols = tracker_cols[tracker_cols['Cleaned Column Names'] == col]['Source Column Names']
+                if col not in tracker_df.columns:
+                    tracker_df[col] = np.nan
+                for source_col in source_cols:
+                    try:
+                        tracker_df[col] = tracker_df[col].fillna(tracker_df[source_col])
+                    except:
+                        print(f"Value Error: {col} not in {tracker_name}")
+                        continue
+            tracker_cleaned.append(tracker_df.loc[:, tracker_cols_of_interest].copy())
+
+        # if args.contact == False:
+        #     for df in tracker_list:
+        #         df.drop(df.filter(regex=r'(!?)(Name)').columns, axis=1)
+        #  Functionality for later:
         tracker_combined = pd.concat(tracker_list)
+        tracker_cleaned_combined = pd.concat(tracker_cleaned)
 
         # DEAL WITH ROBIN AND DOVE LATER!
         # Also missing primary SHIELD info
