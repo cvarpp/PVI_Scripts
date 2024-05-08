@@ -31,7 +31,7 @@ def parse_input():
             [sg.Text('Sheet\nName', size=(9, 2), key='sheetname_text'), sg.Input(key='sheetname')], [sg.Text("Sample ID", size=(9,2), key='sampleid_text'), sg.Input(default_text="Sample ID", key='sampleid')],
             [sg.Text('Sample\nList', size=(9,2), key='sample_list_text', visible=False), sg.Multiline(key="sample_list", disabled=True, size=(40,10), visible=False)],
             [sg.Text('Outfile Name'), sg.Input(key='outfilename')],                  
-            [sg.Submit(), sg.Cancel()]]
+            [sg.Submit(), sg.Cancel(), sg.Checkbox('Test?', disabled=False, visible=True, key='test')]]
 
     study_keys = ['umbrella','paris','crp','mars','titan','gaea','robin','apollo','dove']
     window_main = sg.Window('Sample Query', layout_main)
@@ -126,6 +126,10 @@ if __name__ == '__main__':
     args = parse_input()
 
 #%%""
+    #if args.test == True:
+        #function to be made later
+    #    pass
+
     if args.Text_list == True:
         samples=re.split(r'\r?\n', args.sample_list)
     
@@ -143,7 +147,9 @@ if __name__ == '__main__':
     tracker_cols = pd.read_excel(util.script_folder + 'data/DSCF Column Names.xlsx',sheet_name="Tracker Columns", header=0)
 
     dscf_cols_of_interest = dscf_cols['Cleaned Column Names'].unique()
-    tracker_cols_of_interest = tracker_cols['Cleaned Column Names'].unique()
+    
+    tracker_keep_cols = tracker_cols[tracker_cols['Keep Drop Unique'] == 'keep']['Cleaned Column Names'].unique()
+    tracker_unique_cols = tracker_cols[tracker_cols['Keep Drop Unique'] == 'unique']['Cleaned Column Names'].unique()
 
     for col in dscf_cols_of_interest:
         source_cols = dscf_cols[dscf_cols['Cleaned Column Names'] == col]['Source Column Names']
@@ -166,9 +172,9 @@ if __name__ == '__main__':
             paris_part2['Participant ID'] = paris_part2['Subject ID']
             paris_part2.drop('Subject ID', inplace=True, axis='columns')
 
-            paris = pd.concat([paris_part1,paris_part2,paris_part3])
+            paris = pd.merge(pd.merge(paris_part1,paris_part2, on='Participant ID'),paris_part3, on='Participant ID')
             tracker_list.append(paris)
-            tracker_names.append("PARIS")
+            tracker_names.append("paris")
 
         if args.titan == True:
             titan = pd.read_excel(util.titan_tracker, sheet_name="Tracker", header=4).query("@partID in `Umbrella Corresponding Participant ID`")     
@@ -195,7 +201,8 @@ if __name__ == '__main__':
             tracker_list.append(umbrella)
             tracker_names.append("umbrella")
 
-        tracker_cleaned=[]
+        tracker_cleaned_short=[]
+        tracker_cleaned_long=[]
 
         for tracker_name, tracker_df in zip(tracker_names, tracker_list):
             tracker_df['indicator'] = tracker_name
@@ -204,25 +211,33 @@ if __name__ == '__main__':
                 for df in tracker_list:
                     df.drop(df.filter(regex=r'(!?)(MRN)').columns, axis=1)
 
-            for col in tracker_cols_of_interest:
+            for col in tracker_unique_cols:
                 source_cols = tracker_cols[tracker_cols['Cleaned Column Names'] == col]['Source Column Names']
                 if col not in tracker_df.columns:
                     tracker_df[col] = np.nan
                 for source_col in source_cols:
-                    try:
+                    if source_col in tracker_df.columns:
                         tracker_df[col] = tracker_df[col].fillna(tracker_df[source_col])
-                    except:
-                        print(f"Value Error: {col} not in {tracker_name}")
-                        continue
-            tracker_cleaned.append(tracker_df.loc[:, tracker_cols_of_interest].copy())
+                                   
+            tracker_cleaned_long.append(tracker_df.loc[:, tracker_unique_cols].copy())
+
+
+            for col in tracker_keep_cols:
+                source_cols = tracker_cols[tracker_cols['Cleaned Column Names'] == col]['Source Column Names']
+                if col not in tracker_df.columns:
+                    tracker_df[col] = np.nan
+                for source_col in source_cols:
+                    if source_col in tracker_df.columns:
+                        tracker_df[col] = tracker_df[col].fillna(tracker_df[source_col])
+                                   
+            tracker_cleaned_short.append(tracker_df.loc[:, tracker_keep_cols].copy())
 
         # if args.contact == False:
         #     for df in tracker_list:
         #         df.drop(df.filter(regex=r'(!?)(Name)').columns, axis=1)
         #  Functionality for later:
         tracker_combined = pd.concat(tracker_list)
-        tracker_cleaned_combined = pd.concat(tracker_cleaned)
-
+        tracker_cleaned_combined = pd.concat(tracker_cleaned_short)
         # DEAL WITH ROBIN AND DOVE LATER!
         # Also missing primary SHIELD info
 
@@ -233,7 +248,8 @@ if __name__ == '__main__':
             processing_cleaned.to_excel(writer, sheet_name='Processing Short-Form')
             intake.to_excel(writer , sheet_name='Intake Info')
             processing.to_excel(writer , sheet_name='DSCF Info')
-            for tracker_name, tracker_df in zip(tracker_names, tracker_list):
+            tracker_cleaned_combined.to_excel(writer , sheet_name='Tracker compiled')
+            for tracker_name, tracker_df in zip(tracker_names, tracker_cleaned_long):
                 if tracker_df.shape[0] != 0:
                     tracker_df.to_excel(writer, sheet_name=tracker_name)
         print('exported to:', outfile)
