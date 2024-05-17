@@ -149,7 +149,7 @@ if __name__ == '__main__':
     else:
         partID = ID_values
         intake = helpers.query_intake(include_research=True).query("@partID in `participant_id`")
-        samples = intake['sample_id'].to_list()
+        samples = intake.reset_index()['sample_id'].to_list()
     
     
     processing = helpers.query_dscf(sid_list=samples)
