@@ -20,7 +20,8 @@ def parse_input():
                        [sg.Text("Password"), sg.Input(key='password', password_char='*')],
                        [sg.Submit(), sg.Cancel()]]
 
-    layout_main = [[sg.Text('Sample ID Cohort Consolidator: SICC')],
+    layout_main = [[sg.Text('ID Cohort Consolidator: SICC')],
+            [sg.Radio('Samples?', 'RADIO5', enable_events=True, key='samples', default=True), sg.Radio('Participants?', 'RADIO5', enable_events=True, key='participants')],
             [sg.Radio('External File?', 'RADIO1', enable_events=True, key='Infile', default=True), sg.Radio('Text List?', 'RADIO1', enable_events=True, key='Text_list'), sg.Checkbox('Clinical Compliant?', enable_events=True, key='clinical')],
             [sg.Checkbox('MRN', disabled=True, visible=False, key='MRN'), sg.Checkbox('Tracker Info', enable_events=True, disabled=True, visible=False, key='tracker'), sg.Checkbox("Contact info", disabled=True, visible=False, key="contact")],
             [sg.Checkbox("All", enable_events=True, visible=False, key='all_trackers' ), sg.Checkbox('Umbrella Info', disabled=True, visible=False, key='umbrella'), sg.Checkbox('Paris Info', disabled=True, visible=False, key='paris'),
@@ -28,8 +29,8 @@ def parse_input():
             [sg.Checkbox('titan Info', disabled=True, visible=False, key='titan'), sg.Checkbox('GAEA Info', disabled=True, visible=False, key='gaea'), sg.Checkbox('ROBIN Info', disabled=True, visible=False, key='robin'),\
                 sg.Checkbox('APOLLO Info', disabled=True, visible=False, key='apollo'), sg.Checkbox('DOVE Info', disabled=True, visible=False, key='dove')],
             [sg.Text('File\nName', size=(9, 2), key='filepath_text'), sg.Input(key='filepath'), sg.FileBrowse(key='filepath_browse')],
-            [sg.Text('Sheet\nName', size=(9, 2), key='sheetname_text'), sg.Input(key='sheetname')], [sg.Text("Sample ID", size=(9,2), key='sampleid_text'), sg.Input(default_text="Sample ID", key='sampleid')],
-            [sg.Text('Sample\nList', size=(9,2), key='sample_list_text', visible=False), sg.Multiline(key="sample_list", disabled=True, size=(40,10), visible=False)],
+            [sg.Text('Sheet\nName', size=(9, 2), key='sheetname_text'), sg.Input(key='sheetname')], [sg.Text("ID Column", size=(9,2), key='ID_column_text'), sg.Input(default_text="Sample ID", key='ID_column')],
+            [sg.Text('ID\nList', size=(9,2), key='ID_list_text', visible=False), sg.Multiline(key="ID_list", disabled=True, size=(40,10), visible=False)],
             [sg.Text('Outfile Name'), sg.Input(key='outfilename')],                  
             [sg.Submit(), sg.Cancel(), sg.Checkbox('Test?', disabled=False, visible=True, key='test')]]
 
@@ -38,26 +39,30 @@ def parse_input():
 
     while x == True:
         event_main, values = window_main.read()
+        if event_main == 'participants':
+            window_main['ID_column'].update(value="Particiant ID")
+        if event_main == 'samples':
+            window_main['ID_column'].update(value="Sample ID")
         if event_main == 'Text_list':
             window_main['filepath'].update(disabled=True, visible=False)
             window_main['filepath_text'].update(visible=False)
             window_main['filepath_browse'].update(disabled=True, visible=False)
             window_main['sheetname'].update(disabled=True, visible=False)
             window_main['sheetname_text'].update(visible=False)
-            window_main['sampleid'].update(disabled=True, visible=False)
-            window_main['sampleid_text'].update(visible=False)
-            window_main['sample_list'].update(disabled=False, visible=True)
-            window_main['sample_list_text'].update(visible=True)
+            window_main['ID_column'].update(disabled=True, visible=False)
+            window_main['ID_column_text'].update(visible=False)
+            window_main['ID_list'].update(disabled=False, visible=True)
+            window_main['ID_list_text'].update(visible=True)
         elif event_main == 'Infile':
             window_main['filepath'].update(disabled=False, visible=True)
             window_main['filepath_text'].update(visible=True)
             window_main['filepath_browse'].update(disabled=False, visible=True)
             window_main['sheetname'].update(disabled=False, visible=True)
             window_main['sheetname_text'].update(visible=True)
-            window_main['sampleid'].update(disabled=False, visible=True)
-            window_main['sampleid_text'].update(visible=True)
-            window_main['sample_list'].update(disabled=True, visible=False)
-            window_main['sample_list_text'].update(visible=False)
+            window_main['ID_column'].update(disabled=False, visible=True)
+            window_main['ID_column_text'].update(visible=True)
+            window_main['ID_list'].update(disabled=True, visible=False)
+            window_main['ID_list_text'].update(visible=False)
         elif event_main == 'clinical':
             if check =='Validated':
                 if window_main['clinical'].get() == True:
@@ -131,15 +136,21 @@ if __name__ == '__main__':
     #    pass
 
     if args.Text_list == True:
-        samples=re.split(r'\r?\n', args.sample_list)
+        ID_values=re.split(r'\r?\n', args.ID_list)
     
     if args.Infile == True:
-        sample_list = pd.read_excel(args.filepath, sheet_name=args.sheetname)
-        samples=sample_list[args.sampleid].tolist()
+        ID_list = pd.read_excel(args.filepath, sheet_name=args.sheetname)
+        samples=ID_list[args.ID_column].tolist()
     
-    intake = helpers.query_intake(include_research=True).query("@samples in `sample_id`")
+    if args.samples == True:
+        samples = ID_values
+        intake = helpers.query_intake(include_research=True).query("@samples in `sample_id`")
+        partID = intake['participant_id'].to_list()
+    else:
+        partID = ID_values
+        intake = helpers.query_intake(include_research=True).query("@partID in `participant_id`")
+        samples = intake['sample_id'].to_list()
     
-    partID = intake['participant_id'].to_list()
     
     processing = helpers.query_dscf(sid_list=samples)
 
