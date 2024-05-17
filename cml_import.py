@@ -68,11 +68,12 @@ if __name__ == '__main__':
     boxes_to_delete = []
 
     for sheet_name in nps_data.sheet_names:
-        df = pd.read_excel(nps_data, sheet_name=sheet_name)
-        transformed_data, box_name, tube_count = transform_data(sheet_name, df)
-        if transformed_data:
-            all_data.extend(transformed_data)
-            boxes_to_delete.append((box_name, tube_count))
+        if 'cml' in sheet_name.lower():
+            df = pd.read_excel(nps_data, sheet_name=sheet_name)
+            transformed_data, box_name, tube_count = transform_data(sheet_name, df)
+            if transformed_data:
+                all_data.extend(transformed_data)
+                boxes_to_delete.append((box_name, tube_count))
 
     output_df = pd.DataFrame(all_data)
     output_file_path = os.path.join(util.proc, f'cml_fp_upload_{today_date}.xlsx')
