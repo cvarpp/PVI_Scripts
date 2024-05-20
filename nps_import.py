@@ -19,22 +19,41 @@ def transform_data(sheet_name, df):
     
     df = df.dropna(subset=['sample id'])
 
-    if 'ff' in sheet_name.lower():
-        box_type = 'FF'
-    elif 'lab' in sheet_name.lower():
-        box_type = 'Lab'
+    if 'psp' in sheet_name.lower():
+        box_group = 'PSP'
+        if 'ff' in sheet_name.lower():
+            box_type = 'FF'
+        elif 'lab' in sheet_name.lower():
+            box_type = 'Lab'
+        else:
+            print(f"Sheet '{sheet_name}' does not contain 'ff' or 'lab'. Skipping...")
+            return [], "", 0
+        match = re.search(r'\d+', sheet_name)
+        if match:
+            number = match.group()
+            box_name = f"{box_group} NPS {box_type} {number}"
+        else:
+            print(f"No number found in sheet '{sheet_name}'. Skipping...")
+            return [], "", 0
+    elif 'cml' in sheet_name.lower():
+        box_group = 'CML'
+        if 'a' in sheet_name.lower():
+            box_type = 'A'
+        elif 'b' in sheet_name.lower():
+            box_type = 'B'
+        else:
+            print(f"Sheet '{sheet_name}' does not contain 'A' or 'B'. Skipping...")
+            return [], "", 0
+        match = re.search(r'\d+', sheet_name)
+        if match:
+            number = match.group()
+            box_name = f"{box_group} NPS {number}{box_type}"
+        else:
+            print(f"No number found in sheet '{sheet_name}'. Skipping...")
+            return [], "", 0
     else:
-        print(f"Sheet '{sheet_name}' does not contain 'ff' or 'lab'. Skipping...")
+        print(f"Sheet '{sheet_name}' does not contain 'PSP' or 'CML'. Skipping...")
         return [], "", 0
-    
-    match = re.search(r'\d+', sheet_name)
-    if match:
-        number = match.group()
-    else:
-        print(f"No number found in sheet '{sheet_name}'. Skipping...")
-        return [], "", 0
-
-    box_name = f"PSP_NPS_{box_type}_{number}"
 
     if df['sample id'].duplicated().any():
         print(f"Duplicate 'Sample ID' found in box: {box_name}. Skipping...")
@@ -46,7 +65,7 @@ def transform_data(sheet_name, df):
             'Name': row['sample id'],
             'Sample ID': row['sample id'],
             'Sample Type': row.get('sample type', ''),
-            'Freezer': 'Temporary PSP NPS',
+            'Freezer': 'Temporary ' + box_group + ' NPS',
             'Level1': 'freezer_nps',
             'Level2': 'shelf_nps',
             'Level3': 'rack_nps',
@@ -58,30 +77,43 @@ def transform_data(sheet_name, df):
     return transformed_rows, box_name, len(transformed_rows)
 
 if __name__ == '__main__':
-    argParser = argparse.ArgumentParser(description='FP upload for PSP NPS box')
+    argParser = argparse.ArgumentParser(description='FP upload for PSP NPS and CML NPS box')
     args = argParser.parse_args()
 
     today_date = datetime.now().strftime("%Y.%m.%d")
-    nps_data = pd.ExcelFile(os.path.join(util.psp, 'NPS Upload.xlsx'))
+    nps_data = pd.ExcelFile(os.path.join(util.proc, 'New Import Sheet.xlsx'))
 
-    all_data = []
+    psp_data = []
+    cml_data = []
     boxes_to_delete = []
 
     for sheet_name in nps_data.sheet_names:
         df = pd.read_excel(nps_data, sheet_name=sheet_name)
         transformed_data, box_name, tube_count = transform_data(sheet_name, df)
         if transformed_data:
-            all_data.extend(transformed_data)
+            if 'PSP' in box_name:
+                psp_data.extend(transformed_data)
+            elif 'CML' in box_name:
+                cml_data.extend(transformed_data)
             boxes_to_delete.append((box_name, tube_count))
 
-    output_df = pd.DataFrame(all_data)
-    output_file_path = os.path.join(util.psp, f'nps_fp_upload_{today_date}.xlsx')
+    output_file_path = os.path.join(util.proc, f'psp_cml_nps_fp_upload_{today_date}.xlsx')
     with pd.ExcelWriter(output_file_path, engine='xlsxwriter') as writer:
-        output_df.to_excel(writer, index=False, sheet_name='PSP_NPS_Upload')
-        boxes_to_delete_df = pd.DataFrame(boxes_to_delete, columns=['Box Name', 'Tube Count'])
-        boxes_to_delete_df.to_excel(writer, index=False, sheet_name='Box to Delete')
+        if psp_data:
+            pd.DataFrame(psp_data).to_excel(writer, index=False, sheet_name='PSP NPS Upload')
+        if cml_data:
+            pd.DataFrame(cml_data).to_excel(writer, index=False, sheet_name='CML NPS Upload')
+        if boxes_to_delete:
+            pd.DataFrame(boxes_to_delete, columns=['Box Name', 'Tube Count']).to_excel(writer, index=False, sheet_name='Box to Delete')
     
     print(f"Output saved to {output_file_path}.")
     print("Boxes to upload:")
-    for box_name in output_df['Box'].unique():
-        print(box_name)
+    if psp_data:
+        print("PSP Boxes:")
+        for box_name in pd.DataFrame(psp_data)['Box'].unique():
+            print(box_name)
+    if cml_data:
+        print("CML Boxes:")
+        for box_name in pd.DataFrame(cml_data)['Box'].unique():
+            print(box_name)
+            
