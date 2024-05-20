@@ -7,7 +7,7 @@ import util
 import helpers
 import PySimpleGUI as sg
 from copy import deepcopy
-
+from datetime import date
 #%%
 
 def parse_input():
@@ -26,8 +26,10 @@ def parse_input():
             [sg.Checkbox('MRN', disabled=True, visible=False, key='MRN'), sg.Checkbox('Tracker Info', enable_events=True, disabled=True, visible=False, key='tracker'), sg.Checkbox("Contact info", disabled=True, visible=False, key="contact")],
             [sg.Checkbox("All", enable_events=True, visible=False, key='all_trackers' ), sg.Checkbox('Umbrella Info', disabled=True, visible=False, key='umbrella'), sg.Checkbox('Paris Info', disabled=True, visible=False, key='paris'),
                 sg.Checkbox('CRP Info', disabled=True, visible=False, key='crp'), sg.Checkbox('MARS Info', disabled=True, visible=False, key='mars')], 
-            [sg.Checkbox('titan Info', disabled=True, visible=False, key='titan'), sg.Checkbox('GAEA Info', disabled=True, visible=False, key='gaea'), sg.Checkbox('ROBIN Info', disabled=True, visible=False, key='robin'),\
+            
+            [sg.Checkbox('TITAN Info', disabled=True, visible=False, key='titan'), sg.Checkbox('GAEA Info', disabled=True, visible=False, key='gaea'), sg.Checkbox('ROBIN Info', disabled=True, visible=False, key='robin'),\
                 sg.Checkbox('APOLLO Info', disabled=True, visible=False, key='apollo'), sg.Checkbox('DOVE Info', disabled=True, visible=False, key='dove')],
+            
             [sg.Text('File\nName', size=(9, 2), key='filepath_text'), sg.Input(key='filepath'), sg.FileBrowse(key='filepath_browse')],
             [sg.Text('Sheet\nName', size=(9, 2), key='sheetname_text'), sg.Input(key='sheetname')], [sg.Text("ID Column", size=(9,2), key='ID_column_text'), sg.Input(default_text="Sample ID", key='ID_column')],
             [sg.Text('ID\nList', size=(9,2), key='ID_list_text', visible=False), sg.Multiline(key="ID_list", disabled=True, size=(40,10), visible=False)],
@@ -130,17 +132,19 @@ def parse_input():
 if __name__ == '__main__':
     args = parse_input()
 
-#%%""
-    #if args.test == True:
-        #function to be made later
-    #    pass
-
+#%%
+    if args.test == True:
+        args.filepath = util.script_folder + 'data/Sample ID Query Test data set.xlsx'
+        args.sheetname = "Sample Query Check"
+        date_today = date.today()
+        args.outfilename = f"Test Data {date_today}"
+    
     if args.Text_list == True:
         ID_values=re.split(r'\r?\n', args.ID_list)
     
     if args.Infile == True:
         ID_list = pd.read_excel(args.filepath, sheet_name=args.sheetname)
-        samples=ID_list[args.ID_column].tolist()
+        ID_values = ID_list[args.ID_column].tolist()
     
     if args.samples == True:
         samples = ID_values
@@ -150,7 +154,6 @@ if __name__ == '__main__':
         partID = ID_values
         intake = helpers.query_intake(include_research=True).query("@partID in `participant_id`")
         samples = intake.reset_index()['sample_id'].to_list()
-    
     
     processing = helpers.query_dscf(sid_list=samples)
 
@@ -214,10 +217,11 @@ if __name__ == '__main__':
 
         tracker_cleaned_short=[]
         tracker_cleaned_long=[]
+        tracker_copy=[]
 
         for tracker_name, tracker_df in zip(tracker_names, tracker_list):
             tracker_df['indicator'] = tracker_name
-            
+            tracker_copy.append(tracker_df.copy()) 
             if args.MRN == False:
                 for df in tracker_list:
                     df.drop(df.filter(regex=r'(!?)(MRN)').columns, axis=1)
@@ -260,7 +264,7 @@ if __name__ == '__main__':
             intake.to_excel(writer , sheet_name='Intake Info')
             processing.to_excel(writer , sheet_name='DSCF Info')
             tracker_cleaned_combined.to_excel(writer , sheet_name='Tracker compiled')
-            for tracker_name, tracker_df in zip(tracker_names, tracker_cleaned_long):
+            for tracker_name, tracker_df in zip(tracker_names, tracker_copy):
                 if tracker_df.shape[0] != 0:
                     tracker_df.to_excel(writer, sheet_name=tracker_name)
         print('exported to:', outfile)
