@@ -66,9 +66,9 @@ def transform_data(sheet_name, df):
             'Sample ID': row['sample id'],
             'Sample Type': row.get('sample type', ''),
             'Freezer': 'Temporary ' + box_group + ' NPS',
-            'Level1': 'freezer_nps',
-            'Level2': 'shelf_nps',
-            'Level3': 'rack_nps',
+            'Level1': 'freezer_nps'if box_group == 'PSP' else 'freezer_cml',
+            'Level2': 'shelf_nps' if box_group == 'PSP' else 'shelf_cml',
+            'Level3': 'rack_nps' if box_group == 'PSP' else 'rack_cml',
             'Box': box_name,
             'Position': pos_convert(idx),
             'ALIQUOT': row.get('aliquot', '')
