@@ -7,7 +7,7 @@ import util
 import helpers
 import PySimpleGUI as sg
 from copy import deepcopy
-from datetime import date
+from datetime import datetime
 #%%
 
 def parse_input():
@@ -136,8 +136,8 @@ if __name__ == '__main__':
     if args.test == True:
         args.filepath = util.script_folder + 'data/Sample ID Query Test data set.xlsx'
         args.sheetname = "Sample Query Check"
-        date_today = date.today()
-        args.outfilename = f"Test Data {date_today}"
+        date_today = datetime.today()
+        args.outfilename = f"Test Data {date_today:%Y-%m-%d %H%M}"
     
     if args.Text_list == True:
         ID_values=re.split(r'\r?\n', args.ID_list)
@@ -157,8 +157,9 @@ if __name__ == '__main__':
     
     processing = helpers.query_dscf(sid_list=samples)
 
-    dscf_cols = pd.read_excel(util.script_folder + 'data/DSCF Column Names.xlsx',sheet_name="DSCF Column Names", header=0)
-    tracker_cols = pd.read_excel(util.script_folder + 'data/DSCF Column Names.xlsx',sheet_name="Tracker Columns", header=0)
+    dscf_cols = pd.read_excel(util.script_folder + 'data/Column Names.xlsx',sheet_name="DSCF Column Names", header=0)
+    tracker_cols = pd.read_excel(util.script_folder + 'data/Column Names.xlsx',sheet_name="Tracker Columns", header=0)
+    contact_cols = pd.read_excel(util.script_folder + 'data/Column Names.xlsx',sheet_name="Contact Columns", header=0)
 
     dscf_cols_of_interest = dscf_cols['Cleaned Column Names'].unique()
     
@@ -194,22 +195,27 @@ if __name__ == '__main__':
             titan = pd.read_excel(util.titan_tracker, sheet_name="Tracker", header=4).query("@partID in `Umbrella Corresponding Participant ID`")     
             tracker_list.append(titan)
             tracker_names.append("titan")
+        
         if args.mars == True:
             mars =  pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name="Pt List", header=0).query("@partID in `Participant ID`")
             tracker_list.append(mars)        
             tracker_names.append("mars")
+        
         if args.crp == True:
             crp = pd.read_excel(util.crp_folder + "CRP Patient Tracker.xlsx", sheet_name="Tracker", header=4).query("@partID in `Participant ID`")
             tracker_list.append(crp)        
             tracker_names.append("crp")
+        
         if args.apollo == True:
             apollo = pd.read_excel(util.apollo_folder + "APOLLO Participant Tracker.xlsx", sheet_name="Summary", header=0).query("@partID in `Participant ID`")
             tracker_list.append(apollo)
             tracker_names.append("apollo")
+        
         if args.gaea == True:
             gaea = pd.read_excel(util.gaea_folder + "GAEA Tracker.xlsx", sheet_name="Summary", header=0).query("@partID in `Participant ID`")
             tracker_list.append(gaea)
             tracker_names.append("gaea")
+        
         if args.umbrella == True:
             umbrella = pd.read_excel(util.umbrella_tracker, sheet_name="Summary").query("@partID in `Subject ID`")
             tracker_list.append(umbrella)
@@ -218,6 +224,14 @@ if __name__ == '__main__':
         tracker_cleaned_short=[]
         tracker_cleaned_long=[]
         tracker_copy=[]
+
+        if args.contact == True:
+            pass
+        else:
+            for df in tracker_list:
+                drop_cols = [col for col in contact_cols['Column Names'] if col in df.columns]
+                if len(drop_cols) > 0:
+                    df.drop(drop_cols, axis=1, inplace=True)
 
         for tracker_name, tracker_df in zip(tracker_names, tracker_list):
             tracker_df['indicator'] = tracker_name
@@ -236,7 +250,6 @@ if __name__ == '__main__':
                                    
             tracker_cleaned_long.append(tracker_df.loc[:, tracker_unique_cols].copy())
 
-
             for col in tracker_keep_cols:
                 source_cols = tracker_cols[tracker_cols['Cleaned Column Names'] == col]['Source Column Names']
                 if col not in tracker_df.columns:
@@ -247,18 +260,23 @@ if __name__ == '__main__':
                                    
             tracker_cleaned_short.append(tracker_df.loc[:, tracker_keep_cols].copy())
 
-        # if args.contact == False:
-        #     for df in tracker_list:
-        #         df.drop(df.filter(regex=r'(!?)(Name)').columns, axis=1)
-        #  Functionality for later:
         tracker_combined = pd.concat(tracker_list)
         tracker_cleaned_combined = pd.concat(tracker_cleaned_short)
+
+        # Quick edit to ensure that there is not empty output columns in Small tracker info
+        # Revise later for a more elegant solution
+        
+        tracker_cleaned_combined.dropna(axis="columns", how="all", inplace=True)
+
         # DEAL WITH ROBIN AND DOVE LATER!
         # Also missing primary SHIELD info
 
 # %%
     if args.clinical == True:
-        outfile = util.sample_query + args.outfilename + '.xlsx'
+        if args.test == True:
+            outfile = util.sample_query + "Test Data/" + args.outfilename + ".xlsx"
+        else:
+            outfile = util.sample_query + args.outfilename + ".xlsx"
         with pd.ExcelWriter(outfile, engine='openpyxl') as writer:
             processing_cleaned.to_excel(writer, sheet_name='Processing Short-Form')
             intake.to_excel(writer , sheet_name='Intake Info')
@@ -269,7 +287,11 @@ if __name__ == '__main__':
                     tracker_df.to_excel(writer, sheet_name=tracker_name)
         print('exported to:', outfile)
     else:
-        outfile = util.tracking + 'Sample ID Query/' + args.outfilename + '.xlsx'
+        if args.Test == True:
+            outfile = util.sample_query + "Test Data/" + args.outfilename + "No Clinical.xlsx"
+        else:
+            outfile = util.tracking + 'Sample ID Query/' + args.outfilename + '.xlsx'
+
         with pd.ExcelWriter(outfile, engine='openpyxl') as writer:
             processing_cleaned.to_excel(writer, sheet_name='Processing Short-Form')
             intake.to_excel(writer, sheet_name='Intake Info')
