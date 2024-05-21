@@ -188,26 +188,31 @@ if __name__ == '__main__':
             paris_part2.drop('Subject ID', inplace=True, axis='columns')
 
             paris = pd.merge(pd.merge(paris_part1,paris_part2, on='Participant ID'),paris_part3, on='Participant ID')
+            paris.set_index('Participant ID', inplace=True)
             tracker_list.append(paris)
             tracker_names.append("paris")
 
         if args.titan == True:
             titan = pd.read_excel(util.titan_tracker, sheet_name="Tracker", header=4).query("@partID in `Umbrella Corresponding Participant ID`")     
+            titan.set_index("Umbrella Corresponding Participant ID", inplace=True)
             tracker_list.append(titan)
             tracker_names.append("titan")
         
         if args.mars == True:
             mars =  pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name="Pt List", header=0).query("@partID in `Participant ID`")
+            mars.set_index('Participant ID',inplace=True)            
             tracker_list.append(mars)        
             tracker_names.append("mars")
         
         if args.crp == True:
             crp = pd.read_excel(util.crp_folder + "CRP Patient Tracker.xlsx", sheet_name="Tracker", header=4).query("@partID in `Participant ID`")
+            crp.set_index('Participant ID',inplace=True)
             tracker_list.append(crp)        
             tracker_names.append("crp")
         
         if args.apollo == True:
             apollo = pd.read_excel(util.apollo_folder + "APOLLO Participant Tracker.xlsx", sheet_name="Summary", header=0).query("@partID in `Participant ID`")
+            apollo.set_index('Participant ID',inplace=True)
             tracker_list.append(apollo)
             tracker_names.append("apollo")
         
@@ -265,7 +270,7 @@ if __name__ == '__main__':
 
         # Quick edit to ensure that there is not empty output columns in Small tracker info
         # Revise later for a more elegant solution
-        
+
         tracker_cleaned_combined.dropna(axis="columns", how="all", inplace=True)
 
         # DEAL WITH ROBIN AND DOVE LATER!
@@ -287,7 +292,7 @@ if __name__ == '__main__':
                     tracker_df.to_excel(writer, sheet_name=tracker_name)
         print('exported to:', outfile)
     else:
-        if args.Test == True:
+        if args.test == True:
             outfile = util.sample_query + "Test Data/" + args.outfilename + "No Clinical.xlsx"
         else:
             outfile = util.tracking + 'Sample ID Query/' + args.outfilename + '.xlsx'
