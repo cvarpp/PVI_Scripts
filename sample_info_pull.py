@@ -188,6 +188,7 @@ if __name__ == '__main__':
             paris_part2.drop('Subject ID', inplace=True, axis='columns')
 
             paris = pd.merge(pd.merge(paris_part1,paris_part2, on='Participant ID'),paris_part3, on='Participant ID')
+            paris.drop(paris.filter(regex=r"(!?)Unnamed|MRN").columns, axis="columns", inplace=True)
             paris.set_index('Participant ID', inplace=True)
             tracker_list.append(paris)
             tracker_names.append("paris")
@@ -296,7 +297,6 @@ if __name__ == '__main__':
             outfile = util.sample_query + "Test Data/" + args.outfilename + "No Clinical.xlsx"
         else:
             outfile = util.tracking + 'Sample ID Query/' + args.outfilename + '.xlsx'
-
         with pd.ExcelWriter(outfile, engine='openpyxl') as writer:
             processing_cleaned.to_excel(writer, sheet_name='Processing Short-Form')
             intake.to_excel(writer, sheet_name='Intake Info')
