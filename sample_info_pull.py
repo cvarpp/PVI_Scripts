@@ -13,14 +13,14 @@ from datetime import datetime
 def parse_input():
     x = True
     check = ''
-    sg.theme('Dark Blue 17')
+    sg.theme('Dark Teal 12')
 
     layout_password = [[sg.Text("Clinical Access Check")],
                        [sg.Text("ID"),sg.Input(key='userid')],
                        [sg.Text("Password"), sg.Input(key='password', password_char='*')],
                        [sg.Submit(), sg.Cancel()]]
 
-    layout_main = [[sg.Text('ID Cohort Consolidator: SICC')],
+    layout_main = [[sg.Text('ID Cohort Consolidator: ICC')],
             [sg.Radio('Samples?', 'RADIO5', enable_events=True, key='samples', default=True), sg.Radio('Participants?', 'RADIO5', enable_events=True, key='participants')],
             [sg.Radio('External File?', 'RADIO1', enable_events=True, key='Infile', default=True), sg.Radio('Text List?', 'RADIO1', enable_events=True, key='Text_list'), sg.Checkbox('Clinical Compliant?', enable_events=True, key='clinical')],
             [sg.Checkbox('MRN', disabled=True, visible=False, key='MRN'), sg.Checkbox('Tracker Info', enable_events=True, disabled=True, visible=False, key='tracker'), sg.Checkbox("Contact info", disabled=True, visible=False, key="contact")],
@@ -37,7 +37,7 @@ def parse_input():
             [sg.Submit(), sg.Cancel(), sg.Checkbox('Test?', disabled=False, visible=True, key='test')]]
 
     study_keys = ['umbrella','paris','crp','mars','titan','gaea','robin','apollo','dove']
-    window_main = sg.Window('Sample Query', layout_main)
+    window_main = sg.Window('ID Info Pull', layout_main)
 
     while x == True:
         event_main, values = window_main.read()
@@ -79,7 +79,7 @@ def parse_input():
                     for study in study_keys:
                         window_main[study].update(visible=False)
             else:
-                window_password = sg.Window('SICC Login', deepcopy(layout_password))
+                window_password = sg.Window('ICC Login', deepcopy(layout_password))
                 event_password, values_password = window_password.read()
                 if event_password == 'Cancel':
                     window_main['clinical'].update(value=False)
