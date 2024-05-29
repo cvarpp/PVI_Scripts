@@ -18,11 +18,11 @@ def parse_input():
     layout_password = [[sg.Text("Clinical Access Check")],
                        [sg.Text("ID"),sg.Input(key='userid')],
                        [sg.Text("Password"), sg.Input(key='password', password_char='*')],
-                       [sg.Submit(), sg.Cancel()]]
+                       [sg.Button("Submit"), sg.Button("Cancel")]]
 
     layout_main = [[sg.Text('ID Cohort Consolidator: ICC')],
-            [sg.Radio('Samples?', 'RADIO5', enable_events=True, key='samples', default=True), sg.Radio('Participants?', 'RADIO5', enable_events=True, key='participants')],
-            [sg.Radio('External File?', 'RADIO1', enable_events=True, key='Infile', default=True), sg.Radio('Text List?', 'RADIO1', enable_events=True, key='Text_list'), sg.Checkbox('Clinical Compliant?', enable_events=True, key='clinical')],
+            [sg.Radio('Samples', 'RADIO5', enable_events=True, key='samples', default=True), sg.Radio('Participants', 'RADIO5', enable_events=True, key='participants')],
+            [sg.Radio('External File', 'RADIO1', enable_events=True, key='Infile', default=True), sg.Radio('Text List', 'RADIO1', enable_events=True, key='Text_list'), sg.Checkbox('Clinical Compliant', enable_events=True, key='clinical')],
             [sg.Checkbox('MRN', disabled=True, visible=False, key='MRN'), sg.Checkbox('Tracker Info', enable_events=True, disabled=True, visible=False, key='tracker'), sg.Checkbox("Contact info", disabled=True, visible=False, key="contact")],
             [sg.Checkbox("All", enable_events=True, visible=False, key='all_trackers' ), sg.Checkbox('Umbrella Info', disabled=True, visible=False, key='umbrella'), sg.Checkbox('Paris Info', disabled=True, visible=False, key='paris'),
                 sg.Checkbox('CRP Info', disabled=True, visible=False, key='crp'), sg.Checkbox('MARS Info', disabled=True, visible=False, key='mars')], 
@@ -34,18 +34,34 @@ def parse_input():
             [sg.Text('Sheet\nName', size=(9, 2), key='sheetname_text'), sg.Input(key='sheetname')], [sg.Text("ID Column", size=(9,2), key='ID_column_text'), sg.Input(default_text="Sample ID", key='ID_column')],
             [sg.Text('ID\nList', size=(9,2), key='ID_list_text', visible=False), sg.Multiline(key="ID_list", disabled=True, size=(40,10), visible=False)],
             [sg.Text('Outfile Name'), sg.Input(key='outfilename')],                  
-            [sg.Submit(), sg.Cancel(), sg.Checkbox('Test?', disabled=False, visible=True, key='test')]]
+            [sg.Button("Submit"), sg.Button("Cancel"), sg.Checkbox('Test', disabled=False, visible=True, key='test'), sg.Checkbox('Debug', disabled=False, visible=True, key='debug')]]
+
+    layout_clin_error = [[sg.Text('Clinical Compliance Error')],
+                         [sg.Text('Either you or the computer you are accessing does not have clinical files synced to it!')],
+                         [sg.Text('Please Ensure that clinical files are synced before attempting to access clinical information')],
+                         [sg.Button('Close')]]
 
     study_keys = ['umbrella','paris','crp','mars','titan','gaea','robin','apollo','dove']
     window_main = sg.Window('ID Info Pull', layout_main)
 
     while x == True:
+        
         event_main, values = window_main.read()
-        if event_main == 'participants':
+                
+        if event_main == "Cancel" or sg.WIN_CLOSED:
+            window_main.close()
+            x=False
+        
+        elif event_main == "Submit":
+            args = helpers.ValuesToClass(values)
+            window_main.close()
+            x=False
+
+        elif event_main == 'participants':
             window_main['ID_column'].update(value="Particiant ID")
-        if event_main == 'samples':
+        elif event_main == 'samples':
             window_main['ID_column'].update(value="Sample ID")
-        if event_main == 'Text_list':
+        elif event_main == 'Text_list':
             window_main['filepath'].update(disabled=True, visible=False)
             window_main['filepath_text'].update(visible=False)
             window_main['filepath_browse'].update(disabled=True, visible=False)
@@ -79,32 +95,48 @@ def parse_input():
                     for study in study_keys:
                         window_main[study].update(visible=False)
             else:
-                window_password = sg.Window('ICC Login', deepcopy(layout_password))
-                event_password, values_password = window_password.read()
-                if event_password == 'Cancel':
-                    window_main['clinical'].update(value=False)
-                    window_password.close()
-                elif event_password == sg.WIN_CLOSED:
-                    window_main['clinical'].update(value=False)
-                    window_password.close() 
-                elif event_password == 'Submit':
-                    check = helpers.corned_beef(values_password["userid"],values_password['password'])
-                    if check == "Validated":
-                        if window_main['clinical'].get() == True:
-                            window_main['MRN'].update(disabled=False, visible=True)
-                            window_main['tracker'].update(disabled=False, visible=True)
-                            window_main['contact'].update(disabled=False, visible=True)
-                        else:
-                            window_main['MRN'].update(disabled=True, visible=False, value = False)
-                            window_main['tracker'].update(disabled=True, visible=False, value = False)
-                            window_main['contact'].update(disabled=True, visible=False, value = False)
-                            window_main['all_trackers'].update(visible=False)
-                            for study in study_keys:
-                                window_main[study].update(visible=False)
-                        window_password.close()
-                    else:
+                try:
+                    paris_part3 = pd.read_excel(util.paris_tracker, sheet_name="Flu Vaccine Information", header=0).query("@partID in `Participant ID`")
+                    clinical_check="Valid"
+                except:
+                    clinical_check="Invalid"
+                
+                if clinical_check=="Valid":
+                    window_password = sg.Window('ICC Login', deepcopy(layout_password))
+                    event_password, values_password = window_password.read()
+                    if event_password == 'Cancel':
                         window_main['clinical'].update(value=False)
                         window_password.close()
+                    elif event_password == sg.WIN_CLOSED:
+                        window_main['clinical'].update(value=False)
+                        window_password.close() 
+                    elif event_password == 'Submit':
+                        check = helpers.corned_beef(values_password["userid"],values_password['password'])
+                        if check == "Validated":
+                            if window_main['clinical'].get() == True:
+                                window_main['MRN'].update(disabled=False, visible=True)
+                                window_main['tracker'].update(disabled=False, visible=True)
+                                window_main['contact'].update(disabled=False, visible=True)
+                            else:
+                                window_main['MRN'].update(disabled=True, visible=False, value = False)
+                                window_main['tracker'].update(disabled=True, visible=False, value = False)
+                                window_main['contact'].update(disabled=True, visible=False, value = False)
+                                window_main['all_trackers'].update(visible=False)
+                                for study in study_keys:
+                                    window_main[study].update(visible=False)
+                            window_password.close()
+                        else:
+                            window_main['clinical'].update(value=False)
+                            window_password.close()
+                else:
+                    window_main['clinical'].update(disabled=True, value=False)
+                    window_clin_error= sg.Window('ERROR', deepcopy(layout_clin_error))
+                    event_clin_error, value_clin_error = window_clin_error.read()
+                    
+                    if event_clin_error == 'Close' or sg.WIN_CLOSED:
+                        window_clin_error.close()
+
+
         elif event_main == 'tracker':
             if window_main['tracker'].get() == True:
                 window_main['all_trackers'].update(disabled=False, visible=True, value=True)
@@ -121,17 +153,14 @@ def parse_input():
             else:
                 for study in study_keys:
                     window_main[study].update(disabled=False)
-        elif event_main in ['Cancel', sg.WIN_CLOSED]:
-            quit()
-        elif event_main == "Submit":
-            args = helpers.ValuesToClass(values)
-            window_main.close()
-            x=False
+        
     return args
 
 if __name__ == '__main__':
-    args = parse_input()
-
+    try:
+        args = parse_input()
+    except:
+        quit()
 #%%
     if args.test == True:
         args.filepath = util.script_folder + 'data/Sample ID Query Test data set.xlsx'
@@ -161,8 +190,9 @@ if __name__ == '__main__':
     tracker_cols = pd.read_excel(util.script_folder + 'data/Column Names.xlsx',sheet_name="Tracker Columns", header=0)
     contact_cols = pd.read_excel(util.script_folder + 'data/Column Names.xlsx',sheet_name="Contact Columns", header=0)
 
-    dscf_cols_of_interest = dscf_cols['Cleaned Column Names'].unique()
-    
+    dscf_cols_of_interest = dscf_cols['Cleaned Column Names'].unique().tolist()
+    dscf_short_cols = dscf_cols[dscf_cols['short or debug'] == 'short']['Cleaned Column Names'].unique().tolist()
+
     tracker_keep_cols = tracker_cols[tracker_cols['Keep Drop Unique'] == 'keep']['Cleaned Column Names'].unique()
     tracker_unique_cols = tracker_cols[tracker_cols['Keep Drop Unique'] == 'unique']['Cleaned Column Names'].unique()
 
@@ -172,8 +202,20 @@ if __name__ == '__main__':
             processing[col] = np.nan
         for source_col in source_cols:
             processing[col] = processing[col].fillna(processing[source_col])
-    processing_cleaned = processing.loc[:, dscf_cols_of_interest].copy()
     
+    processing['compiled comments'] = processing.filter(regex=r"(!?)Comments")[processing.filter(regex=r"(!?)Comments").columns.tolist()].astype(str).stack().groupby(level=0).agg(" - ".join)
+    processing['compiled initials'] = processing.filter(regex=r"(!?)proc_inits")[processing.filter(regex=r"(!?)proc_inits").columns.tolist()].astype(str).stack().groupby(level=0).agg(" - ".join)
+
+    dscf_cols_of_interest.extend(['compiled comments', 'compiled initials'])
+    dscf_short_cols.append('compiled comments')
+
+    processing_debug = processing.loc[:, dscf_cols_of_interest].copy()
+    processing_short = processing.loc[:, dscf_short_cols].copy()
+    
+    comment_drop = processing_short.filter(regex=r"(!?)Comments").columns.tolist()
+
+    processing_short.drop(comment_drop, axis=1, inplace=True)
+
     if args.tracker == True:
         tracker_list=[]
         tracker_names=[]
@@ -182,7 +224,6 @@ if __name__ == '__main__':
             
             paris_part1 = pd.read_excel(util.paris_tracker, sheet_name="Subgroups", header=4).query("@partID in `Participant ID`")
             paris_part2 = pd.read_excel(util.paris_tracker, sheet_name="Participant details", header=0).query("@partID in `Subject ID`")
-            paris_part3 = pd.read_excel(util.paris_tracker, sheet_name="Flu Vaccine Information", header=0).query("@partID in `Participant ID`")
 
             paris_part2['Participant ID'] = paris_part2['Subject ID']
             paris_part2.drop('Subject ID', inplace=True, axis='columns')
@@ -253,7 +294,7 @@ if __name__ == '__main__':
                 for source_col in source_cols:
                     if source_col in tracker_df.columns:
                         tracker_df[col] = tracker_df[col].fillna(tracker_df[source_col])
-                                   
+
             tracker_cleaned_long.append(tracker_df.loc[:, tracker_unique_cols].copy())
 
             for col in tracker_keep_cols:
@@ -263,7 +304,7 @@ if __name__ == '__main__':
                 for source_col in source_cols:
                     if source_col in tracker_df.columns:
                         tracker_df[col] = tracker_df[col].fillna(tracker_df[source_col])
-                                   
+
             tracker_cleaned_short.append(tracker_df.loc[:, tracker_keep_cols].copy())
 
         tracker_combined = pd.concat(tracker_list)
@@ -284,11 +325,16 @@ if __name__ == '__main__':
         else:
             outfile = util.sample_query + args.outfilename + ".xlsx"
         with pd.ExcelWriter(outfile, engine='openpyxl') as writer:
-            processing_cleaned.to_excel(writer, sheet_name='Processing Short-Form')
+            
+            if args.debug==True:
+                processing_debug.to_excel(writer, sheet_name='Processing Debug')
+            
+            processing_short.to_excel(writer, sheet_name='Processing Short-Form')
             intake.to_excel(writer , sheet_name='Intake Info')
             processing.to_excel(writer , sheet_name='DSCF Info')
             tracker_cleaned_combined.to_excel(writer , sheet_name='Tracker compiled')
             for tracker_name, tracker_df in zip(tracker_names, tracker_copy):
+                tracker_name.upper()
                 if tracker_df.shape[0] != 0:
                     tracker_df.to_excel(writer, sheet_name=tracker_name)
         print('exported to:', outfile)
@@ -298,7 +344,10 @@ if __name__ == '__main__':
         else:
             outfile = util.tracking + 'Sample ID Query/' + args.outfilename + '.xlsx'
         with pd.ExcelWriter(outfile, engine='openpyxl') as writer:
-            processing_cleaned.to_excel(writer, sheet_name='Processing Short-Form')
+            if args.debug==True:
+                processing_debug.to_excel(writer, sheet_name='Processing Debug')
+
+            processing_short.to_excel(writer, sheet_name='Processing Short-Form')
             intake.to_excel(writer, sheet_name='Intake Info')
             processing.to_excel(writer, sheet_name='DSCF Info')
         print('exported to:', outfile)
