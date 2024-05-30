@@ -77,27 +77,22 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                     sheet_data.iloc[7:25, 7] = assigned_sample_ids
                     sheet_data.iloc[1:19, 12] = assigned_sample_ids
                     sheet_data.iloc[1:19, 13] = [box for box in range(box_start, box_end + 1) for _ in range(3)]
-                if '1-Box Top round1' in sheet_name:
-                    sheet_data.iloc[:6, 7] = assigned_sample_ids[:6]
-                    sheet_data.iloc[:90, 2] = [sid for sid in assigned_sample_ids[:6] for _ in range(15)]
-                if '2-Box Side round1' in sheet_name:
-                    sheet_data.iloc[:6, 7] = assigned_sample_ids[:6]
-                    sheet_data.iloc[:90, 11] = [sid for sid in assigned_sample_ids[:6] for _ in range(15)]
-                    sheet_data[2] = sheet_data[12] + " " + sheet_data[11]
-                if '3-Box Top round2' in sheet_name:
-                    sheet_data.iloc[:6, 7] = assigned_sample_ids[6:12]
-                    sheet_data.iloc[:90, 2] = [sid for sid in assigned_sample_ids[6:12] for _ in range(15)]
-                if '4-Box Side round2' in sheet_name:
-                    sheet_data.iloc[:6, 7] = assigned_sample_ids[6:12]
-                    sheet_data.iloc[:90, 11] = [sid for sid in assigned_sample_ids[6:12] for _ in range(15)]
-                    sheet_data[2] = sheet_data[12] + " " + sheet_data[11]
-                if '5-Box Top round3' in sheet_name:
-                    sheet_data.iloc[:6, 7] = assigned_sample_ids[12:]
-                    sheet_data.iloc[:90, 2] = [sid for sid in assigned_sample_ids[12:] for _ in range(15)]
-                if '6-Box Side round3' in sheet_name:
-                    sheet_data.iloc[:6, 7] = assigned_sample_ids[12:]
-                    sheet_data.iloc[:90, 11] = [sid for sid in assigned_sample_ids[12:] for _ in range(15)]
-                    sheet_data[2] = sheet_data[12] + " " + sheet_data[11]
+                
+                for round_num in range(1, 4):
+                    top_sheet = f'{round_num * 2 - 1}-Box Top round{round_num}'
+                    side_sheet = f'{round_num * 2}-Box Side round{round_num}'
+                    idx_start = (round_num - 1) * 6
+                    idx_end = round_num * 6
+                    
+                    if top_sheet in sheet_name:
+                        sheet_data.iloc[:6, 7] = assigned_sample_ids[idx_start:idx_end]
+                        sheet_data.iloc[:90, 2] = [sid for sid in assigned_sample_ids[idx_start:idx_end] for _ in range(15)]
+                    
+                    if side_sheet in sheet_name:
+                        sheet_data.iloc[:6, 7] = assigned_sample_ids[idx_start:idx_end]
+                        sheet_data.iloc[:90, 11] = [sid for sid in assigned_sample_ids[idx_start:idx_end] for _ in range(15)]
+                        sheet_data[2] = sheet_data[12] + " " + sheet_data[11]
+                
                 if '7-Kits' in sheet_name:
                     sheet_data.iloc[:90, 1] = [sid for i in range(0, len(assigned_sample_ids), 2) for sid in [assigned_sample_ids[i], assigned_sample_ids[i + 1]] * 5]
 
@@ -172,7 +167,7 @@ if __name__ == '__main__':
                 continue
             
             # Output
-            workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} Round {round_num + 1} by scripts"
+            workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} Round {round_num + 1} TESTING"
             template_path = os.path.join(util.tube_print, 'Future Sheets', template_file)
             output_path = os.path.join(util.tube_print, output_folder, f"{workbook_name}.xlsx")
 
