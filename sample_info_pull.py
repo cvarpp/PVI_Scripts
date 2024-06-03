@@ -41,6 +41,11 @@ def parse_input():
                          [sg.Text('Please Ensure that clinical files are synced before attempting to access clinical information')],
                          [sg.Button('Close')]]
 
+    layout_pass_error = [[sg.Text('User name/Password Error')],
+                         [sg.Text('You have entered an incorrect ID or Password')],
+                         [sg.Text('Please Try Again')],
+                         [sg.Button('Close')]]
+
     study_keys = ['umbrella','paris','crp','mars','titan','gaea','robin','apollo','dove']
     window_main = sg.Window('ID Info Pull', layout_main)
 
@@ -96,7 +101,7 @@ def parse_input():
                         window_main[study].update(visible=False)
             else:
                 try:
-                    paris_part3 = pd.read_excel(util.paris_tracker, sheet_name="Flu Vaccine Information", header=0).query("@partID in `Participant ID`")
+                    paris_check = pd.read_excel(util.paris_tracker, sheet_name="Flu Vaccine Information", header=0)
                     clinical_check="Valid"
                 except:
                     clinical_check="Invalid"
@@ -128,9 +133,14 @@ def parse_input():
                         else:
                             window_main['clinical'].update(value=False)
                             window_password.close()
+                            window_pass_error = sg.Window('ERROR', deepcopy(layout_pass_error))
+                            event_pass_error, value_pass_error = window_pass_error.read()
+                            window_password.close()
+                            if event_pass_error == 'Close' or sg.WIN_CLOSED:
+                                window_pass_error.close()
                 else:
                     window_main['clinical'].update(disabled=True, value=False)
-                    window_clin_error= sg.Window('ERROR', deepcopy(layout_clin_error))
+                    window_clin_error= sg.Window('ERROR', layout_clin_error)
                     event_clin_error, value_clin_error = window_clin_error.read()
                     
                     if event_clin_error == 'Close' or sg.WIN_CLOSED:
@@ -224,7 +234,7 @@ if __name__ == '__main__':
             
             paris_part1 = pd.read_excel(util.paris_tracker, sheet_name="Subgroups", header=4).query("@partID in `Participant ID`")
             paris_part2 = pd.read_excel(util.paris_tracker, sheet_name="Participant details", header=0).query("@partID in `Subject ID`")
-
+            paris_part3 = paris_check.query("@partID in `Participant ID`")
             paris_part2['Participant ID'] = paris_part2['Subject ID']
             paris_part2.drop('Subject ID', inplace=True, axis='columns')
 
