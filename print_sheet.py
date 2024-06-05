@@ -154,7 +154,7 @@ if __name__ == '__main__':
                 'SERONET': ('Seronet Full', 'SERONET FULL/SERONET FULL Template.xlsx', 'Future Sheets/SERONET FULL'),
                 'SERUM': ('Serum', 'SERUM/SERUM Template.xlsx', 'Future Sheets/SERUM'),
                 'STANDARD': ('Standard', 'STANDARD/STANDARD Template.xlsx', 'Future Sheets/STANDARD'),
-                'SERONETPBMC': ('Seronet Full', 'SERONET FULL/SERONET FULL PBMC Template.xlsx', 'Future Sheets/SERONET FULL'),
+                'SERONETPBMC': ('Seronet Full', 'SERONET FULL/SERONET PBMC Template.xlsx', 'Future Sheets/SERONET FULL'),
                 'STANDARDPBMC': ('Standard', 'STANDARD/STANDARD PBMC Template.xlsx', 'Future Sheets/STANDARD')
             }
             sheet_name, template_file, output_folder = print_type_mapping[print_type]
