@@ -63,7 +63,7 @@ def parse_input():
             x=False
 
         elif event_main == 'participants':
-            window_main['ID_column'].update(value="Particiant ID")
+            window_main['ID_column'].update(value="Participant ID")
         elif event_main == 'samples':
             window_main['ID_column'].update(value="Sample ID")
         elif event_main == 'Text_list':
