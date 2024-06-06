@@ -8,10 +8,10 @@ import helpers
 import PySimpleGUI as sg
 from copy import deepcopy
 from datetime import datetime
+import os
 #%%
 
 def parse_input():
-    x = True
     check = ''
     sg.theme('Dark Teal 12')
 
@@ -31,37 +31,24 @@ def parse_input():
                 sg.Checkbox('APOLLO Info', disabled=True, visible=False, key='apollo'), sg.Checkbox('DOVE Info', disabled=True, visible=False, key='dove')],
             
             [sg.Text('File\nName', size=(9, 2), key='filepath_text'), sg.Input(key='filepath'), sg.FileBrowse(key='filepath_browse')],
-            [sg.Text('Sheet\nName', size=(9, 2), key='sheetname_text'), sg.Input(key='sheetname')], [sg.Text("ID Column", size=(9,2), key='ID_column_text'), sg.Input(default_text="Sample ID", key='ID_column')],
+            [sg.Text('Sheet\nName', size=(9, 2), key='sheetname_text'), sg.Input(key='sheetname', default_text='Sheet1')], [sg.Text("ID Column", size=(9,2), key='ID_column_text'), sg.Input(default_text="Sample ID", key='ID_column')],
             [sg.Text('ID\nList', size=(9,2), key='ID_list_text', visible=False), sg.Multiline(key="ID_list", disabled=True, size=(40,10), visible=False)],
             [sg.Text('Outfile Name'), sg.Input(key='outfilename')],                  
             [sg.Button("Submit"), sg.Button("Cancel"), sg.Checkbox('Test', disabled=False, visible=True, key='test'), sg.Checkbox('Debug', disabled=False, visible=True, key='debug')]]
 
-    layout_clin_error = [[sg.Text('Clinical Compliance Error')],
-                         [sg.Text('Either you or the computer you are accessing does not have clinical files synced to it!')],
-                         [sg.Text('Please Ensure that clinical files are synced before attempting to access clinical information')],
-                         [sg.Button('Close')]]
-
-    layout_pass_error = [[sg.Text('User name/Password Error')],
-                         [sg.Text('You have entered an incorrect ID or Password')],
-                         [sg.Text('Please Try Again')],
-                         [sg.Button('Close')]]
-
     study_keys = ['umbrella','paris','crp','mars','titan','gaea','robin','apollo','dove']
     window_main = sg.Window('ID Info Pull', layout_main)
 
-    while x == True:
-        
+    while True:
         event_main, values = window_main.read()
                 
-        if event_main == "Cancel" or sg.WIN_CLOSED:
+        if event_main == sg.WIN_CLOSED:
+            break
+        elif event_main == "Cancel":
             window_main.close()
-            x=False
-        
         elif event_main == "Submit":
             args = helpers.ValuesToClass(values)
             window_main.close()
-            x=False
-
         elif event_main == 'participants':
             window_main['ID_column'].update(value="Participant ID")
         elif event_main == 'samples':
@@ -100,21 +87,14 @@ def parse_input():
                     for study in study_keys:
                         window_main[study].update(visible=False)
             else:
-                try:
-                    paris_check = pd.read_excel(util.paris_tracker, sheet_name="Flu Vaccine Information", header=0)
-                    clinical_check="Valid"
-                except:
-                    clinical_check="Invalid"
-                
-                if clinical_check=="Valid":
+                if os.path.exists(util.paris_tracker):
                     window_password = sg.Window('ICC Login', deepcopy(layout_password))
                     event_password, values_password = window_password.read()
-                    if event_password == 'Cancel':
+                    if event_password == sg.WIN_CLOSED:
+                        window_main['clinical'].update(value=False)
+                    elif event_password == 'Cancel':
                         window_main['clinical'].update(value=False)
                         window_password.close()
-                    elif event_password == sg.WIN_CLOSED:
-                        window_main['clinical'].update(value=False)
-                        window_password.close() 
                     elif event_password == 'Submit':
                         check = helpers.corned_beef(values_password["userid"],values_password['password'])
                         if check == "Validated":
@@ -133,20 +113,10 @@ def parse_input():
                         else:
                             window_main['clinical'].update(value=False)
                             window_password.close()
-                            window_pass_error = sg.Window('ERROR', deepcopy(layout_pass_error))
-                            event_pass_error, value_pass_error = window_pass_error.read()
-                            window_password.close()
-                            if event_pass_error == 'Close' or sg.WIN_CLOSED:
-                                window_pass_error.close()
+                            sg.popup_ok("Incorrect username or password. Please try again.", title="", font=14)
                 else:
                     window_main['clinical'].update(disabled=True, value=False)
-                    window_clin_error= sg.Window('ERROR', layout_clin_error)
-                    event_clin_error, value_clin_error = window_clin_error.read()
-                    
-                    if event_clin_error == 'Close' or sg.WIN_CLOSED:
-                        window_clin_error.close()
-
-
+                    sg.popup_ok("You (or your computer) cannot access clinical files. Processing information can still be pulled", title="", font=14)
         elif event_main == 'tracker':
             if window_main['tracker'].get() == True:
                 window_main['all_trackers'].update(disabled=False, visible=True, value=True)
@@ -163,7 +133,6 @@ def parse_input():
             else:
                 for study in study_keys:
                     window_main[study].update(disabled=False)
-        
     return args
 
 if __name__ == '__main__':
@@ -232,15 +201,16 @@ if __name__ == '__main__':
 
         if args.paris == True:
             
-            paris_part1 = pd.read_excel(util.paris_tracker, sheet_name="Subgroups", header=4).query("@partID in `Participant ID`")
-            paris_part2 = pd.read_excel(util.paris_tracker, sheet_name="Participant details", header=0).query("@partID in `Subject ID`")
-            paris_part3 = paris_check.query("@partID in `Participant ID`")
-            paris_part2['Participant ID'] = paris_part2['Subject ID']
-            paris_part2.drop('Subject ID', inplace=True, axis='columns')
-
-            paris = pd.merge(pd.merge(paris_part1,paris_part2, on='Participant ID'),paris_part3, on='Participant ID')
-            paris.drop(paris.filter(regex=r"(!?)Unnamed|MRN").columns, axis="columns", inplace=True)
-            paris.set_index('Participant ID', inplace=True)
+            paris_tracker_excel = pd.ExcelFile(util.paris_tracker)
+            paris_part1 = pd.read_excel(paris_tracker_excel, sheet_name="Subgroups", header=4).set_index('Participant ID')
+            paris_part2 = pd.read_excel(paris_tracker_excel, sheet_name="Participant details", header=0).set_index('Subject ID')
+            paris_part3 = pd.read_excel(paris_tracker_excel, sheet_name="Flu Vaccine Information", header=0).set_index('Participant ID')
+            paris_cols = paris_part1.columns.to_list()
+            paris_cols += [col for col in paris_part2.columns if col not in paris_cols]
+            paris_cols += [col for col in paris_part3.columns if col not in paris_cols]
+            paris = paris_part1.combine_first(paris_part2).combine_first(paris_part3).loc[partID, paris_cols].copy()
+            paris.index.name = "Participant ID"
+            paris.drop(paris.filter(regex=r"(!?)Unnamed").columns, axis="columns", inplace=True)
             tracker_list.append(paris)
             tracker_names.append("paris")
 
@@ -319,10 +289,6 @@ if __name__ == '__main__':
 
         tracker_combined = pd.concat(tracker_list)
         tracker_cleaned_combined = pd.concat(tracker_cleaned_short)
-
-        # Quick edit to ensure that there is not empty output columns in Small tracker info
-        # Revise later for a more elegant solution
-
         tracker_cleaned_combined.dropna(axis="columns", how="all", inplace=True)
 
         # DEAL WITH ROBIN AND DOVE LATER!
