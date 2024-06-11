@@ -12,7 +12,7 @@ import os
 #%%
 
 def parse_input():
-    check = ''
+    check = None
     sg.theme('Dark Teal 12')
 
     layout_password = [[sg.Text("Clinical Access Check")],
@@ -74,7 +74,7 @@ def parse_input():
             window_main['ID_list'].update(disabled=True, visible=False)
             window_main['ID_list_text'].update(visible=False)
         elif event_main == 'clinical':
-            if check =='Validated':
+            if check == 'Validated':
                 if window_main['clinical'].get() == True:
                     window_main['MRN'].update(disabled=False, visible=True)
                     window_main['tracker'].update(disabled=False, visible=True)
@@ -88,32 +88,22 @@ def parse_input():
                         window_main[study].update(visible=False)
             else:
                 if os.path.exists(util.paris_tracker):
-                    window_password = sg.Window('ICC Login', deepcopy(layout_password))
-                    event_password, values_password = window_password.read()
-                    if event_password == sg.WIN_CLOSED:
-                        window_main['clinical'].update(value=False)
-                    elif event_password == 'Cancel':
-                        window_main['clinical'].update(value=False)
-                        window_password.close()
-                    elif event_password == 'Submit':
-                        check = helpers.corned_beef(values_password["userid"],values_password['password'])
-                        if check == "Validated":
-                            if window_main['clinical'].get() == True:
-                                window_main['MRN'].update(disabled=False, visible=True)
-                                window_main['tracker'].update(disabled=False, visible=True)
-                                window_main['contact'].update(disabled=False, visible=True)
-                            else:
-                                window_main['MRN'].update(disabled=True, visible=False, value = False)
-                                window_main['tracker'].update(disabled=True, visible=False, value = False)
-                                window_main['contact'].update(disabled=True, visible=False, value = False)
-                                window_main['all_trackers'].update(visible=False)
-                                for study in study_keys:
-                                    window_main[study].update(visible=False)
-                            window_password.close()
+                    password_text = sg.popup_get_text(message='Clinical Access Password:', title="", password_char="*")
+                    if helpers.corned_beef(password_text):
+                        if window_main['clinical'].get() == True:
+                            window_main['MRN'].update(disabled=False, visible=True)
+                            window_main['tracker'].update(disabled=False, visible=True)
+                            window_main['contact'].update(disabled=False, visible=True)
                         else:
-                            window_main['clinical'].update(value=False)
-                            window_password.close()
-                            sg.popup_ok("Incorrect username or password. Please try again.", title="", font=14)
+                            window_main['MRN'].update(disabled=True, visible=False, value = False)
+                            window_main['tracker'].update(disabled=True, visible=False, value = False)
+                            window_main['contact'].update(disabled=True, visible=False, value = False)
+                            window_main['all_trackers'].update(visible=False)
+                            for study in study_keys:
+                                window_main[study].update(visible=False)
+                    else:
+                        window_main['clinical'].update(value=False)
+                        sg.popup_ok("Incorrect username or password. Please try again.", title="", font=14)
                 else:
                     window_main['clinical'].update(disabled=True, value=False)
                     sg.popup_ok("You (or your computer) cannot access clinical files. Processing information can still be pulled", title="", font=14)

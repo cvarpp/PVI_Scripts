@@ -295,18 +295,14 @@ def map_dates(df, date_cols):
     return df
 
 
-def corned_beef(userid, userkey):
+def corned_beef(userkey):
     try:
         locked = zf.ZipFile(util.script_folder + 'data/Corned_Beef_reference.zip', 'r')
         idset = locked.read("Corned_Beef_reference.txt")
     except:
-        return("Not Clinical Access")
-    h = hlib.sha256()
-    uid = encode(userid)
-    pid = encode(userkey)
-    h.update(uid)
-    h.update(pid)
-    hash = h.hexdigest()
+        return None
+    hash = hlib.sha256().update(encode(userkey)).hexdigest()
     if hash in decode(idset):
         return("Validated")
-    
+    else:
+        return None
