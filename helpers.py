@@ -2,6 +2,9 @@ import pandas as pd
 import numpy as np
 import util
 import os
+import matplotlib as mplp
+import matplotlib.pyplot as plt
+import math
 
 class ValuesToClass(object):
     def __init__(self,values):
@@ -286,3 +289,100 @@ def map_dates(df, date_cols):
     for col in date_cols:
         df[col] = df[col].apply(coerce_date)
     return df
+
+
+def graph_maker(quant=1, columns=1, style="plots", y_size=5, x_size=7, example=False):
+    axes=[]
+    sfig=[]
+    if quant % columns == 0:
+        if style.lower() in ["plots"]:
+            main_figure, axis_start = plt.subplots(nrows=int(quant/columns), ncols=columns, tight_layout=True, figsize=[int(columns)*x_size, int(quant/columns)*y_size])
+            for axis_row in axis_start:
+                try:
+                    for ax in axis_row:
+                        axes.append(ax)
+                except:
+                    axes.append(axis_row)
+            
+            if example!=False:
+                numbered_charts = axes #These are here because I would like to use a deepcopy but it makes the original unusable
+                for i, ax in enumerate(numbered_charts):
+                    ax.text(s=str(i), x=0.5, y=0.5, fontsize=22, fontweight='bold', ha='center')
+                plt.show()
+                
+
+        if style.lower() in ["figs", "figures"]:
+            main_figure = plt.figure(layout='constrained', figsize=[int(columns)*x_size, int(quant/columns)*y_size])
+            subfigs = main_figure.subfigures(int(quant/columns), columns, wspace=0.07)
+            for figs in subfigs:
+                try:
+                    for fig in figs:
+                        sfig.append(fig)
+                except:
+                    sfig.append(figs)
+
+            if example!=False:
+                numbered_charts = sfig
+                for i, fig in enumerate(numbered_charts):
+                    ax = fig.subplots(1,1)
+                    ax.text(s=str(i), x=0.5, y=0.5, fontsize=22, fontweight='bold', ha='center')
+                plt.show()
+            
+    else:
+        print("not an even grid!")
+        
+        bottom = quant % columns
+        main_figure = plt.figure(layout='constrained', figsize=[int(columns)*x_size, int(math.ceil(quant/columns))*y_size])
+        subfigs = main_figure.subfigures(nrows=int(math.ceil(quant/columns)), wspace=0.07)
+        
+        if style.lower() in ["plots"]:
+            for i, figs in enumerate(subfigs):
+                if i <= math.floor(quant/columns)-1:
+                    ax = figs.subplots(nrows=1, ncols=columns)
+                    for axis in ax:
+                        axes.append(axis)
+                else:
+                    ax = figs.subplots(nrows=1, ncols=bottom)
+                    try:
+                        for axis in ax:
+                            axes.append(axis)
+                    except:
+                        axes.append(ax)
+            if example!=False:
+                numbered_charts = axes #These are here because I would like to use a deepcopy but it makes the original unusable
+                for i, ax in enumerate(numbered_charts):
+                    ax.text(s=str(i), x=0.5, y=0.5, fontsize=22, fontweight='bold', ha='center')
+                plt.show()
+            
+                
+        if style.lower() in ["figs", "figures"]:
+            for i, row_fig in enumerate(subfigs):
+                if i <= (math.floor(quant/columns)-1):
+                    column_fig = row_fig.subfigures(nrows=1,ncols=columns)
+                    for figs in column_fig:
+                        sfig.append(figs)
+                else:
+                    column_fig = row_fig.subfigures(nrows=1,ncols=bottom)
+                    try:
+                        for figs in column_fig:
+                            sfig.append(figs)
+                    except:
+                        sfig.append(column_fig)
+
+
+            if example!=False:
+                numbered_charts = sfig #These are here because I would like to use a deepcopy but it makes the original unusable
+                for i, figs in enumerate(sfig):
+                    ax = figs.subplots(1,1)
+                    ax.text(s=str(i), x=0.5, y=0.5, fontsize=22, fontweight='bold', ha='center')
+                plt.show()
+
+    if example != False:
+        main_figure, sfig = graph_maker(quant=quant,columns=columns,style=style, example=False, y_size=y_size,x_size=x_size)
+        axes = sfig
+
+    if style.lower() in ["figs", "figures"]:
+        return(main_figure, sfig)
+    
+    if style.lower() in ["plots"]:
+        return(main_figure, axes)
