@@ -48,10 +48,40 @@ if __name__ == '__main__':
             continue
         if "Sample ID" not in sheet.columns:
             continue
-        if re.search('APOLLO RESEARCH \d+', name) or re.search('APOLLO NIH \d+', name):
-            team = 'APOLLO'
-        elif re.search('PSP', name):
+        if 'psp' in name.lower():
             team = 'PSP'
+            if 'ff' in name.lower():
+                box_type = 'FF'
+            elif 'lab' in name.lower():
+                box_type = 'Lab'
+            else:
+                print(f"Sheet '{name}' does not contain 'ff' or 'lab'.")
+                continue
+            match = re.search(r'\d+', name)
+            if match:
+                number = match.group()
+                box_name = f"{team} NPS {box_type} {number}"
+            else:
+                print(f"No number found in sheet '{name}'. Skipping...")
+                continue
+        elif 'cml' in name.lower():
+            team = 'CML'
+            if 'a' in name.lower():
+                box_type = 'A'
+            elif 'b' in name.lower():
+                box_type = 'B'
+            else:
+                print(f"Sheet '{name}' does not contain 'A' or 'B'.")
+                continue
+            match = re.search(r'\d+', name)
+            if match:
+                number = match.group()
+                box_name = f"{team} NPS {number}{box_type}"
+            else:
+                print(f"No number found in sheet '{name}'. Skipping...")
+                continue
+        elif re.search('APOLLO RESEARCH \d+', name) or re.search('APOLLO NIH \d+', name):
+            team = 'APOLLO'
         elif re.match("MIT|MARS|IRIS|TITAN|PRIORITY", name.upper()) is not None:
             team = 'PVI ' + name.split()[0]
         else:
@@ -89,11 +119,16 @@ if __name__ == '__main__':
             level2 = 'Shelf 2'
             if team == 'APOLLO':
                 level3 = 'APOLLO Rack'
-            elif box_sample_type == 'NPS':
+            elif team == 'PSP':
                 freezer = 'Temporary PSP NPS'
                 level1 = 'freezer_nps'
                 level2 = 'shelf_nps'
                 level3 = 'rack_nps'
+            elif team == 'CML':
+                freezer = 'Temporary CML NPS'
+                level1 = 'freezer_cml'
+                level2 = 'shelf_cml'
+                level3 = 'rack_cml'
             elif box_sample_type == 'Saliva' or box_sample_type == 'Pellet':
                 level3 = '{} Lab/FF Rack'.format(box_sample_type)
             elif box_sample_type == 'PBMC':
@@ -160,5 +195,5 @@ if __name__ == '__main__':
     if uploading_boxes.shape[0] > 0:
         print("Boxes to upload today:")
     for _, row in uploading_boxes.iterrows():
-            print(row['Name'])
-            uploaded.add(row['Name'])
+        print(row['Name'])
+        uploaded.add(row['Name'])
