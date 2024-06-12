@@ -30,6 +30,7 @@ if __name__ == '__main__':
     participants = participants[participants['Study Status'] == 'Active']
     latest_week = 48 # This is actually the earliest visit we are worrying about (Week 48) since everyone has reached it
     visit_week_numbers = range(latest_week, latest_week + 300, 4) # goes until ~week 300, further than we need to worry about
+    visit_week_numbers = [x for x in visit_week_numbers if x <= 208]
     visit_day_offsets = [datetime.timedelta(days=int(x) * 7) for x in visit_week_numbers]
     contents = ['blood (5), saliva'] * 70 # Only looking at up to 70 visits (which is 6 years, seems fine)
     days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
