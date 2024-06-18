@@ -301,7 +301,9 @@ def corned_beef(userkey):
         idset = locked.read("Corned_Beef_reference.txt")
     except:
         return None
-    hash = hlib.sha256().update(encode(userkey)).hexdigest()
+    hash_machine = hlib.sha256()
+    hash_machine.update(encode(userkey))
+    hash = hash_machine.hexdigest()
     if hash in decode(idset):
         return("Validated")
     else:
