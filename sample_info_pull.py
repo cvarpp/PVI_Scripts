@@ -198,7 +198,8 @@ if __name__ == '__main__':
             paris_cols = paris_part1.columns.to_list()
             paris_cols += [col for col in paris_part2.columns if col not in paris_cols]
             paris_cols += [col for col in paris_part3.columns if col not in paris_cols]
-            paris = paris_part1.combine_first(paris_part2).combine_first(paris_part3).loc[partID, paris_cols].copy()
+            paris_ids = [pid for pid in partID if pid in paris_part1.index]
+            paris = paris_part1.combine_first(paris_part2).combine_first(paris_part3).loc[paris_ids, paris_cols].copy()
             paris.index.name = "Participant ID"
             paris.drop(paris.filter(regex=r"(!?)Unnamed").columns, axis="columns", inplace=True)
             tracker_list.append(paris)
