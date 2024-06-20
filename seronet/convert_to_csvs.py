@@ -34,6 +34,8 @@ if __name__ == '__main__':
         else:
             args = ValuesToClass(values)
     for fname in glob.glob('{}/*xls*'.format(args.input_dir)):
+        if '~' in fname:
+            continue
         print("Converting", fname)
         pd.read_excel(fname, na_filter=False, keep_default_na=False).to_csv('{}/{}.csv'.format(args.output_dir, fname.split(os.sep)[-1].split('.')[0]), index=False)
         print(fname, "converted!")

@@ -1,8 +1,12 @@
+import util
+import hashlib as hlib
+from codecs import encode
+from codecs import decode
+import zipfile as zf
 import pandas as pd
 import numpy as np
 import util
 import os
-
 class ValuesToClass(object):
     def __init__(self,values):
         for key in values:
@@ -144,7 +148,10 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=Fals
                     'Time in -80C (Serum)': 'Time put in -80: SERUM',
                     'Time in Freezing Device': 'Time put in -80: PBMC',}
         new_samples = pd.read_excel(util.proc + 'Processing Notebook.xlsx', sheet_name='Specimen Dashboard', header=1).rename(columns=correct_new)
-        all_samples = (pd.concat([bsl2p_archive, bsl2_archive, bsl2p_samples, bsl2_samples, crp_samples, new_samples])
+        
+        dataframe_list = [bsl2p_archive, bsl2_archive, bsl2p_samples, bsl2_samples, crp_samples, new_samples]
+        
+        all_samples = (pd.concat(dataframe_list)
                         .assign(sample_id=clean_sample_id)
                         .drop_duplicates(subset=['sample_id'], keep='last')
                         .assign(serum_vol=clean_serum)
@@ -286,3 +293,18 @@ def map_dates(df, date_cols):
     for col in date_cols:
         df[col] = df[col].apply(coerce_date)
     return df
+
+
+def corned_beef(userkey):
+    try:
+        locked = zf.ZipFile(util.script_folder + 'data/Corned_Beef_reference.zip', 'r')
+        idset = locked.read("Corned_Beef_reference.txt")
+    except:
+        return None
+    hash_machine = hlib.sha256()
+    hash_machine.update(encode(userkey))
+    hash = hash_machine.hexdigest()
+    if hash in decode(idset):
+        return("Validated")
+    else:
+        return None
