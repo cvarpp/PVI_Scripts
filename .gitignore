@@ -146,5 +146,6 @@ dmypy.json
 # Local files
 local_cache/
 local_secrets/
+*.xlsx
 
 .DS_Store
