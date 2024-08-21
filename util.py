@@ -64,6 +64,9 @@ seronet_data = cross_d4 + 'Data/'
 seronet_qc = cross_d4 + 'QC/'
 seronet_vax = cross_d4 + 'Vax/'
 
+r_d = cross_project + '/R&D'
+robin_dove = r_d + '/ROBIN & DOVE sample info.xlsx'
+
 fp_url = 'https://mssm-simonlab.freezerpro.com/api/v2/'
 
 # Header Heights

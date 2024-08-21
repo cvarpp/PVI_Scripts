@@ -239,6 +239,17 @@ if __name__ == '__main__':
             tracker_list.append(umbrella)
             tracker_names.append("umbrella")
 
+        if args.robin == True:
+            robin = pd.read_excel(util.robin_dove, sheet_name="ROBIN").query("@partID in `Participant ID`")
+            tracker_list.append(robin)
+            tracker_names.append("robin")
+
+        if args.dove == True:
+            dove = pd.read_excel(util.robin_dove, sheet_name="DOVE").query("@partID in `Participant ID`")
+            tracker_list.append(dove)
+            tracker_names.append("dove")
+
+
         tracker_cleaned_short=[]
         tracker_cleaned_long=[]
         tracker_copy=[]
