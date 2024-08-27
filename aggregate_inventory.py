@@ -84,22 +84,26 @@ if __name__ == '__main__':
             team = 'APOLLO'
         elif re.match("MIT|MARS|IRIS|TITAN|PRIORITY", name.upper()) is not None:
             team = 'PVI ' + name.split()[0]
+        elif re.match(r'PX Box \d+', name):
+            team = 'PX'
         else:
             team = 'PVI'
         sample_type = 'N/A'
         if team == 'APOLLO':
             sample_type = 'Serum'
+        elif team == 'PX':
+            sample_type = 'PX'
         else:
             for val in sample_types:
                 if re.search(str(val).upper().split()[0], name.upper()):
                     sample_type = val
                     break
-        if sample_type == 'N/A':
+        if sample_type == 'N/A' and team != 'PX':
             print(name, "has a box number but no valid sample type")
             continue
         box_kinds = re.findall('RESEARCH|NIH|Lab|FF', name)
         if len(box_kinds) == 0:
-            if sample_type in ['PBMC', 'HT', '4.5 mL Tube']:
+            if sample_type in ['PBMC', 'HT', '4.5 mL Tube', 'PX']:
                 box_kinds.append('')
             else:
                 print(name, " is neither lab nor ff. Not uploaded")
@@ -108,6 +112,8 @@ if __name__ == '__main__':
         for kind in box_kinds:
             if team == 'APOLLO':
                 box_name = f"{team} {kind} {box_number}"
+            if team == 'PX':
+                box_name = name
             elif box_sample_type in ['PBMC', 'HT', '4.5 mL Tube']:
                 box_name = f"{team} {box_sample_type} {box_number}"
             else:
@@ -119,7 +125,7 @@ if __name__ == '__main__':
             level2 = 'Shelf 2'
             if team == 'APOLLO':
                 level3 = 'APOLLO Rack'
-            elif team == 'PSP':
+            elif team == 'PSP' or 'PX':
                 freezer = 'Temporary PSP NPS'
                 level1 = 'freezer_nps'
                 level2 = 'shelf_nps'
