@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import argparse
 import util
 import os
@@ -198,7 +199,7 @@ if __name__ == '__main__':
                 continue
             
             # Output
-            workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} by scripts TESTING"
+            workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} by scripts"
             template_path = os.path.join(util.tube_print, 'Future Sheets', template_file)
             output_path = os.path.join(util.tube_print, output_folder, f"{workbook_name}.xlsx")
 
