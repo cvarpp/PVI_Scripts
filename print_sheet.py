@@ -7,7 +7,13 @@ import warnings
 
 
 def get_box_range(print_type, round_num):
-    # Rename Printing Log: Study - Kit Type
+    '''
+    Get the range of box numbers to print for a given kit type and round number
+    print_type: str
+    A valid type of kit to be printed
+    round_num: int
+    Non-negative integer representing how many rounds have already been selected
+    '''
     plog = (pd.read_excel(util.print_log, sheet_name='LOG', header=0)
             .rename(columns={'Box numbers': 'Box Min', 'Unnamed: 4': 'Box Max', 'Study': 'Kit Type'})
             .drop(1))
@@ -50,7 +56,6 @@ def get_sample_ids(sheet_name, box_start, box_end):
     sample_ids = print_planning.loc[box_range, 'Sample ID'].to_numpy()
 
     return sample_ids
-
 
 def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, template_folder, output_path, print_type):
     template_path = os.path.join(util.tube_print, 'Future Sheets', template_folder)
@@ -155,9 +160,6 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                     side_df = pd.DataFrame({'Column A': side_index, 'Blank': '', 'Sample ID': side_writers, 'Kit Type': 'APOLLO'})
                     side_df.to_excel(writer, sheet_name=f'{side_idx} - Sides {round_num}', index=False, header=False)
 
-            # sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
-
-
 if __name__ == '__main__':
     warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
     parser = argparse.ArgumentParser()
@@ -179,9 +181,10 @@ if __name__ == '__main__':
     }
 
     for print_type, rounds in round_counts.items():
-        for round_num in range(0, rounds):
+        for round_num in range(rounds):
             box_start, box_end = get_box_range(print_type, round_num)
 
+            # TODO: Remove dependence on templates
             print_type_mapping = {
                 'SERONET': ('Seronet Full', 'SERONET FULL/SERONET FULL Template.xlsx', 'Future Sheets/SERONET FULL'),
                 'SERUM': ('Serum', 'SERUM/SERUM Template.xlsx', 'Future Sheets/SERUM'),
