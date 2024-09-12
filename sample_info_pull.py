@@ -10,6 +10,7 @@ from datetime import datetime
 import os
 from sys import exit
 
+
 def flip_inputs(to_text, window_main):
     window_main['filepath'].update(disabled=to_text, visible=not to_text)
     window_main['filepath_text'].update(visible=not to_text)
