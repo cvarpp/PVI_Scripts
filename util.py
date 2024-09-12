@@ -8,6 +8,8 @@ proc_ntbk = proc + 'Processing Notebook.xlsx'
 inventory_input = proc + 'New Import Sheet.xlsx'
 
 psp = onedrive + 'Simon Lab - Pathogen Surveillance/'
+sequencing = psp + 'Sequencing/'
+extractions = sequencing + 'Extraction/'
 
 tracking = onedrive + 'Simon Lab - Sample Tracking/'
 shared_samples = tracking + 'Released Samples/Collaborator Samples Tracker.xlsx'
@@ -50,6 +52,7 @@ cam_long = clin_ops + "Long-Form CAM Schedule.xlsx"
 script_folder = pvi + 'Scripts/'
 script_input = script_folder + 'input/'
 script_output = script_folder + 'output/'
+script_data = script_folder + 'data/'
 
 proc_d4 = proc + 'D4 Sheets/'
 unfiltered = script_output + 'all_D4.xlsx'
