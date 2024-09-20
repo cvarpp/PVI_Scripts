@@ -159,6 +159,8 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                     side_writers = ['Serum {}'.format(sid) for sid in local_sids]
                     side_df = pd.DataFrame({'Column A': side_index, 'Blank': '', 'Sample ID': side_writers, 'Kit Type': 'APOLLO'})
                     side_df.to_excel(writer, sheet_name=f'{side_idx} - Sides {round_num}', index=False, header=False)
+            
+            sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False) 
 
 if __name__ == '__main__':
     warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
