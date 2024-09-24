@@ -18,6 +18,7 @@ def make_report(use_cache=False):
     umbrella_info = pd.read_excel(util.umbrella_tracker, sheet_name='Summary', header=0)
     titan_info = pd.read_excel(util.titan_tracker, sheet_name='Tracker', header=4)
     apollo_info = pd.read_excel(util.apollo_tracker, sheet_name='Summary')
+    hd_info = pd.read_excel(util.clin_ops + "Healthy donors/Healthy Donors Participant Tracker.xlsx", sheet_name = "Participants")
 
     was_shared_col = 'Clinical Ab Result Shared?'
 
@@ -33,12 +34,13 @@ def make_report(use_cache=False):
     uemail = umbrella_info[['Subject ID', 'Email']]
     temail = titan_info[['Umbrella Corresponding Participant ID', 'Email (From EPIC)']].rename(columns={'Umbrella Corresponding Participant ID': 'Subject ID', 'Email (From EPIC)': 'Email'})
     aemail = apollo_info[['Participant ID', 'Email']].rename(columns={'Participant ID': 'Subject ID'})
+    hdemail = hd_info[['Participant ID', 'Email']].rename(columns={'Participant ID': 'Subject ID'})
     lk_sheet = util.cross_project + 'Lock & Key/Lock and Key - KDS.xlsx'
     if os.path.exists(lk_sheet):
         lkemail = pd.read_excel(lk_sheet, sheet_name='Link L&K').rename(columns={'Participant ID': 'Subject ID'})[['Subject ID', 'Email']]
     else:
         lkemail = uemail
-    emails = (pd.concat([lkemail, pemail, temail, uemail, aemail])
+    emails = (pd.concat([lkemail, pemail, temail, uemail, aemail, hdemail])
                 .assign(pid=lambda df: df['Subject ID'].str.strip())
                 .drop_duplicates(subset='pid').set_index('pid'))
 
