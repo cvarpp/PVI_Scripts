@@ -34,7 +34,7 @@ def clinical_view(window_main, study_keys):
         for study in study_keys:
             window_main[study].update(visible=False)
 
-def parse_input():pyth
+def parse_input():
     check = None
     sg.theme('Dark Teal 12')
 
