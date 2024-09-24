@@ -41,7 +41,7 @@ def get_box_range(print_type, round_num):
         'STANDARD': 6,
         'SERONETPBMC': 32,
         'STANDARDPBMC': 32,
-        'APOLLO': 5
+        'APOLLO': 6
     }
     box_start = recent_box_max + 1 + round_num * box_range_mapping[print_type]
     box_end = recent_box_max + box_range_mapping[print_type] + round_num * box_range_mapping[print_type]
@@ -136,8 +136,8 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                 sid_kits = []
                 for sid in sids:
                     sid_kits.extend([sid] * 5)
-                counts = list(np.concatenate([2 * np.arange(5) + 1, 2 * np.arange(5) + 2])) * 9
-                count_adders = np.arange(108, step=12)
+                counts = list(np.concatenate([2 * np.arange(5) + 1, 2 * np.arange(5) + 2])) * (len(sids) // 2)
+                count_adders = np.arange(len(sids) * 6, step=12)
                 count_adders2 = []
                 for count_adder in count_adders:
                     count_adders2.extend([count_adder] * 10)
@@ -147,7 +147,7 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                 sid_aliquots = []
                 for sid in sids:
                     sid_aliquots.extend([sid] * 16)
-                for x in range(3):
+                for x in range(4):
                     round_num = x + 1
                     top_idx = round_num * 2
                     side_idx = top_idx + 1
