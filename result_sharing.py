@@ -18,7 +18,7 @@ def make_report(use_cache=False):
     umbrella_info = pd.read_excel(util.umbrella_tracker, sheet_name='Summary', header=0)
     titan_info = pd.read_excel(util.titan_tracker, sheet_name='Tracker', header=4)
     apollo_info = pd.read_excel(util.apollo_tracker, sheet_name='Summary')
-    hd_info = pd.read_excel(util.clin_ops + "Healthy donors/Healthy Donors Participant Tracker.xlsx", sheet_name = "Participants")
+    hd_info = pd.read_excel(util.clin_ops + 'Healthy donors/Healthy Donors Participant Tracker.xlsx', sheet_name = 'Participants')
 
     was_shared_col = 'Clinical Ab Result Shared?'
 
@@ -46,7 +46,7 @@ def make_report(use_cache=False):
 
     keep_cols = ['participant_id', 'sample_id', 'Date Collected', util.visit_type, 'Email', 'Qualitative', 'Quant_str', 'COV22_str', 'Quantitative', 'COV22', 'Spike endpoint', 'AUC']
     report = samplesClean.join(emails, on='participant_id').reset_index().loc[:, keep_cols]
-    valid_prefixes = ['16791', '03374', '23873']
+    valid_prefixes = ['16791', '03374', '23873', '16772']
     report = report[report['participant_id'].str[:5].isin(valid_prefixes)].copy()
     report['COV22 / Quant'] = np.exp2(np.log2(report['COV22']) - np.log2(report['Quantitative']))
     report['COV22 / Research'] = np.exp2(np.log2(report['COV22']) - np.log2(report['AUC']))
