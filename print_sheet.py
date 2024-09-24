@@ -165,12 +165,12 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
 if __name__ == '__main__':
     warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
     parser = argparse.ArgumentParser()
-    parser.add_argument('-seronet_full', type=int, default=0, help='Number of SERONET FULL rounds')
-    parser.add_argument('-serum', type=int, default=0, help='Number of SERUM rounds')
-    parser.add_argument('-standard', type=int, default=0, help='Number of STANDARD rounds')
-    parser.add_argument('-seronet_pbmc', type=int, default=0, help='Number of SERONET PBMC rounds')
-    parser.add_argument('-standard_pbmc', type=int, default=0, help='Number of STANDARD PBMC rounds')
-    parser.add_argument('-apollo', type=int, default=0, help='Number of APOLLO rounds')
+    parser.add_argument('--seronet_full', type=int, default=0, help='Number of SERONET FULL rounds')
+    parser.add_argument('--serum', type=int, default=0, help='Number of SERUM rounds')
+    parser.add_argument('--standard', type=int, default=0, help='Number of STANDARD rounds')
+    parser.add_argument('--seronet_pbmc', type=int, default=0, help='Number of SERONET PBMC rounds')
+    parser.add_argument('--standard_pbmc', type=int, default=0, help='Number of STANDARD PBMC rounds')
+    parser.add_argument('--apollo', type=int, default=0, help='Number of APOLLO rounds')
     args = parser.parse_args()
 
     round_counts = {
