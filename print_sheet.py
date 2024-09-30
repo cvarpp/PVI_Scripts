@@ -78,6 +78,7 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                     sheet_data.iloc[0:24, 2] = assigned_sample_ids
                 if sheet_name == '5 - 4.5 mL Sides':
                     sheet_data.iloc[0:24, 1] = assigned_sample_ids
+                sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
         elif print_type in ('SERONET', 'STANDARD'):
             box_numbers_range = [box for box in range(box_start, box_end + 1)]
             check_df = pd.DataFrame({'Print List': ['Box'] * 6 + ['Kit'] * 18, '': box_numbers_range + [sid for sid in assigned_sample_ids], 'Completed': 'No'})
@@ -117,18 +118,15 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                     sheet_data.iloc[4:7, 19] = assigned_sample_ids[45:48]
                     sheet_data.iloc[9:12, 19] = assigned_sample_ids[60:63]
                     sheet_data.iloc[14:17, 19] = assigned_sample_ids[75:78]
-                    sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
-                if print_type == 'SERONETPBMC':
+                elif print_type == 'SERONETPBMC':
                     if 'PBMC Tops' in sheet_name or '4.5mL Tops' in sheet_name:
                         sheet_data.iloc[:96, 2] = assigned_sample_ids
-                        sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
-                    if 'PBMC Sides' in sheet_name or '4.5mL Sides' in sheet_name:
+                    elif 'PBMC Sides' in sheet_name or '4.5mL Sides' in sheet_name:
                         sheet_data.iloc[:96, 1] = assigned_sample_ids
-                        sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
-                if print_type == 'STANDARDPBMC':
+                elif print_type == 'STANDARDPBMC':
                     if 'PBMC Tops' in sheet_name or 'PBMC Sides' in sheet_name:
                         sheet_data.iloc[:288, 2] = [sid for sid in assigned_sample_ids for _ in range(3)]
-                        sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
+                sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
         elif print_type == 'APOLLO':
             sids = assigned_sample_ids
             sid_kits = []
