@@ -9,9 +9,10 @@ import os
 import argparse
 from helpers import clean_sample_id
 
+freezer_map = pd.read_excel(util.freezer_map, sheet_name='Racks in Freezers', header=0)    
+
 # Pull all file/folder locations from util.py
 # Pull in sample data from dscf to check (query_dscf in helpers.py)
-
 
 def pos_convert(idx):
     '''Converts a 0-80 index to a box position'''
@@ -30,6 +31,11 @@ if __name__ == '__main__':
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=78)
     args = argParser.parse_args()
     inventory_boxes = pd.read_excel(util.inventory_input, sheet_name=None)
+    freezer_map = pd.read_excel(util.freezer_map, sheet_name='Racks in Freezers', header=0)    
+    map = freezer_map.dropna(subset='Rack ID', axis=0).copy().reset_index()
+    rack_shelf={}
+    for n, item in enumerate(map['Rack ID']):
+        rack_shelf.update({item:map['Shelf'][n]})
     sample_types = ['Plasma', 'Serum', 'Pellet', 'Saliva', 'PBMC', 'HT', '4.5 mL Tube', 'NPS', 'All']
     data = {'Name': [], 'Sample ID': [], 'Sample Type': [],'Freezer': [],'Level1': [],'Level2': [],'Level3': [],'Box': [],'Position': [], 'ALIQUOT': []}
     samples_data = {st: deepcopy(data) for st in sample_types if st != 'HT'}
@@ -46,6 +52,12 @@ if __name__ == '__main__':
         except:
             print(name, "has no box number")
             continue
+        try:
+            rack_number = sheet['Rack Number'][0]
+        except:
+            rack_number = "missing"
+            print(name, "Has no Rack number in Sheet")
+
         if "Sample ID" not in sheet.columns:
             continue
         if re.search('APOLLO RESEARCH \d+', name) or re.search('APOLLO NIH \d+', name):
@@ -86,20 +98,29 @@ if __name__ == '__main__':
                 box_counts[box_name] = 0
             freezer = 'Annenberg 18'
             level1 = 'Freezer 1 (Eiffel Tower)'
-            level2 = 'Shelf 2'
+            if rack_number == 'missing':
+                level2 = 'Shelf 2'
+            else:
+                level2 = rack_shelf[rack_number]
             if team == 'APOLLO':
                 level3 = 'APOLLO Rack'
             elif box_sample_type == 'NPS':
                 freezer = 'Temporary PSP NPS'
                 level1 = 'freezer_nps'
-                level2 = 'shelf_nps'
+                if rack_number=='missing':
+                    level2 = 'shelf_nps'
+                else:
+                    pass
                 level3 = 'rack_nps'
             elif box_sample_type == 'Saliva' or box_sample_type == 'Pellet':
                 level3 = '{} Lab/FF Rack'.format(box_sample_type)
             elif box_sample_type == 'PBMC':
                 freezer = 'LN Tank #3'
                 level1 = 'PBMC SUPER TEMPORARY HOLDING'
-                level2 = ''
+                if rack_number == 'missing':
+                    level2 = ''
+                else:
+                    pass
                 level3 = ''
             else:
                 level3 = '{} {} Rack'.format(box_sample_type, kind)
@@ -162,3 +183,5 @@ if __name__ == '__main__':
     for _, row in uploading_boxes.iterrows():
             print(row['Name'])
             uploaded.add(row['Name'])
+
+# %%

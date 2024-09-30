@@ -14,6 +14,7 @@ extractions = sequencing + 'Extraction/'
 tracking = onedrive + 'Simon Lab - Sample Tracking/'
 shared_samples = tracking + 'Released Samples/Collaborator Samples Tracker.xlsx'
 intake = tracking + 'Sample Intake Log Historian.xlsx'
+freezer_map = tracking + 'New Freezer Map.xlsx'
 
 pvi = onedrive + 'Simon Lab - PVI - Personalized Virology Initiative/'
 clin_ops = pvi + 'Clinical Research Study Operations/'
