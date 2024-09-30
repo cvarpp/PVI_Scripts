@@ -229,4 +229,3 @@ if __name__ == '__main__':
 
             generate_workbook(assigned_sample_ids, box_start, box_end, workbook_name, template_file, output_path, print_type)
             print(f"'{workbook_name}' workbook generated in {output_folder}.")
-            
