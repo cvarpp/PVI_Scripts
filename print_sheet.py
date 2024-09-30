@@ -188,7 +188,7 @@ if __name__ == '__main__':
     parser.add_argument('--seronet_pbmc', type=int, default=0, help='Number of SERONET PBMC rounds')
     parser.add_argument('--standard_pbmc', type=int, default=0, help='Number of STANDARD PBMC rounds')
     parser.add_argument('--apollo', type=int, default=0, help='Number of APOLLO rounds')
-    parser.add_argument('--NPS', type=int, default=0, help='Number of NPS rounds')
+    parser.add_argument('--nps', type=int, default=0, help='Number of NPS rounds')
     args = parser.parse_args()
 
     round_counts = {
