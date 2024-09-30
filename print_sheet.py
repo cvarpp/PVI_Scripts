@@ -25,7 +25,8 @@ def get_box_range(print_type, round_num):
         'STANDARD': (plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].str.strip().str.lower() == 'no'),
         'SERONETPBMC': (plog['Kit Type'].isin(['SERONET', 'MIT (PBMCS)'])) & (plog['PBMCs'].str.strip().str.lower() == 'yes'),
         'STANDARDPBMC': (plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].str.strip().str.lower() == 'yes'),
-        'APOLLO':(plog['Kit Type'] == 'APOLLO') & (plog['PBMCs'].str.strip().str.lower() == 'no')
+        'APOLLO': (plog['Kit Type'] == 'APOLLO'),
+        'NPS': (plog['Kit Type'] == 'NPS'),
     }
 
     if print_type not in filter:
@@ -55,7 +56,6 @@ def get_sample_ids(sheet_name, box_start, box_end):
     print_planning = pd.read_excel(print_planning_path, sheet_name=sheet_name)
     box_range = print_planning['Box ID'].between(box_start, box_end)
     sample_ids = print_planning.loc[box_range, 'Sample ID'].to_numpy()
-
     return sample_ids
 
 def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, template_file, output_path, print_type):
@@ -168,7 +168,7 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                 side_idx = top_idx + 1
                 tops = {'IDX': [], 'PV': [], 'Num': [], 'SType': []}
                 sides = {'IDX': [], 'Blank': [], 'PVID': [], 'SType': []}
-                pv_range = sid_aliquots[x * 2 * 36:(x + 1) * 2 * 36]
+                pv_range = sid_aliquots[x * 2 * 72:(x + 1) * 2 * 72]
                 for i, pv in enumerate(pv_range):
                     tops['IDX'].append(i + (i // 72) * 6 + 1)
                     sides['IDX'].append(i + 1)
@@ -200,6 +200,7 @@ if __name__ == '__main__':
         'SERONETPBMC': args.seronet_pbmc,
         'STANDARDPBMC': args.standard_pbmc,
         'APOLLO': args.apollo,
+        'NPS': args.nps,
     }
 
     for print_type, rounds in round_counts.items():
