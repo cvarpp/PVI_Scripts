@@ -56,7 +56,11 @@ if __name__ == '__main__':
             rack_number = sheet['Rack Number'][0]
         except:
             rack_number = "missing"
-            print(name, "Has no Rack number in Sheet")
+            print(name, ": No Rack cell in Sheet")
+        
+        if rack_number != rack_number:
+            print(name, ": Rack number Not Filled in")
+            continue
 
         if "Sample ID" not in sheet.columns:
             continue
