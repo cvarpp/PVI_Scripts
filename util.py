@@ -1,7 +1,7 @@
 import os
 
 home = os.path.expanduser('~') + '/'
-onedrive = home + 'The Mount Sinai Hospital/'
+onedrive = home + 'OneDrive - The Mount Sinai Hospital/'
 proc = onedrive + 'Simon Lab - Processing Team/'
 dscf = proc + 'Data Sample Collection Form.xlsx'
 proc_ntbk = proc + 'Processing Notebook.xlsx'
@@ -11,11 +11,11 @@ psp = onedrive + 'Simon Lab - Pathogen Surveillance/'
 sequencing = psp + 'Sequencing/'
 extractions = sequencing + 'Extraction/'
 
-tracking = onedrive + 'Simon Lab - Sample Tracking/'
+tracking = onedrive + 'Sample Tracking/'
 shared_samples = tracking + 'Released Samples/Collaborator Samples Tracker.xlsx'
 intake = tracking + 'Sample Intake Log Historian.xlsx'
 
-pvi = onedrive + 'Simon Lab - PVI - Personalized Virology Initiative/'
+pvi = onedrive + 'PVI - Personalized Virology Initiative/'
 clin_ops = pvi + 'Clinical Research Study Operations/'
 umbrella = clin_ops + 'Umbrella Viral Sample Collection Protocol/'
 secret_charles = pvi + 'Secret Sheets/Charles/'
