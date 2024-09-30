@@ -24,11 +24,11 @@ def filter_box(box_name, uploaded, args, box_df=None):
     '''
     if box_df is None:
         return False
-    return (box_name not in uploaded) and ((args.min_count <= box_df.set_index('Name').loc[box_name, 'Tube Count'] <= 81) or (box_name in full_des))
+    return (box_name not in uploaded) and ((args.min_count <= box_df.set_index('Name').loc[box_name, 'Tube Count'] <= 81) or (box_name in full_des) or (box_df.set_index('Name').loc[box_name, 'Done?'] == "Yes"))
 
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Aggregate inventory of each sample type for FP upload')
-    argParser.add_argument('-m', '--min_count', action='store', type=int, default=78)
+    argParser.add_argument('-m', '--min_count', action='store', type=int, default=81)
     args = argParser.parse_args()
     inventory_boxes = pd.read_excel(util.inventory_input, sheet_name=None)
     freezer_map = pd.read_excel(util.freezer_map, sheet_name='Racks in Freezers', header=0)    
@@ -45,21 +45,39 @@ if __name__ == '__main__':
     samples_data['All'] = deepcopy(data)
     box_counts = {}
     aliquot_counts = {}
+    completion = []
+    boxes_lost_name = []
+    boxes_lost_reason = []
 
     for name, sheet in inventory_boxes.items():
         try:
             box_number = int(name.rstrip('LabFF_ ').split()[-1])
         except:
             print(name, "has no box number")
+            boxes_lost_name.append(name)
+            boxes_lost_reason.append("Has No Box Number")
             continue
+
         try:
-            rack_number = sheet['Rack Number'][0]
+            sheet['Box Done?'][0] == 1.0
         except:
-            rack_number = "missing"
-            print(name, ": No Rack cell in Sheet")
+            print(name, ': No Check Box')
+            boxes_lost_name.append(name)
+            boxes_lost_reason.append("Has No Check Box")
+            continue
+        
+        rack_number = sheet['Rack Number'][0]
         
         if rack_number != rack_number:
             print(name, ": Rack number Not Filled in")
+            boxes_lost_name.append(name)
+            boxes_lost_reason.append("Rack Number Empty")
+            continue
+
+        if rack_number not in rack_shelf:
+            print(name, ": Rack number Not in Inventory")
+            boxes_lost_name.append(name)
+            boxes_lost_reason.append("Rack Number Provided Not in Inventory")
             continue
 
         if "Sample ID" not in sheet.columns:
@@ -102,32 +120,21 @@ if __name__ == '__main__':
                 box_counts[box_name] = 0
             freezer = 'Annenberg 18'
             level1 = 'Freezer 1 (Eiffel Tower)'
-            if rack_number == 'missing':
-                level2 = 'Shelf 2'
-            else:
-                level2 = rack_shelf[rack_number]
-            if team == 'APOLLO':
-                level3 = 'APOLLO Rack'
-            elif box_sample_type == 'NPS':
+            level2 = 'Shelf {}'.format(int(rack_shelf[rack_number]))
+            level3 = 'Rack #{}'.format(int(rack_number))
+            if box_sample_type == 'NPS':
                 freezer = 'Temporary PSP NPS'
                 level1 = 'freezer_nps'
                 if rack_number=='missing':
-                    level2 = 'shelf_nps'
+                    level2 = 'Shelf {}'.format(int(rack_shelf[rack_number]))
                 else:
                     pass
-                level3 = 'rack_nps'
-            elif box_sample_type == 'Saliva' or box_sample_type == 'Pellet':
-                level3 = '{} Lab/FF Rack'.format(box_sample_type)
+                level3 = 'Rack #{}'.format(int(rack_number))
             elif box_sample_type == 'PBMC':
                 freezer = 'LN Tank #3'
                 level1 = 'PBMC SUPER TEMPORARY HOLDING'
-                if rack_number == 'missing':
-                    level2 = ''
-                else:
-                    pass
-                level3 = ''
             else:
-                level3 = '{} {} Rack'.format(box_sample_type, kind)
+                level3 = 'Rack #{}'.format(rack_number)
             for idx, (sample_id, row) in enumerate(sheet.iterrows()):
                 if re.search("[1-9A-Z][0-9]{4,5}", sample_id) is None:
                     continue
@@ -163,16 +170,27 @@ if __name__ == '__main__':
                     if sname == '4.5 mL Tube':
                         data['Serum or Plasma?'].append(row['Serum or Plasma?'])
                 box_counts[box_name] += 1
+                
+                if (box_name not in completion) and (sheet['Box Done?'][0] == 1.0):
+                        completion.append(box_name)
+    
     uploaded = set()
     full_des = set(inventory_boxes['Full Boxes, DES']['Name'].to_numpy())
-    box_data = {'Name': [], 'Tube Count': []}
-    for box_name, tube_count in box_counts.items():
+    box_data = {'Name': [], 'Tube Count': [], 'Done?': []}
+    for (box_name, tube_count) in box_counts.items():
         box_data['Name'].append(box_name)
         box_data['Tube Count'].append(tube_count)
+        if box_name in completion:
+            box_data['Done?'].append("Yes")
+        else:
+            box_data['Done?'].append("No")
+    
     box_df = pd.DataFrame(box_data)
+    lost_df = pd.DataFrame.from_dict({"Box Name":boxes_lost_name, "Reason Dropped":boxes_lost_reason})
+    print(box_df)
     pd.DataFrame(samples_data['All']).to_excel(util.proc + 'inventory_in_progress.xlsx')
     uploading_boxes = box_df[box_df['Name'].apply(lambda val: filter_box(val, uploaded, args, box_df=box_df))]
-    with pd.ExcelWriter(util.proc + 'aggregate_inventory_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))) as writer:
+    with pd.ExcelWriter(util.proc + 'aggregate_inventory_test_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))) as writer:
         for sample_type, data in samples_data.items():
             if sample_type != 'All':
                 df = pd.DataFrame(data)
@@ -180,8 +198,9 @@ if __name__ == '__main__':
                 df.to_excel(writer, sheet_name='{}'.format(sample_type), index=False)
         box_df.to_excel(writer, sheet_name='Box Counts')
         uploading_boxes.to_excel(writer, sheet_name='Uploaded Box Counts')
+        lost_df.to_excel(writer, sheet_name="Unprocessed boxes")
     for _, row in box_df[~box_df['Name'].apply(lambda val: filter_box(val, uploaded, args, box_df=box_df))].iterrows():
-        print(row['Name'], 'with', row['Tube Count'], "tubes is partially inventoried and not being uploaded")
+        print(row['Name'], 'with', row['Tube Count'], "tubes is partially inventoried and not marked as completed")
     if uploading_boxes.shape[0] > 0:
         print("Boxes to upload today:")
     for _, row in uploading_boxes.iterrows():
