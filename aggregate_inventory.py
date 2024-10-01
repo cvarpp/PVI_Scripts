@@ -31,11 +31,9 @@ if __name__ == '__main__':
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=81)
     args = argParser.parse_args()
     inventory_boxes = pd.read_excel(util.inventory_input, sheet_name=None)
-    freezer_map = pd.read_excel(util.freezer_map, sheet_name='Racks in Freezers', header=0)    
-    map = freezer_map.dropna(subset='Rack ID', axis=0).copy().reset_index()
-    rack_shelf={}
-    for n, item in enumerate(map['Rack ID']):
-        rack_shelf.update({item:map['Shelf'][n]})
+    freezer_map = pd.read_excel(util.freezer_map, sheet_name='Racks in Freezers', header=0)
+    racks_in_freezers = freezer_map.dropna(subset='Rack ID', axis=0).copy().reset_index()
+    freezers_positions = pd.read_excel(util.freezer_map, sheet_name='FP Shelf_Rack Names', header=0, index_col='Concat')
     sample_types = ['Plasma', 'Serum', 'Pellet', 'Saliva', 'PBMC', 'HT', '4.5 mL Tube', 'NPS', 'All']
     data = {'Name': [], 'Sample ID': [], 'Sample Type': [],'Freezer': [],'Level1': [],'Level2': [],'Level3': [],'Box': [],'Position': [], 'ALIQUOT': []}
     samples_data = {st: deepcopy(data) for st in sample_types if st != 'HT'}
@@ -48,6 +46,18 @@ if __name__ == '__main__':
     completion = []
     boxes_lost_name = []
     boxes_lost_reason = []
+    rack_shelf={}
+    rack_rack={}
+    rack_freezer={}
+    rack_floor={}
+    rack_concat={}
+
+    for n, item in enumerate(racks_in_freezers['Rack ID']):
+        rack_shelf.update({item:racks_in_freezers['Shelf'][n]})
+        rack_rack.update({item:racks_in_freezers['Position'][n]})
+        rack_freezer.update({item:racks_in_freezers['Freezer'][n]})
+        rack_floor.update({item:racks_in_freezers['Farm'][n]})
+        rack_concat.update({item:str(racks_in_freezers['Farm'][n])+':'+str(racks_in_freezers['Freezer'][n])+':'+str(int(racks_in_freezers['Shelf'][n]))+':'+str(int(racks_in_freezers['Position'][n]))})
 
     for name, sheet in inventory_boxes.items():
         try:
@@ -81,16 +91,25 @@ if __name__ == '__main__':
             continue
 
         if "Sample ID" not in sheet.columns:
+            print(name, ": No Sample ID column in sheet")
+            boxes_lost_name.append(name)
+            boxes_lost_reason.append("No Sample ID Column")
             continue
+
         if re.search('APOLLO RESEARCH \d+', name) or re.search('APOLLO NIH \d+', name):
             team = 'APOLLO'
+        
         elif re.search('PSP', name):
             team = 'PSP'
+        
         elif re.match("MIT|MARS|IRIS|TITAN|PRIORITY", name.upper()) is not None:
             team = 'PVI ' + name.split()[0]
+        
         else:
             team = 'PVI'
+
         sample_type = 'N/A'
+
         if team == 'APOLLO':
             sample_type = 'Serum'
         else:
@@ -98,15 +117,20 @@ if __name__ == '__main__':
                 if re.search(str(val).upper().split()[0], name.upper()):
                     sample_type = val
                     break
+        
         if sample_type == 'N/A':
             print(name, "has a box number but no valid sample type")
+            boxes_lost_name.append(name)
+            boxes_lost_reason.append("No Valid Sample ID value")
             continue
+        
         box_kinds = re.findall('RESEARCH|NIH|Lab|FF', name)
         if len(box_kinds) == 0:
             if sample_type in ['PBMC', 'HT', '4.5 mL Tube']:
                 box_kinds.append('')
             else:
                 print(name, " is neither lab nor ff. Not uploaded")
+        
         box_sample_type = sample_type
         sheet = sheet.assign(sample_id=clean_sample_id).set_index('sample_id')
         for kind in box_kinds:
@@ -118,23 +142,33 @@ if __name__ == '__main__':
                 box_name = f"{team} {box_sample_type} {kind} {box_number}"
             if box_name not in box_counts.keys():
                 box_counts[box_name] = 0
-            freezer = 'Annenberg 18'
-            level1 = 'Freezer 1 (Eiffel Tower)'
-            level2 = 'Shelf {}'.format(int(rack_shelf[rack_number]))
-            level3 = 'Rack #{}'.format(int(rack_number))
-            if box_sample_type == 'NPS':
-                freezer = 'Temporary PSP NPS'
-                level1 = 'freezer_nps'
-                if rack_number=='missing':
-                    level2 = 'Shelf {}'.format(int(rack_shelf[rack_number]))
-                else:
-                    pass
-                level3 = 'Rack #{}'.format(int(rack_number))
-            elif box_sample_type == 'PBMC':
-                freezer = 'LN Tank #3'
-                level1 = 'PBMC SUPER TEMPORARY HOLDING'
+
+            freezer_index = rack_concat[rack_number]            
+            if freezer_index in freezers_positions.index:
+                freezer = freezers_positions.loc[freezer_index,'FP_Freezer']
+                level1 = freezers_positions.loc[freezer_index,'FP_Level1']
+                level2 = freezers_positions.loc[freezer_index,'FP_Level2']
+                level3 = freezers_positions.loc[freezer_index,'FP_Level3']
             else:
-                level3 = 'Rack #{}'.format(rack_number)
+                freezer = 'Annenberg 18'
+                level1 = 'Freezer 1 (Eiffel Tower)'
+                level2 = 'Shelf {}'.format(int(rack_shelf[rack_number]))
+                level3 = 'Rack #{}'.format(int(rack_number))
+            
+                if box_sample_type == 'NPS':
+                    freezer = 'Temporary PSP NPS'
+                    level1 = 'freezer_nps'
+                    if rack_number=='missing':
+                        level2 = 'Shelf {}'.format(int(rack_shelf[rack_number]))
+                    else:
+                        pass
+                    level3 = 'Rack #{}'.format(int(rack_number))
+                elif box_sample_type == 'PBMC':
+                    freezer = 'LN Tank #3'
+                    level1 = 'PBMC SUPER TEMPORARY HOLDING'
+                else:
+                    level3 = 'Rack #{}'.format(rack_number)
+
             for idx, (sample_id, row) in enumerate(sheet.iterrows()):
                 if re.search("[1-9A-Z][0-9]{4,5}", sample_id) is None:
                     continue
