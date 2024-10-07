@@ -15,7 +15,7 @@ tracking = onedrive + 'Simon Lab - Sample Tracking/'
 shared_samples = tracking + 'Released Samples/Collaborator Samples Tracker.xlsx'
 intake = tracking + 'Sample Intake Log Historian.xlsx'
 
-pvi = onedrive + 'Simon Lab - PVI - Personalized Virology Initiative/'
+pvi = home + 'OneDrive - The Mount Sinai Hospital/' + 'PVI - Personalized Virology Initiative/'
 clin_ops = pvi + 'Clinical Research Study Operations/'
 umbrella = clin_ops + 'Umbrella Viral Sample Collection Protocol/'
 secret_charles = pvi + 'Secret Sheets/Charles/'
