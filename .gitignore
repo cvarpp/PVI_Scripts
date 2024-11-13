@@ -148,3 +148,9 @@ local_cache/
 local_secrets/
 
 .DS_Store
+
+# Data files
+*.xlsx
+*.xls
+*.csv
+*.tsv
