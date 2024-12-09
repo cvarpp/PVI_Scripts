@@ -119,10 +119,20 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                     sheet_data.iloc[9:12, 19] = assigned_sample_ids[60:63]
                     sheet_data.iloc[14:17, 19] = assigned_sample_ids[75:78]
                 elif print_type == 'SERONETPBMC':
-                    if 'PBMC Tops' in sheet_name or '4.5mL Tops' in sheet_name:
+                    if 'PBMC Top' in sheet_name or 'PBMC Side' in sheet_name:
+                        round_num = int(sheet_name.split()[-1])
+                        start_idx = (round_num - 1) * 48
+                        end_idx = start_idx + 48
+                        sids_twice = np.repeat(assigned_sample_ids[start_idx:end_idx], 2)
+                        if 'Top' in sheet_name:
+                            sheet_data.iloc[:96, 2] = sids_twice
+                        elif 'Side' in sheet_name:
+                            sheet_data.iloc[:96, 1] = sids_twice
+                    if '4.5mL Top' in sheet_name:
                         sheet_data.iloc[:96, 2] = assigned_sample_ids
-                    elif 'PBMC Sides' in sheet_name or '4.5mL Sides' in sheet_name:
+                    elif '4.5mL Side' in sheet_name:
                         sheet_data.iloc[:96, 1] = assigned_sample_ids
+                    sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
                 elif print_type == 'STANDARDPBMC':
                     if 'PBMC Tops' in sheet_name or 'PBMC Sides' in sheet_name:
                         sheet_data.iloc[:288, 2] = [sid for sid in assigned_sample_ids for _ in range(3)]
