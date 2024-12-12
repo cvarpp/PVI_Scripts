@@ -2,20 +2,20 @@ import os
 
 home = os.path.expanduser('~') + '/'
 onedrive = home + 'OneDrive - The Mount Sinai Hospital/'
-proc = onedrive + 'Simon Lab - Processing Team/'
+proc = onedrive + 'Processing Team/'
 dscf = proc + 'Data Sample Collection Form.xlsx'
 proc_ntbk = proc + 'Processing Notebook.xlsx'
 inventory_input = proc + 'New Import Sheet.xlsx'
 
-psp = onedrive + 'Simon Lab - Pathogen Surveillance/'
+psp = onedrive + 'Pathogen Surveillance/'
 sequencing = psp + 'Sequencing/'
 extractions = sequencing + 'Extraction/'
 
-tracking = onedrive + 'Sample Tracking/'
+tracking = onedrive + 'Simon Lab - Sample Tracking/'
 shared_samples = tracking + 'Released Samples/Collaborator Samples Tracker.xlsx'
 intake = tracking + 'Sample Intake Log Historian.xlsx'
 
-pvi = onedrive + 'PVI - Personalized Virology Initiative/'
+pvi = onedrive + 'Simon Lab - PVI - Personalized Virology Initiative/'
 clin_ops = pvi + 'Clinical Research Study Operations/'
 umbrella = clin_ops + 'Umbrella Viral Sample Collection Protocol/'
 secret_charles = pvi + 'Secret Sheets/Charles/'
@@ -26,7 +26,7 @@ reports = pvi + 'Reports & Data/'
 research = reports + 'From Krammer Lab/Master Sheet.xlsx'
 projects = reports + 'Projects/'
 
-printing = onedrive + 'Simon Lab - Print Shop/'
+printing = onedrive + 'Print Shop/'
 tube_print = printing + 'Tube Printing/'
 print_log = tube_print + 'Printing Log.xlsx'
 
