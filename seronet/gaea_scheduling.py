@@ -9,7 +9,7 @@ import util
 
 if __name__ == '__main__':
     if len(sys.argv) != 2:
-        print("usage: python monthly_schedule.py MM-DD-YY")
+        print("usage: python -m seronet.gaea_scheduling MM-DD-YY")
         exit(1)
     else:
         try:
@@ -59,7 +59,6 @@ if __name__ == '__main__':
         table['Visit Date'].append(scheduling_stuff.loc[pt, 'Date'].strftime("%A, %B %d, %Y"))
         table['Must See By'].append(scheduling_stuff.loc[pt, 'Last in Window'].strftime("%A, %B %d, %Y"))
     output = pd.DataFrame.from_dict(table)
-    print(output.head())
 
     destination = util.gaea_folder + 'GAEA Scheduling Week of {}.xlsx'.format(date_of_interest.date())
     with pd.ExcelWriter(destination) as writer:
