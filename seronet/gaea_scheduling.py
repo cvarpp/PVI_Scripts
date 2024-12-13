@@ -47,7 +47,7 @@ if __name__ == '__main__':
             if due_date[pid] == day_check:
                 pts_due.append(pid)
    
-    table = {'Name':[], 'Study':[], 'Visit Details':[], 'NoF':[], 'ID':[], 'Email':[], 'Timepoint':[], 'Due Date':[]}
+    table = {'Name':[], 'Study':[], 'Visit Details':[], 'NoF':[], 'ID':[], 'Email':[], 'Timepoint':[], 'Visit Date':[], 'Must See By': []}
     for pt in pts_due:
         table['Name'].append(scheduling_stuff.loc[pt, 'Name'])
         table['Study'].append('GAEA')
@@ -56,10 +56,12 @@ if __name__ == '__main__':
         table['ID'].append(pt)
         table['Email'].append(scheduling_stuff.loc[pt, 'Email'])
         table['Timepoint'].append(key_frame.loc[scheduling_stuff.loc[pt, 'Visit Kind'], 'Timepoint'])
-        table['Due Date'].append(scheduling_stuff.loc[pt, 'Date'].strftime("%A, %B %d, %Y"))
+        table['Visit Date'].append(scheduling_stuff.loc[pt, 'Date'].strftime("%A, %B %d, %Y"))
+        table['Must See By'].append(scheduling_stuff.loc[pt, 'Last in Window'].strftime("%A, %B %d, %Y"))
     output = pd.DataFrame.from_dict(table)
     print(output.head())
 
     destination = util.gaea_folder + 'GAEA Scheduling Week of {}.xlsx'.format(date_of_interest.date())
     with pd.ExcelWriter(destination) as writer:
         output.to_excel(writer, sheet_name='{}-{}'.format(date_of_interest.strftime("%m.%d.%y"), (date_of_interest + datetime.timedelta(days=4)).strftime("%m.%d.%y")), index=False)
+        print("Written to", destination)
