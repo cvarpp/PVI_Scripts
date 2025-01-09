@@ -262,7 +262,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             add_to['Initial_Volume_of_Biospecimen'].append(sst_vol)
             add_to['Biospecimen_Collection_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
             add_to['Biospecimen_Collector_Initials'].append(coll_inits)
-            add_to['Biospecimen_Collection_Year'].append(2021)
+            add_to['Biospecimen_Collection_Year'].append(row['Date'].year)
             tname = 'SST'
             add_to['Collection_Tube_Type'].append(tname)
             odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], tname, lot_log)
@@ -306,7 +306,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             add_to['Initial_Volume_of_Biospecimen'].append(cpt_vol)
             add_to['Biospecimen_Collection_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
             add_to['Biospecimen_Collector_Initials'].append(coll_inits)
-            add_to['Biospecimen_Collection_Year'].append(2021)
+            add_to['Biospecimen_Collection_Year'].append(row['Date'].year)
             tname = 'CPT'
             add_to['Collection_Tube_Type'].append(tname)
             odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], tname, lot_log)
