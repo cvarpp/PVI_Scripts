@@ -61,6 +61,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
     sample_visits = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Source').drop_duplicates(subset='Sample ID').assign(sample_id=clean_sample_id).set_index('sample_id')
     sample_visits['Visit Num'] = sample_visits['Biospecimen_ID'].str[-2:].apply(lambda val: int(val) if val[-1].isdigit() else val)
     for _, row in source.iterrows():
+        proc_comment = row['proc_comment']
         participant = row['Participant ID']
         sample_id = str(row['Sample ID'])
         seronet_id = row['Seronet ID']
@@ -96,7 +97,6 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
         viability = row['viability']
         cpt_vol = row['cpt_vol']
         sst_vol = row['sst_vol']
-        proc_comment = row['proc_comment']
         try:
             if cell_count > 20.:
                 aliq_cells = 10.
