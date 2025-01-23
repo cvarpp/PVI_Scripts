@@ -1,32 +1,34 @@
 import os
 
 home = os.path.expanduser('~') + '/'
-onedrive = home + 'OneDrive - The Mount Sinai Hospital/'
-proc = onedrive + 'Processing Team/'
+
+onedrive = os.environ.get('SHAREPOINT_DIR', home + 'The Mount Sinai Hospital/')
+tracking = os.environ.get('TRACKING_DIR', onedrive + 'Simon Lab - Sample Tracking/')
+pvi = os.environ.get('PVI_DIR', onedrive + 'Simon Lab - PVI - Personalized Virology Initiative/')
+proc = os.environ.get('PROCESS_DIR', onedrive + 'Simon Lab - Processing Team/')
+project_ws = os.environ.get('PROJECT_DIR', onedrive + 'Simon Lab - Project Workspace/')
+psp = os.environ.get('PSP_DIR', onedrive + 'Simon Lab - Pathogen Surveillance/')
+printing = os.environ.get('PRINT_DIR', onedrive + 'Simon Lab - Print Shop/')
+
 dscf = proc + 'Data Sample Collection Form.xlsx'
 proc_ntbk = proc + 'Processing Notebook.xlsx'
 inventory_input = proc + 'New Import Sheet.xlsx'
 
-psp = onedrive + 'Pathogen Surveillance/'
 sequencing = psp + 'Sequencing/'
 extractions = sequencing + 'Extraction/'
 
-tracking = onedrive + 'Simon Lab - Sample Tracking/'
 shared_samples = tracking + 'Released Samples/Collaborator Samples Tracker.xlsx'
 intake = tracking + 'Sample Intake Log Historian.xlsx'
 
-pvi = onedrive + 'Simon Lab - PVI - Personalized Virology Initiative/'
 clin_ops = pvi + 'Clinical Research Study Operations/'
 umbrella = clin_ops + 'Umbrella Viral Sample Collection Protocol/'
 secret_charles = pvi + 'Secret Sheets/Charles/'
 
-project_ws = onedrive + 'Simon Lab - Project Workspace/'
 
 reports = pvi + 'Reports & Data/'
 research = reports + 'From Krammer Lab/Master Sheet.xlsx'
 projects = reports + 'Projects/'
 
-printing = onedrive + 'Print Shop/'
 tube_print = printing + 'Tube Printing/'
 print_log = tube_print + 'Printing Log.xlsx'
 
