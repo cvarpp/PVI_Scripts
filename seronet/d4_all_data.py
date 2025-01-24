@@ -119,7 +119,7 @@ def pull_from_source(debug=False):
     cam_df['coll_time'] = cam_df['Time Collected'].fillna(cam_df['Time'])
     cam_df['coll_inits'] = cam_df['Phlebotomist'].fillna('CCT (Clinical Care Team)')
     proc_unfiltered['coll_time'] = proc_unfiltered.apply(lambda row: cam_df.loc[row.name, 'coll_time'] if row.name in cam_df.index else row['Time Collected'], axis=1)
-    proc_unfiltered['coll_inits'] = proc_unfiltered.apply(lambda row: cam_df.loc[row.name, 'coll_inits'] if row.name in cam_df.index else 'CCT (Clinical Care Team)')
+    proc_unfiltered['coll_inits'] = proc_unfiltered.apply(lambda row: cam_df.loc[row.name, 'coll_inits'] if row.name in cam_df.index else 'CCT (Clinical Care Team)', axis=1)
     serum_or_cells = proc_unfiltered['Volume of Serum Collected (mL)'].apply(sufficient) | proc_unfiltered['PBMC concentration per mL (x10^6)'].apply(sufficient)
     if not debug:
         proc_unfiltered[~serum_or_cells].to_excel(util.script_output + 'missing_info.xlsx', index=False)
