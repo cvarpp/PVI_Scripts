@@ -5,6 +5,8 @@ import util
 from seronet.d4_all_data import pull_from_source
 from helpers import clean_sample_id
 
+PVI_list = ['MVK','mvk','NL','nl','ACA','aca']
+
 def process_lots():
     equip_lots = pd.read_excel(util.proc + 'script_data/lots_by_dates.xlsx').set_index(['Date Used', 'Material'])
     return equip_lots
@@ -90,7 +92,13 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
         rec_time = row['rec_time']
         proc_time = row['proc_time']
         coll_time = row['coll_time']
-        coll_inits = row['coll_inits']
+        #print(row['coll_inits'], type(row['coll_inits']))
+        
+        if row['coll_inits'] in PVI_list:
+            coll_inits = row['coll_inits']
+        else:
+            coll_inits = "CCT"
+
         serum_freeze_time = row['serum_freeze_time']
         cell_freeze_time = row['cell_freeze_time']
         proc_inits = row['proc_inits']
@@ -282,7 +290,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             if time_diff != 'Missing':
                 time_diff = round(time_diff * 60., 2)
             add_to['RT_Serum_Clotting_Time'].append(time_diff)
-            add_to['Centrifugation_Time'].append(20)
+            add_to['Centrifugation_Time'].append(10)
             for col in ['Live_Cells_Hemocytometer_Count', 'Total_Cells_Hemocytometer_Count', 'Viability_Hemocytometer_Count', 'Live_Cells_Automated_Count', 'Total_Cells_Automated_Count', 'Viability_Automated_Count', 'Storage_Time_in_Mr_Frosty']:
                 add_to[col].append('N/A')
             add_to['Comments'].append('')
@@ -322,7 +330,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             add_to['Biospecimen_Collection_to_Receipt_Duration'].append(time_diff)
             time_diff = time_diff_wrapper(rec_time, cell_freeze_time, "rec to serum store {}".format(sample_id))
             add_to['Biospecimen_Receipt_to_Storage_Duration'].append(time_diff)
-            add_to['Centrifugation_Time'].append(40)
+            add_to['Centrifugation_Time'].append("N/A")
             add_to['RT_Serum_Clotting_Time'].append('N/A')
             add_to['Live_Cells_Hemocytometer_Count'].append('N/A')
             add_to['Total_Cells_Hemocytometer_Count'].append('N/A')
