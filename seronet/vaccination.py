@@ -61,7 +61,7 @@ if __name__ == '__main__':
             if pd.to_datetime(date_boost) >= pd.to_datetime('2024-08-29'):
                 boost_type = str(boost_type).split()[0]
                 if 'novavax' in str(boost_type).lower():
-                    addendum = 'Monovalent JN.1'
+                    addendum = ':Monovalent JN.1'
                 else:
                     addendum = ':Monovalent KP.2'
             elif pd.to_datetime(date_boost) >= pd.to_datetime('2023-08-29'):
@@ -144,7 +144,7 @@ if __name__ == '__main__':
             if pd.to_datetime(date_boost) >= pd.to_datetime('2024-08-29'):
                 boost_type = str(boost_type).split()[0]
                 if 'novavax' in str(boost_type).lower():
-                    addendum = 'Monovalent JN.1'
+                    addendum = ':Monovalent JN.1'
                 else:
                     addendum = ':Monovalent KP.2'
             elif pd.to_datetime(date_boost) >= pd.to_datetime('2023-08-29'):
