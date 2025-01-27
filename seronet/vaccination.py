@@ -162,4 +162,21 @@ if __name__ == '__main__':
                 vaccine_stuff['Timepoint'].append(timepoint_cols[i] + addendum)
                 vaccine_stuff['Vaccine Type'].append(boost_type)
                 vaccine_stuff['Vaccine Date'].append(date_boost)
-    pd.DataFrame(vaccine_stuff).to_excel(util.seronet_vax + 'gaea_vaccines.xlsx', index=False)
+    #pd.DataFrame(vaccine_stuff).to_excel(util.seronet_vax + 'gaea_vaccines.xlsx', index=False)
+    from_tracker = pd.DataFrame(vaccine_stuff).rename(columns={'Timepoint': 'Vaccination_Status'}).set_index(['Participant ID', 'Vaccination_Status'])
+    from_long = pd.read_excel(util.gaea_folder + 'GAEA for D4 Long.xlsx', sheet_name='COVID Vaccinations').set_index(['Participant ID', 'Vaccination_Status'])
+    in_both = from_long.join(from_tracker, how='inner', lsuffix='_long', rsuffix='_tracker')
+    in_both_correct = in_both[(in_both['SARS-CoV-2_Vaccination_Date'] == in_both['Vaccine Date']) &
+                                (in_both['SARS-CoV-2_Vaccine_Type'] == in_both['Vaccine Type'])]
+    date_issue = in_both[(in_both['SARS-CoV-2_Vaccination_Date'] != in_both['Vaccine Date'])]
+    type_issue = in_both[(in_both['SARS-CoV-2_Vaccine_Type'] != in_both['Vaccine Type'])]
+    add_to_tracker = from_long[~from_long.index.isin(from_tracker.index)]
+    add_to_long = from_tracker[~from_tracker.index.isin(from_long.index)]
+    with pd.ExcelWriter(util.seronet_vax + 'gaea_vaccines.xlsx') as writer:
+        add_to_long.reset_index().to_excel(writer, sheet_name='Add to Long', index=False)
+        date_issue.reset_index().to_excel(writer, sheet_name='Date Discrepancy', index=False)
+        type_issue.reset_index().to_excel(writer, sheet_name='Type Discrepancy', index=False)
+        add_to_tracker.reset_index().to_excel(writer, sheet_name='Add to Tracker', index=False)
+        in_both_correct.reset_index().to_excel(writer, sheet_name='In Both (agreed)', index=False)
+        from_tracker.reset_index().to_excel(writer, sheet_name='Tracker Source', index=False)
+        from_long.reset_index().to_excel(writer, sheet_name='Long D4 Source', index=False)
