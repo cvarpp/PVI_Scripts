@@ -57,17 +57,18 @@ if __name__ == '__main__':
         for i, vals in enumerate(boost_cols):
             dt, tp = vals
             date_boost = mars_data.loc[participant, dt]
+            date_boost_dt = pd.to_datetime(date_boost, errors='coerce')
             boost_type = mars_data.loc[participant, tp]
-            if pd.to_datetime(date_boost) >= pd.to_datetime('2024-08-29'):
+            if date_boost_dt >= pd.to_datetime('2024-08-29'):
                 boost_type = str(boost_type).split()[0]
                 if 'novavax' in str(boost_type).lower():
                     addendum = ':Monovalent JN.1'
                 else:
                     addendum = ':Monovalent KP.2'
-            elif pd.to_datetime(date_boost) >= pd.to_datetime('2023-08-29'):
+            elif date_boost_dt >= pd.to_datetime('2023-08-29'):
                 boost_type = str(boost_type).split()[0]
                 addendum = ':Monovalent XBB.1.5'
-            elif pd.to_datetime(date_boost) >= pd.to_datetime('2022-08-29'):
+            elif date_boost_dt >= pd.to_datetime('2022-08-29'):
                 boost_type = str(boost_type).split()[0]
                 addendum = ':Bivalent'
             else:
@@ -140,17 +141,18 @@ if __name__ == '__main__':
         for i, vals in enumerate(boost_cols):
             dt, tp = vals
             date_boost = gaea_data.loc[participant, dt]
+            date_boost_dt = pd.to_datetime(date_boost, errors='coerce')
             boost_type = gaea_data.loc[participant, tp]
-            if pd.to_datetime(date_boost) >= pd.to_datetime('2024-08-29'):
+            if date_boost_dt >= pd.to_datetime('2024-08-29'):
                 boost_type = str(boost_type).split()[0]
                 if 'novavax' in str(boost_type).lower():
                     addendum = ':Monovalent JN.1'
                 else:
                     addendum = ':Monovalent KP.2'
-            elif pd.to_datetime(date_boost) >= pd.to_datetime('2023-08-29'):
+            elif date_boost_dt >= pd.to_datetime('2023-08-29'):
                 boost_type = str(boost_type).split()[0]
                 addendum = ':Monovalent XBB.1.5'
-            elif pd.to_datetime(date_boost) >= pd.to_datetime('2022-08-29'):
+            elif date_boost_dt >= pd.to_datetime('2022-08-29'):
                 boost_type = boost_type.split()[0]
                 addendum = ':Bivalent'
             else:
