@@ -343,7 +343,9 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             else:
                 try:
                     add_to['Storage_Time_in_Mr_Frosty'].append(((datetime.timedelta(days=1) + pd.to_datetime('10:30AM')) - pd.to_datetime(cell_freeze_time)) / datetime.timedelta(hours=1))
+                    
                 except:
+                    print("failed try block: ", cell_freeze_time)
                     issues.add(sample_id)
                     add_to['Storage_Time_in_Mr_Frosty'].append('PLEASE FILL')
             add_to['Comments'].append('')
