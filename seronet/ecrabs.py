@@ -4,11 +4,12 @@ import argparse
 import util
 from seronet.d4_all_data import pull_from_source
 from helpers import clean_sample_id
+from lots_consolidated import compress_lots
 
 PVI_list = ['MVK','mvk','NL','nl','ACA','aca']
 
 def process_lots():
-    equip_lots = pd.read_excel(util.proc + 'script_data/lots_by_dates.xlsx').set_index(['Date Used', 'Material'])
+    equip_lots = compress_lots().set_index(['Date Used', 'Material'])
     return equip_lots
 
 def get_catalog_lot_exp(coll_date, material, lot_log):
@@ -97,7 +98,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
         if row['coll_inits'] in PVI_list:
             coll_inits = row['coll_inits']
         else:
-            coll_inits = "CCT"
+            coll_inits = "CCT (Clinical Care Team)"
 
         serum_freeze_time = row['serum_freeze_time']
         cell_freeze_time = row['cell_freeze_time']
