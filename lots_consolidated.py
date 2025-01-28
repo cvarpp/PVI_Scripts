@@ -8,6 +8,10 @@ if __name__ == '__main__':
     dscf_lot = pd.read_excel(util.dscf, sheet_name='Lot # Sheet', header=0).iloc[:, :9]
     proc_lot = pd.read_excel(util.proc_ntbk, sheet_name='Lot #s', header=0)
     
+    print(proc_lot['Material'].unique())
+
+    print("test: ", proc_lot[proc_lot['Material'] == "CPT"][["Catalog Number","Lot Number", "EXP Date"]])
+
     selected_columns = ['Date Used', 'Material', 'Lot Number', 'EXP Date', 'Catalog Number', 'odate', 'Samples Affected/ COMMENTS']
     
     lots_reformatted = (pd.concat([dscf_lot, proc_lot]).assign(Material=lambda df: df['Material'].str.strip().str.title())
