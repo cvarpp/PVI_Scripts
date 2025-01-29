@@ -107,21 +107,31 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
         cpt_vol = row['cpt_vol']
         sst_vol = row['sst_vol']
         try:
-            if cell_count > 20.:
-                aliq_cells = 10.
-            elif vial_count == 0:
-                aliq_cells = 0
-            elif type(vial_count) != str:
-                aliq_cells = cell_count / vial_count
-            else:
-                aliq_cells = cell_count
-            live_cells = cell_count * (10**6)
-            try:
-                all_cells = live_cells * 100 / viability
-            except:
-                all_cells = "Viability needs fixing"
-                if vial_count != 0:
-                    issues.add(sample_id)
+            if row['Date'] > pd.to_datetime("11/1/2024"):
+                aliq_cells = 10
+                Last_aliq = cell_count - 10*vial_count
+            else:    
+                
+                print("Proc_notebook assignment failure")
+
+                if cell_count > 20.:
+                    aliq_cells = 10.
+                elif vial_count == 0:
+                    aliq_cells = 0
+                elif type(vial_count) != str:
+                    if vial_count <= 2:
+                        aliq_cells = cell_count / vial_count
+                    else:
+                        aliq_cells == 10000000
+                else:
+                    aliq_cells = cell_count
+                live_cells = cell_count * (10**6)
+                try:
+                    all_cells = live_cells * 100 / viability
+                except:
+                    all_cells = "Viability needs fixing"
+                    if vial_count != 0:
+                        issues.add(sample_id)
         except Exception as e:
             print(e)
             aliq_cells = 'Missing'
@@ -228,6 +238,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             print("{} for {} has no serum".format(sample_id, participant))
         if not (type(vial_count) == str or (type(vial_count) == float and pd.isna(vial_count))):
             for i in range(min(int(vial_count), 2)):
+                print(i)
                 add_to['Participant ID'].append(participant)
                 add_to['Sample ID'].append(sample_id)
                 add_to['Date'].append(row['Date'])
@@ -235,7 +246,15 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
                 add_to['Aliquot_ID'].append("{}_{}".format(cells_id, i + 1))
                 add_to['Aliquot_Volume'].append(1)
                 add_to['Aliquot_Units'].append('mL')
-                add_to['Aliquot_Concentration'].append("{:.2f}".format(aliq_cells * 1000000.0))
+
+                try:
+                    if i==0 and int(vial_count) < 3:
+                        add_to['Aliquot_Concentration'].append("{:.2f}".format(Last_aliq * 1000000.0))
+                    else:
+                        add_to['Aliquot_Concentration'].append("{:.2f}".format(aliq_cells * 1000000.0))
+                except:
+                    add_to['Aliquot_Concentration'].append("{:.2f}".format(aliq_cells * 1000000.0))
+
                 add_to['Aliquot_Initials'].append(proc_inits)
                 tname = 'CRYOTUBE 1.8ML'
                 add_to['Aliquot_Tube_Type'].append(tname)
