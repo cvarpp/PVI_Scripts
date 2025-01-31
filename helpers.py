@@ -139,7 +139,7 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=Fals
         crp_samples['# cells per aliquot'] = crp_samples.apply(fallible(lambda row: row['Cell Count'] / row['# of aliquots frozen']), axis=1)
         crp_samples.loc[crp_samples['Total volume of serum after second spin (ml)'].str.upper().str.strip() != 'X', 'Total volume of serum (mL)'] = crp_samples.loc[crp_samples['Total volume of serum after second spin (ml)'].str.upper().str.strip() != 'X', 'Total volume of serum after second spin (ml)']
         date_cols = ['Date Processing Started']
-        correct_new = {'# PBMCs per Aliquot': '# cells per aliquot',
+        correct_new = {'# PBMCs per Aliquot (except last)': '# cells per aliquot',
                     '# Aliquots': '# of aliquots frozen',
                     'Total Plasma Vol. (mL)': 'Total volume of plasma (mL)',
                     'Total Serum Vol. (mL)': 'Total volume of serum (mL)',
@@ -155,6 +155,7 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=Fals
                         .assign(serum_vol=clean_serum)
                         .pipe(clean_cells, no_pbmcs)
                         .pipe(map_dates, date_cols))
+        all_samples['Cells in Last Aliquot'] = all_samples['Cells in Last Aliquot'].fillna(all_samples['pbmc_conc'])
         if update_cache:
             if not os.path.exists('local_cache/'):
                 os.mkdir('local_cache/')
