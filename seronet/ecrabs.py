@@ -88,7 +88,9 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
         serum_id = '{}_1{}'.format(seronet_id, str(visit_num).zfill(2))
         cells_id = '{}_2{}'.format(seronet_id, str(visit_num).zfill(2))
         serum_vol = row['Volume of Serum Collected (mL)']
-        cell_count = row['PBMC concentration per mL (x10^6)']
+        total_cell_count = row['Total Cell Count (x10^6)']
+        aliq_cell_count = row['PBMC concentration per mL (x10^6)']
+        last_aliq_cell_count = row['Cells in Last Aliquot']
         vial_count = row['# of PBMC vials']
         rec_time = row['rec_time']
         proc_time = row['proc_time']
@@ -107,39 +109,24 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
         cpt_vol = row['cpt_vol']
         sst_vol = row['sst_vol']
         try:
-            if row['Date'] > pd.to_datetime("11/1/2024"):
-                aliq_cells = 10
-                Last_aliq = cell_count - 10*vial_count
-            else:    
-                
-                print("Proc_notebook assignment failure")
-
-                if cell_count > 20.:
-                    aliq_cells = 10.
-                elif vial_count == 0:
-                    aliq_cells = 0
-                elif type(vial_count) != str:
-                    if vial_count <= 2:
-                        aliq_cells = cell_count / vial_count
-                    else:
-                        aliq_cells == 10000000
-                else:
-                    aliq_cells = cell_count
-                live_cells = cell_count * (10**6)
-                try:
-                    all_cells = live_cells * 100 / viability
-                except:
-                    all_cells = "Viability needs fixing"
-                    if vial_count != 0:
-                        issues.add(sample_id)
+            total_live_cells = total_cell_count * (10**6)
+            aliq_live_cells = aliq_cell_count * (10**6)
+            last_aliq_live_cells = last_aliq_cell_count * (10**6)
+            try:
+                total_all_cells = total_live_cells * 100 / viability
+            except:
+                total_all_cells = "Viability needs fixing"
+                if vial_count != 0:
+                    issues.add(sample_id)
         except Exception as e:
             print(e)
-            aliq_cells = 'Missing'
-            live_cells = cell_count
-            all_cells = 'Missing'
+            total_live_cells = "Missing"
+            aliq_live_cells = "Missing"
+            last_aliq_live_cells = "Missing"
+            total_all_cells = "Missing"
             proc_comment = str(proc_comment) + '; cell count is not number, please fix'
             issues.add(sample_id)
-            print(sample_id, "has invalid cell count:", cell_count)
+            print(sample_id, "has invalid cell count:", total_cell_count)
         '''
         Equipment First
         '''
@@ -248,17 +235,18 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
                 add_to['Aliquot_Units'].append('mL')
 
                 try:
-                    if i==0 and int(vial_count) < 3:
-                        add_to['Aliquot_Concentration'].append("{:.2f}".format(Last_aliq * 1000000.0))
+                    if i + 1 == int(vial_count):
+                        add_to['Aliquot_Concentration'].append("{:.0f}".format(last_aliq_live_cells))
                     else:
-                        add_to['Aliquot_Concentration'].append("{:.2f}".format(aliq_cells * 1000000.0))
+                        add_to['Aliquot_Concentration'].append("{:.0f}".format(aliq_live_cells))
                 except:
-                    add_to['Aliquot_Concentration'].append("{:.2f}".format(aliq_cells * 1000000.0))
+                    print("Issue with aliquot for", sample_id)
+                    add_to['Aliquot_Concentration'].append("{:.0f}".format(aliq_live_cells))
 
                 add_to['Aliquot_Initials'].append(proc_inits)
                 tname = 'CRYOTUBE 1.8ML'
                 add_to['Aliquot_Tube_Type'].append(tname)
-                odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], tname, lot_log)
+                _odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], tname, lot_log)
                 add_to['Aliquot_Tube_Type_Catalog_Number'].append(cat)
                 add_to['Aliquot_Tube_Type_Lot_Number'].append(lot)
                 add_to['Aliquot_Tube_Type_Expiration_Date'].append(exp)
@@ -355,17 +343,18 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             add_to['Live_Cells_Hemocytometer_Count'].append('N/A')
             add_to['Total_Cells_Hemocytometer_Count'].append('N/A')
             add_to['Viability_Hemocytometer_Count'].append('N/A')
-            add_to['Live_Cells_Automated_Count'].append(live_cells)
-            add_to['Total_Cells_Automated_Count'].append(all_cells)
+            add_to['Live_Cells_Automated_Count'].append(total_live_cells)
+            add_to['Total_Cells_Automated_Count'].append(total_all_cells)
             add_to['Viability_Automated_Count'].append(viability)
-            if live_cells >= 19_999_999:
+            if row['Freezing Method'] != 'Mr. Frosty':
                 add_to['Storage_Time_in_Mr_Frosty'].append('N/A')
             else:
                 try:
-                    add_to['Storage_Time_in_Mr_Frosty'].append(((datetime.timedelta(days=1) + pd.to_datetime('10:30AM')) - pd.to_datetime(cell_freeze_time)) / datetime.timedelta(hours=1))
-                    
+                    add_to['Storage_Time_in_Mr_Frosty'].append(((datetime.timedelta(days=1) + pd.to_datetime(cell_freeze_time)) - pd.to_datetime(row['Time in LN'])) / datetime.timedelta(hours=1))
                 except:
-                    print("failed try block: ", cell_freeze_time)
+                    if add_to['Biospecimen_Collection_Year'][-1] == 2025:
+                        print("failed try block: ", cell_freeze_time)
+                        print(row['Time in LN'])
                     issues.add(sample_id)
                     add_to['Storage_Time_in_Mr_Frosty'].append('PLEASE FILL')
             add_to['Comments'].append('')

@@ -126,7 +126,7 @@ def pull_from_source(debug=False):
     sample_info = proc_unfiltered[serum_or_cells].copy()
     sample_info.loc[sample_info['Volume of Serum Collected (mL)'] > 4.5, 'Volume of Serum Collected (mL)'] = 4.5
 
-    proc_cols = ['Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_time', 'coll_inits', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
+    proc_cols = ['Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_time', 'coll_inits', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'Cells in Last Aliquot', 'Total Cell Count (x10^6)', 'Freezing Method', 'Time in LN', 'proc_comment']
     key_cols = ['Cohort', 'Vaccine', '1st Dose Date', '2nd Dose Date', '3rd Dose Date', '3rd Dose Vaccine', 'Boost Date', 'Boost Vaccine', 'Boost 2 Date', 'Boost 2 Vaccine', 'Baseline Date']
 
     cutoff_date = pd.to_datetime('2022-11-20').date()
@@ -142,7 +142,7 @@ def pull_from_source(debug=False):
                 'Visit Type', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC',
                 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_inits',
                 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability',
-                'cpt_vol', 'sst_vol', 'proc_comment']
+                'cpt_vol', 'sst_vol', 'Cells in Last Aliquot', 'Total Cell Count (x10^6)', 'Freezing Method', 'Time in LN', 'proc_comment']
 
     days = ['Days from Index', 'Days to 1st', 'Days to 2nd', 'Days to 3rd', 'Days to Boost', 'Days to Boost 2', 'Post-Baseline']
     dates = ['Index Date', '1st Dose Date', '2nd Dose Date', '3rd Dose Date', 'Boost Date', 'Boost 2 Date', 'Baseline Date']
