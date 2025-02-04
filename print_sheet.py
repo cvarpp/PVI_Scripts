@@ -121,13 +121,13 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                 elif print_type == 'SERONETPBMC':
                     if 'PBMC Top' in sheet_name or 'PBMC Side' in sheet_name:
                         round_num = int(sheet_name.split()[-1])
-                        start_idx = (round_num - 1) * 48
-                        end_idx = start_idx + 48
-                        sids_twice = np.repeat(assigned_sample_ids[start_idx:end_idx], 2)
+                        start_idx = (round_num - 1) * 32
+                        end_idx = start_idx + 32
+                        sids_thrice = np.repeat(assigned_sample_ids[start_idx:end_idx], 3)
                         if 'Top' in sheet_name:
-                            sheet_data.iloc[:96, 2] = sids_twice
+                            sheet_data.iloc[:96, 2] = sids_thrice
                         elif 'Side' in sheet_name:
-                            sheet_data.iloc[:96, 1] = sids_twice
+                            sheet_data.iloc[:96, 1] = sids_thrice
                     if '4.5mL Top' in sheet_name:
                         sheet_data.iloc[:96, 2] = assigned_sample_ids
                     elif '4.5mL Side' in sheet_name:
