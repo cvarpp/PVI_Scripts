@@ -308,3 +308,35 @@ def corned_beef(userkey):
         return("Validated")
     else:
         return None
+    
+def immune_history(vaccine_dates, vaccine_types, infection_dates, visit_date):
+   '''
+   Returns a string listing all of a participant's previous immune events on a given 'visit_date'.
+   
+   'vaccine_dates', 'vaccine types', and 'infection dates'  are all lists.
+
+   Example Application: sample_info['Immune History'] = sample_info.apply(lambda row: immune_history(row[vaccine_date_cols], row[vaccine_type_cols], row[infection_date_cols], row['Date Collected']), axis=1)
+   '''
+   events = {'Event Date':[], 'Event Type':[]}
+   for date, type in zip(vaccine_dates, vaccine_types):
+      if pd.to_datetime(date) < pd.to_datetime(visit_date):
+         events['Event Date'].append(date)
+      if pd.to_datetime(date) < pd.to_datetime(visit_date) and pd.to_datetime(date) >= pd.to_datetime('2024-08-29'):
+         if 'novavax' in str(type).lower():
+            events['Event Type'].append('JN1')
+         else:
+            events['Event Type'].append('KP2')
+      elif pd.to_datetime(date) < pd.to_datetime(visit_date) and pd.to_datetime(date) >= pd.to_datetime('2023-08-29'):
+         events['Event Type'].append('XBB')
+      elif pd.to_datetime(date) < pd.to_datetime(visit_date) and pd.to_datetime(date) >= pd.to_datetime('2022-08-29'):
+         events['Event Type'].append('BvB')
+      elif pd.to_datetime(date) < pd.to_datetime(visit_date):
+         events['Event Type'].append('V') 
+   for infection in infection_dates:
+      if pd.to_datetime(infection) < pd.to_datetime(visit_date):
+         events['Event Date'].append(infection)
+         events['Event Type'].append('I') 
+   events_frame = pd.DataFrame.from_dict(events).set_index('Event Date')
+   events_sorted = events_frame.sort_index()                       
+   history = "-".join(events_sorted['Event Type'])    
+   return history  
