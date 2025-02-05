@@ -20,7 +20,8 @@ def get_box_range(print_type, round_num):
     plog[['Box Min', 'Box Max']] = plog[['Box Min', 'Box Max']].apply(pd.to_numeric, errors='coerce').dropna()
 
     filter = {
-        'SERONET': (plog['Kit Type'] == 'SERONET') & (plog['PBMCs'].str.strip().str.lower() == 'no'),
+        'SERONET_CAM': (plog['Kit Type'] == 'SERONET') & (plog['PBMCs'].str.strip().str.lower() == 'no'),
+        'SERONET_RTC': (plog['Kit Type'] == 'SERONET') & (plog['PBMCs'].str.strip().str.lower() == 'no'),
         'SERUM': (plog['Kit Type'] == 'SERUM'),
         'STANDARD': (plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'].str.strip().str.lower() == 'no'),
         'SERONETPBMC': (plog['Kit Type'].isin(['SERONET', 'MIT (PBMCS)'])) & (plog['PBMCs'].str.strip().str.lower() == 'yes'),
@@ -37,7 +38,8 @@ def get_box_range(print_type, round_num):
     recent_box_max = filtered_plog['Box Max']
 
     box_range_mapping = {
-        'SERONET': 6,
+        'SERONET_CAM': 6,
+        'SERONET_RTC': 6,
         'SERUM': 4,
         'STANDARD': 6,
         'SERONETPBMC': 32,
@@ -79,7 +81,7 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                 if sheet_name == '5 - 4.5 mL Sides':
                     sheet_data.iloc[0:24, 1] = assigned_sample_ids
                 sheet_data.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
-        elif print_type in ('SERONET', 'STANDARD'):
+        elif print_type in ('SERONET_CAM', 'SERONET_RTC', 'STANDARD'):
             box_numbers_range = [box for box in range(box_start, box_end + 1)]
             check_df = pd.DataFrame({'Print List': ['Box'] * 6 + ['Kit'] * 18, '': box_numbers_range + [sid for sid in assigned_sample_ids], 'Completed': 'No'})
             check_df.to_excel(writer, sheet_name='To Print', index=False)
@@ -89,18 +91,28 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
                 idx_start = (round_num - 1) * 6
                 idx_end = round_num * 6
                 aliquot_ids = [sid for sid in assigned_sample_ids[idx_start:idx_end] for _ in range(15)]
+                if print_type == 'SERONET_CAM':
+                    top_types = (['Plsma'] * 6 + ['Serum'] * 7 + ['Slva'] * 2) * 6
+                    side_types = (['Plasma'] * 6 + ['Serum'] * 7 + ['Saliva'] * 2) * 6
+                    kit_type = "SERONET"
+                if print_type == 'SERONET_RTC':
+                    top_types = (['Plsma'] * 8 + ['Serum'] * 5 + ['Slva'] * 2) * 6
+                    side_types = (['Plasma'] * 8 + ['Serum'] * 5 + ['Saliva'] * 2) * 6
+                    kit_type = "SERONET"
+                else:
+                    top_types = (['Plsma'] * 6 + ['Serum'] * 7 + ['Slva'] * 2) * 6
+                    side_types = (['Plasma'] * 6 + ['Serum'] * 7 + ['Saliva'] * 2) * 6
+                    kit_type = "STANDARD"
                 top_idxes = [x + 1 for x in np.arange(45)] + [x + 79 for x in np.arange(45)]
                 side_idxes = [x + 1 for x in np.arange(45)] + [x + 51 for x in np.arange(45)]
-                top_types = (['Plsma'] * 6 + ['Serum'] * 7 + ['Slva'] * 2) * 6
-                side_types = (['Plasma'] * 6 + ['Serum'] * 7 + ['Saliva'] * 2) * 6
                 top_df = pd.DataFrame({"IDX": top_idxes, "Blank": "", "Sample ID": aliquot_ids, 'Tube Type': top_types})
                 top_df.to_excel(writer, sheet_name=top_sheet, index=False, header=False)
                 side_script = [f'{side_type} {aliquot}' for side_type, aliquot in zip(side_types, aliquot_ids)]
-                side_df = pd.DataFrame({"IDX": side_idxes, "Blank": "", "Sample ID": side_script, 'Kit Type': print_type})
+                side_df = pd.DataFrame({"IDX": side_idxes, "Blank": "", "Sample ID": side_script, 'Kit Type': kit_type})
                 side_df.to_excel(writer, sheet_name=side_sheet, index=False, header=False)
             kit_ids = [sid for i in range(0, len(assigned_sample_ids), 2) for sid in [assigned_sample_ids[i], assigned_sample_ids[i + 1]] * 5]
             kit_idxes = [x + 1 for x in np.arange(10)] * 9 + np.array([[x * 12] * 10 for x in range(9)]).flatten()
-            pd.DataFrame({'IDX': kit_idxes, 'Sample ID': kit_ids, 'Kit Type': print_type}).to_excel(writer, sheet_name='7-Kits', index=False, header=False)
+            pd.DataFrame({'IDX': kit_idxes, 'Sample ID': kit_ids, 'Kit Type': kit_type}).to_excel(writer, sheet_name='7-Kits', index=False, header=False)
         elif print_type in ('SERONETPBMC', 'STANDARDPBMC'):
             for sheet_name, sheet_data in template.items():
                 if 'Instructions' in sheet_name:
@@ -192,7 +204,8 @@ def generate_workbook(assigned_sample_ids, box_start, box_end, sheet_name, templ
 if __name__ == '__main__':
     warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
     parser = argparse.ArgumentParser()
-    parser.add_argument('--seronet_full', type=int, default=0, help='Number of SERONET FULL rounds')
+    parser.add_argument('--seronet_cam', type=int, default=0, help='Number of SERONET CAM rounds')
+    parser.add_argument('--seronet_rtc', type=int, default=0, help='Number of SERONET RTC rounds')
     parser.add_argument('--serum', type=int, default=0, help='Number of SERUM rounds')
     parser.add_argument('--standard', type=int, default=0, help='Number of STANDARD rounds')
     parser.add_argument('--seronet_pbmc', type=int, default=0, help='Number of SERONET PBMC rounds')
@@ -202,7 +215,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     round_counts = {
-        'SERONET': args.seronet_full,
+        'SERONET_CAM': args.seronet_cam,
+        'SERONET_RTC': args.seronet_rtc,
         'SERUM': args.serum,
         'STANDARD': args.standard,
         'SERONETPBMC': args.seronet_pbmc,
@@ -217,7 +231,8 @@ if __name__ == '__main__':
 
             # TODO: Remove dependence on templates
             print_type_mapping = {
-                'SERONET': ('Seronet Full', 'SERONET FULL/SERONET FULL Template.xlsx', 'Future Sheets/SERONET FULL'),
+                'SERONET_CAM': ('Seronet Full', 'SERONET FULL/SERONET CAM Template.xlsx', 'Future Sheets/SERONET FULL'),
+                'SERONET_RTC': ('Seronet Full', 'SERONET FULL/SERONET RTC Template.xlsx', 'Future Sheets/SERONET FULL'),
                 'SERUM': ('Serum', 'SERUM/SERUM Template.xlsx', 'Future Sheets/SERUM'),
                 'STANDARD': ('Standard', 'STANDARD/STANDARD Template.xlsx', 'Future Sheets/STANDARD'),
                 'SERONETPBMC': ('Seronet Full', 'SERONET FULL/SERONET PBMC Template.xlsx', 'Future Sheets/SERONET FULL'),
@@ -234,7 +249,8 @@ if __name__ == '__main__':
                 continue
             
             # Output
-            workbook_name = f"{sheet_name.upper()} {'PBMC ' if 'PBMC' in print_type else ''}{box_start}-{box_end} by scripts"
+            output_suffix = "3CPTs" if print_type == 'SERONET_RTC' else "2CPTs" if print_type == 'SERONET_CAM' else ""
+            workbook_name = f"{print_type.replace('_', ' ')} {box_start}-{box_end} {output_suffix}".strip()
             output_path = os.path.join(util.tube_print, output_folder, f"{workbook_name}.xlsx")
 
             generate_workbook(assigned_sample_ids, box_start, box_end, workbook_name, template_file, output_path, print_type)
