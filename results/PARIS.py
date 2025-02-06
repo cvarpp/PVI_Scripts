@@ -6,7 +6,7 @@ import util
 import argparse
 import sys
 import PySimpleGUI as sg
-from helpers import try_datediff, permissive_datemax, query_intake, query_research, map_dates, ValuesToClass
+from helpers import try_datediff, permissive_datemax, query_intake, map_dates, immune_history, ValuesToClass
 
 def auc_logger(val):
     if val == '-' or str(val).strip() == '' or len(str(val)) > 15:
@@ -24,28 +24,29 @@ def paris_results():
     dems = pd.read_excel(util.projects + 'PARIS/Demographics.xlsx').set_index('Subject ID')
     sample_info = query_intake(participants=participants, include_research=True)
 
-    col_order = ['Participant ID', 'Date', 'Sample ID', 'Days to 1st Vaccine Dose',
+    col_order = ['Participant ID', 'Date', 'Sample ID', 'Immune History', 'Days to 1st Vaccine Dose',
                 'Days to Boost', 'Days to Last Infection', 'Days to Last Vax', 'Infection Timing',
                 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Log2Quant', 'Log2COV22', 'Vaccine Type',
-                'Boost Type', 'Days to Infection 1', 'Days to Infection 2', 'Days to Infection 3',
+                'Boost Type', 'Days to Infection 1', 'Days to Infection 2', 'Days to Infection 3', 'Days to Infection 4',
                 'Infection Pre-Vaccine?', 'Number of SARS-CoV-2 Infections', 'Infection on Study',
                 'First Dose Date', 'Second Dose Date', 'Days to 2nd', 'Boost Date', 'Boost 2 Date',
                 'Days to Boost 2', 'Boost 2 Type', 'Boost 3 Date', 'Days to Boost 3', 'Boost 3 Type',
                 'Boost 4 Date', 'Days to Boost 4', 'Boost 4 Type', 'Boost 5 Date', 'Days to Boost 5', 'Boost 5 Type',
-                'Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date', 'Most Recent Infection',
-                'Most Recent Vax', 'Post-Baseline', 'Visit Type', 'Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
+                'Boost 6 Date', 'Days to Boost 6', 'Boost 6 Type','Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date', 
+                'Most Recent Infection','Most Recent Vax', 'Post-Baseline', 'Visit Type', 'Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
     dem_cols = ['Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
-    shared_cols = ['Infection Pre-Vaccine?', 'Vaccine Type', 'Number of SARS-CoV-2 Infections', 'Infection Timing', 'Boost Type', 'Boost 2 Type', 'Boost 3 Type', 'Boost 4 Type', 'Boost 5 Type']
-    date_cols = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Boost 3 Date', 'Boost 4 Date', 'Boost 5 Date', 'Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date']
-    day_cols = ['Days to 1st Vaccine Dose', 'Days to 2nd', 'Days to Boost', 'Days to Boost 2', 'Days to Boost 3', 'Days to Boost 4', 'Days to Boost 5', 'Days to Infection 1', 'Days to Infection 2', 'Days to Infection 3']
-    dose_dates = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Boost 3 Date', 'Boost 4 Date', 'Boost 5 Date']
-    inf_dates = ['Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date']
+    shared_cols = ['Infection Pre-Vaccine?', 'Vaccine Type', 'Number of SARS-CoV-2 Infections', 'Infection Timing', 'Boost Type', 'Boost 2 Type', 'Boost 3 Type', 'Boost 4 Type', 'Boost 5 Type', 'Boost 6 Type']
+    date_cols = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Boost 3 Date', 'Boost 4 Date', 'Boost 5 Date', 'Boost 6 Date', 'Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date', 'Infection 4 Date']
+    day_cols = ['Days to 1st Vaccine Dose', 'Days to 2nd', 'Days to Boost', 'Days to Boost 2', 'Days to Boost 3', 'Days to Boost 4', 'Days to Boost 5', 'Days to Boost 6', 'Days to Infection 1', 'Days to Infection 2', 'Days to Infection 3', 'Days to Infection 4']
+    dose_dates = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Boost 3 Date', 'Boost 4 Date', 'Boost 5 Date', 'Boost 6 Date']
+    vaccine_type_cols = ['Vaccine Type', 'Vaccine Type', 'Boost Type', 'Boost 2 Type', 'Boost 3 Type', 'Boost 4 Type', 'Boost 5 Type', 'Boost 6 Type']
+    inf_dates = ['Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date', 'Infection 4 Date']
     sample_info['Date'] = sample_info['Date Collected']
     sample_info = (sample_info.join(dems.loc[:, dem_cols], on='participant_id')
                               .join(paris_data.loc[:, shared_cols + date_cols], on='participant_id')
                               .reset_index().copy())
     baseline_data = sample_info.sort_values(by='Date').drop_duplicates(subset='participant_id').set_index('participant_id')
-    sample_info['Post-Baseline'] = (sample_info['Date'] - sample_info['participant_id'].apply(lambda val: baseline_data.loc[val, 'Date'])).dt.days
+    sample_info['Post-Baseline'] = (pd.to_datetime(sample_info['Date']) - pd.to_datetime(sample_info['participant_id'].apply(lambda val: baseline_data.loc[val, 'Date']))).dt.days
     sample_info['Infection on Study'] = sample_info['participant_id'].apply(lambda ppt: 'yes' in (str(paris_data.loc[ppt, 'Infection 1 On Study?']) + str(paris_data.loc[ppt, 'Infection 2 On Study?']) + str(paris_data.loc[ppt, 'Infection 3 On Study?'])).lower())
     sample_info = sample_info.pipe(map_dates, date_cols)
     for date_col, day_col in zip(date_cols, day_cols):
@@ -54,6 +55,7 @@ def paris_results():
     sample_info['Most Recent Vax'] = sample_info.apply(lambda row: permissive_datemax([row[dose_date] for dose_date in dose_dates], row['Date']), axis=1)
     sample_info['Days to Last Infection'] = sample_info.apply(lambda row: try_datediff(row['Most Recent Infection'], row['Date']), axis=1)
     sample_info['Days to Last Vax'] = sample_info.apply(lambda row: try_datediff(row['Most Recent Vax'], row['Date']), axis=1)
+    sample_info['Immune History'] = sample_info.apply(lambda row: immune_history(row[dose_dates], row[vaccine_type_cols], row[inf_dates], row['Date']), axis=1)
     sample_info['Participant ID'] = sample_info['participant_id']
     sample_info['Sample ID'] = sample_info['sample_id']
     sample_info['Visit Type'] = sample_info[util.visit_type]
@@ -72,7 +74,7 @@ if __name__ == '__main__':
         args = argparser.parse_args()
 
     else:
-        sg.theme('Dark Blue 17')
+        sg.theme('Green')
 
         layout = [[sg.Text('PARIS Result Generation Script')],
                   [sg.Checkbox('Debug?', key='debug', default=False)],
