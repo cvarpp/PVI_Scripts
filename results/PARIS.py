@@ -16,7 +16,7 @@ def auc_logger(val):
     else:
         return np.log2(float(val))
 
-def paris_results():
+def paris_results(drop_dates=False):
     paris_data = pd.read_excel(util.paris + 'Patient Tracking - PARIS.xlsx', sheet_name='Subgroups', header=4).dropna(subset=['Participant ID'])
     paris_data['Participant ID'] = paris_data['Participant ID'].apply(lambda val: val.strip().upper())
     participants = paris_data['Participant ID'].unique()
@@ -24,16 +24,6 @@ def paris_results():
     dems = pd.read_excel(util.projects + 'PARIS/Demographics.xlsx').set_index('Subject ID')
     sample_info = query_intake(participants=participants, include_research=True)
 
-    col_order = ['Participant ID', 'Date', 'Sample ID', 'Immune History', 'Days to 1st Vaccine Dose',
-                'Days to Boost', 'Days to Last Infection', 'Days to Last Vax', 'Infection Timing',
-                'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Log2Quant', 'Log2COV22', 'Vaccine Type',
-                'Boost Type', 'Days to Infection 1', 'Days to Infection 2', 'Days to Infection 3', 'Days to Infection 4',
-                'Infection Pre-Vaccine?', 'Number of SARS-CoV-2 Infections', 'Infection on Study',
-                'First Dose Date', 'Second Dose Date', 'Days to 2nd', 'Boost Date', 'Boost 2 Date',
-                'Days to Boost 2', 'Boost 2 Type', 'Boost 3 Date', 'Days to Boost 3', 'Boost 3 Type',
-                'Boost 4 Date', 'Days to Boost 4', 'Boost 4 Type', 'Boost 5 Date', 'Days to Boost 5', 'Boost 5 Type',
-                'Boost 6 Date', 'Days to Boost 6', 'Boost 6 Type','Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date', 'Infection 4 Date', 
-                'Most Recent Infection','Most Recent Vax', 'Post-Baseline', 'Visit Type', 'Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
     dem_cols = ['Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
     shared_cols = ['Infection Pre-Vaccine?', 'Vaccine Type', 'Number of SARS-CoV-2 Infections', 'Infection Timing', 'Boost Type', 'Boost 2 Type', 'Boost 3 Type', 'Boost 4 Type', 'Boost 5 Type', 'Boost 6 Type']
     date_cols = ['First Dose Date', 'Second Dose Date', 'Boost Date', 'Boost 2 Date', 'Boost 3 Date', 'Boost 4 Date', 'Boost 5 Date', 'Boost 6 Date', 'Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date', 'Infection 4 Date']
@@ -63,7 +53,21 @@ def paris_results():
     (sample_info.loc[:, ['Participant ID', 'Date', 'Sample ID']]
            .drop_duplicates(subset=['Participant ID'], keep='last')
            .to_excel(util.paris + 'LastSeen.xlsx', index=False))
-    return sample_info.loc[:, col_order].sort_values(by=['Participant ID', 'Date'])
+    
+    col_order = ['Participant ID', 'Date', 'Sample ID', 'Immune History', 'Days to 1st Vaccine Dose',
+                'Days to Boost', 'Days to Last Infection', 'Days to Last Vax', 'Infection Timing',
+                'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Log2Quant', 'Log2COV22', 'Vaccine Type',
+                'Boost Type', 'Days to Infection 1', 'Days to Infection 2', 'Days to Infection 3', 'Days to Infection 4',
+                'Infection Pre-Vaccine?', 'Number of SARS-CoV-2 Infections', 'Infection on Study',
+                'First Dose Date', 'Second Dose Date', 'Days to 2nd', 'Boost Date', 'Boost 2 Date',
+                'Days to Boost 2', 'Boost 2 Type', 'Boost 3 Date', 'Days to Boost 3', 'Boost 3 Type',
+                'Boost 4 Date', 'Days to Boost 4', 'Boost 4 Type', 'Boost 5 Date', 'Days to Boost 5', 'Boost 5 Type',
+                'Boost 6 Date', 'Days to Boost 6', 'Boost 6 Type', 'Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date', 'Infection 4 Date', 
+                'Most Recent Infection', 'Most Recent Vax', 'Post-Baseline', 'Visit Type', 'Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
+    all_date_cols = date_cols + ['Date', 'Most Recent Infection', 'Most Recent Vax']
+    if drop_dates:
+        col_order = [col for col in col_order if col not in all_date_cols]
+    return sample_info.sort_values(by=['Participant ID', 'Date']).loc[:, col_order]
 
 if __name__ == '__main__':
     if len(sys.argv) != 1:
@@ -71,6 +75,7 @@ if __name__ == '__main__':
         argparser = argparse.ArgumentParser(description='Generate report for all PARIS samples')
         argparser.add_argument('-o', '--output_file', action='store', default='tmp', help="Prefix for the output file (current date appended")
         argparser.add_argument('-d', '--debug', action='store_true', help="Print to the command line but do not write to file")
+        argparser.add_argument('--no_dates', action='store_true', help="Drop date columns from output")
         args = argparser.parse_args()
 
     else:
@@ -78,12 +83,13 @@ if __name__ == '__main__':
 
         layout = [[sg.Text('PARIS Result Generation Script')],
                   [sg.Checkbox('Debug?', key='debug', default=False)],
+                  [sg.Checkbox('Drop Dates?', key='no_dates', default=False)],
                   [sg.Text('Output File Name:'),sg.Input(key='output_file')],
                   [sg.Submit(), sg.Cancel()]]
         
-        window = sg.Window('MARS Results Script', layout)
+        window = sg.Window('PARIS Results Script', layout)
 
-        event,  values = window.read()
+        event, values = window.read()
         window.close()
 
         if event=='Cancel':
@@ -91,7 +97,7 @@ if __name__ == '__main__':
         else:
             args = ValuesToClass(values)
 
-    report = paris_results()
+    report = paris_results(args.no_dates)
     if not args.debug:
         output_filename = util.paris + 'datasets/{}_{}.xlsx'.format(args.output_file, date.today().strftime("%m.%d.%y"))
         report.to_excel(output_filename, index=False)
