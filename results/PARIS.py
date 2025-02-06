@@ -63,7 +63,7 @@ def paris_results():
     (sample_info.loc[:, ['Participant ID', 'Date', 'Sample ID']]
            .drop_duplicates(subset=['Participant ID'], keep='last')
            .to_excel(util.paris + 'LastSeen.xlsx', index=False))
-    return sample_info.loc[:, col_order]
+    return sample_info.loc[:, col_order].sort_values(by=['Participant ID', 'Date'])
 
 if __name__ == '__main__':
     if len(sys.argv) != 1:
