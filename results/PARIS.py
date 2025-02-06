@@ -32,7 +32,7 @@ def paris_results():
                 'First Dose Date', 'Second Dose Date', 'Days to 2nd', 'Boost Date', 'Boost 2 Date',
                 'Days to Boost 2', 'Boost 2 Type', 'Boost 3 Date', 'Days to Boost 3', 'Boost 3 Type',
                 'Boost 4 Date', 'Days to Boost 4', 'Boost 4 Type', 'Boost 5 Date', 'Days to Boost 5', 'Boost 5 Type',
-                'Boost 6 Date', 'Days to Boost 6', 'Boost 6 Type','Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date', 
+                'Boost 6 Date', 'Days to Boost 6', 'Boost 6 Type','Infection 1 Date', 'Infection 2 Date', 'Infection 3 Date', 'Infection 4 Date', 
                 'Most Recent Infection','Most Recent Vax', 'Post-Baseline', 'Visit Type', 'Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
     dem_cols = ['Gender', 'Age', 'Race', 'Ethnicity: Hispanic or Latino']
     shared_cols = ['Infection Pre-Vaccine?', 'Vaccine Type', 'Number of SARS-CoV-2 Infections', 'Infection Timing', 'Boost Type', 'Boost 2 Type', 'Boost 3 Type', 'Boost 4 Type', 'Boost 5 Type', 'Boost 6 Type']
