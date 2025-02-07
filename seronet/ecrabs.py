@@ -104,6 +104,27 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
 
         serum_freeze_time = row['serum_freeze_time']
         cell_freeze_time = row['cell_freeze_time']
+
+        try:
+            pd.to_datetime(str(serum_freeze_time))
+        except:
+            try:
+                pd.to_datetime(str(cell_freeze_time))
+                serum_freeze_time = cell_freeze_time
+                proc_comment = str(proc_comment) + "; Freeze Times Missing (Cell)"
+            except:
+                proc_comment = str(proc_comment) + "; Freeze Times Missing (All)"
+
+        try:
+            pd.to_datetime(str(cell_freeze_time))
+        except:
+            try:
+                pd.to_datetime(str(serum_freeze_time))
+                cell_freeze_time = serum_freeze_time
+                proc_comment = str(proc_comment) + "; Freeze Times Missing (Serum)"
+            except:
+                proc_comment = str(proc_comment) + "; Freeze Times Missing (All)"
+
         proc_inits = row['proc_inits']
         viability = row['viability']
         cpt_vol = row['cpt_vol']
