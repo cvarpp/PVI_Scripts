@@ -214,7 +214,7 @@ def clean_path(df):
     df['Log2COV22'] = np.log2(df['COV22'])
     return df
 
-def query_intake(participants=None, include_research=False, use_cache=False, update_cache=False):
+def query_intake(participants=None, include_research=False, use_cache=False, update_cache=False, from_date=None):
     '''
     Queries the intake log, optionally limited to a subset of participants.
 
@@ -222,6 +222,8 @@ def query_intake(participants=None, include_research=False, use_cache=False, upd
 
     `include_research` will join the resulting dataframe with the results from `query_research`
     for convenience
+
+    'from_date' only includes samples collected on or after a specified date
     '''
     if use_cache and os.path.exists('local_cache/dscf.h5') and '/intake_info' in pd.HDFStore('local_cache/dscf.h5', mode='r').keys():
         all_samples = pd.read_hdf(util.tracking + 'intake.h5', key='intake_info')
@@ -247,6 +249,10 @@ def query_intake(participants=None, include_research=False, use_cache=False, upd
             all_samples.to_hdf(util.tracking + 'intake.h5', key='intake_info')
     if participants is not None:
         samples = all_samples.query('participant_id in @participants').copy()
+    if from_date is not None:
+        all_samples['Date Collected'] = pd.to_datetime(all_samples['Date Collected'])
+        dt = pd.to_datetime(from_date)
+        samples = all_samples.query('`Date Collected` >= @dt')
     else:
         samples = all_samples
     if include_research:
