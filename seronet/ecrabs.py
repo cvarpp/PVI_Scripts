@@ -1,5 +1,5 @@
 import pandas as pd
-import datetime
+# import datetime
 import argparse
 import util
 from seronet.d4_all_data import pull_from_source
@@ -22,7 +22,7 @@ def get_catalog_lot_exp(coll_date, material, lot_log):
 
 def time_diff_wrapper(t_start, t_end, annot):
     try:
-        time_diff = (pd.to_datetime(str(t_end)) - pd.to_datetime(str(t_start))) / datetime.timedelta(hours=1)
+        time_diff = (pd.to_datetime(str(t_end)) - pd.to_datetime(str(t_start))) / pd.Timedelta(hours=1)
         if pd.isna(time_diff):
             time_diff = 'Missing'
     except Exception as e:
@@ -350,10 +350,10 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
                 add_to['Storage_Time_in_Mr_Frosty'].append('N/A')
             else:
                 try:
-                    add_to['Storage_Time_in_Mr_Frosty'].append(((datetime.timedelta(days=1) + pd.to_datetime(cell_freeze_time)) - pd.to_datetime(row['Time in LN'])) / datetime.timedelta(hours=1))
+                    add_to['Storage_Time_in_Mr_Frosty'].append(((pd.Timedelta(hours=24) + pd.Timestamp(str(cell_freeze_time))) - pd.Timestamp(str(row['Time in LN']))) / pd.Timedelta(hours=1))
                 except:
                     if add_to['Biospecimen_Collection_Year'][-1] == 2025:
-                        print("failed try block: ", cell_freeze_time)
+                        print("failed year check try block: ", cell_freeze_time)
                         print(row['Time in LN'])
                     issues.add(sample_id)
                     add_to['Storage_Time_in_Mr_Frosty'].append('PLEASE FILL')
