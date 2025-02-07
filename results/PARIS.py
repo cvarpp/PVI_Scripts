@@ -45,6 +45,7 @@ def paris_results(drop_dates=False):
     sample_info['Most Recent Vax'] = sample_info.apply(lambda row: permissive_datemax([row[dose_date] for dose_date in dose_dates], row['Date']), axis=1)
     sample_info['Days to Last Infection'] = sample_info.apply(lambda row: try_datediff(row['Most Recent Infection'], row['Date']), axis=1)
     sample_info['Days to Last Vax'] = sample_info.apply(lambda row: try_datediff(row['Most Recent Vax'], row['Date']), axis=1)
+    sample_info['Days to Last SARS-CoV-2 Exposure'] = sample_info.loc[:, ['Days to Last Infection', 'Days to Last Vax']].min(axis=1)
     sample_info['Immune History'] = sample_info.apply(lambda row: immune_history(row[dose_dates], row[vaccine_type_cols], row[inf_dates], row['Date']), axis=1)
     sample_info['Participant ID'] = sample_info['participant_id']
     sample_info['Sample ID'] = sample_info['sample_id']
@@ -55,7 +56,7 @@ def paris_results(drop_dates=False):
            .to_excel(util.paris + 'LastSeen.xlsx', index=False))
     
     col_order = ['Participant ID', 'Date', 'Sample ID', 'Immune History', 'Days to 1st Vaccine Dose',
-                'Days to Boost', 'Days to Last Infection', 'Days to Last Vax', 'Infection Timing',
+                'Days to Boost', 'Days to Last Infection', 'Days to Last Vax', 'Days to Last SARS-CoV-2 Exposure', 'Infection Timing',
                 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC', 'Log2Quant', 'Log2COV22', 'Vaccine Type',
                 'Boost Type', 'Days to Infection 1', 'Days to Infection 2', 'Days to Infection 3', 'Days to Infection 4',
                 'Infection Pre-Vaccine?', 'Number of SARS-CoV-2 Infections', 'Infection on Study',
@@ -100,7 +101,7 @@ if __name__ == '__main__':
     report = paris_results(args.no_dates)
     if not args.debug:
         output_filename = util.paris + 'datasets/{}_{}.xlsx'.format(args.output_file, date.today().strftime("%m.%d.%y"))
-        report.to_excel(output_filename, index=False)
+        report.to_excel(output_filename, index=False, na_rep='N/A')
         print("PARIS report written to {}".format(output_filename))
     print("{} samples from {} participants".format(
         report.shape[0],
