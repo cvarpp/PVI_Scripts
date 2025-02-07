@@ -22,9 +22,11 @@ def get_catalog_lot_exp(coll_date, material, lot_log):
 
 def time_diff_wrapper(t_start, t_end, annot):
     try:
-        time_diff = (pd.to_datetime(str(t_end)) - pd.to_datetime(str(t_start))) / pd.Timedelta(hours=1)
+        time_diff = (pd.to_datetime(t_end, errors='coerce') - pd.to_datetime(t_start, errors='coerce'))
         if pd.isna(time_diff):
             time_diff = 'Missing'
+        else:
+            time_diff /= pd.Timedelta(hours=1)
     except Exception as e:
         if not (pd.isna(t_end) or pd.isna(t_start)):
             print(annot, e)
@@ -42,7 +44,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
     consum_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Consumable_Name', 'Consumable_Catalog_Number', 'Consumable_Lot_Number', 'Consumable_Expiration_Date', 'Comments']
     reag_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Reagent_Name', 'Reagent_Catalog_Number', 'Reagent_Lot_Number', 'Reagent_Expiration_Date', 'Comments']
     aliq_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Aliquot_ID', 'Aliquot_Volume', 'Aliquot_Units', 'Aliquot_Concentration', 'Aliquot_Initials', 'Aliquot_Tube_Type', 'Aliquot_Tube_Type_Catalog_Number', 'Aliquot_Tube_Type_Lot_Number', 'Aliquot_Tube_Type_Expiration_Date', 'Comments']
-    biospec_cols = ['Participant ID', 'Sample ID', 'Date', 'Proc Comments', 'Time Collected', 'Time Received', 'Time Processed', 'Time Serum Frozen', 'Time Cells Frozen', 'Research_Participant_ID', 'Cohort', 'Visit_Number', 'Biospecimen_ID', 'Biospecimen_Type', 'Biospecimen_Collection_Date_Duration_From_Index', 'Biospecimen_Processing_Batch_ID', 'Initial_Volume_of_Biospecimen', 'Biospecimen_Collection_Company_Clinic', 'Biospecimen_Collector_Initials', 'Biospecimen_Collection_Year', 'Collection_Tube_Type', 'Collection_Tube_Type_Catalog_Number', 'Collection_Tube_Type_Lot_Number', 'Collection_Tube_Type_Expiration_Date', 'Storage_Time_at_2_8_Degrees_Celsius', 'Storage_Start_Time_at_2-8_Initials', 'Storage_End_Time_at_2-8_Initials', 'Biospecimen_Processing_Company_Clinic', 'Biospecimen_Processor_Initials', 'Biospecimen_Collection_to_Receipt_Duration', 'Biospecimen_Receipt_to_Storage_Duration', 'Centrifugation_Time', 'RT_Serum_Clotting_Time', 'Live_Cells_Hemocytometer_Count', 'Total_Cells_Hemocytometer_Count', 'Viability_Hemocytometer_Count', 'Live_Cells_Automated_Count', 'Total_Cells_Automated_Count', 'Viability_Automated_Count', 'Storage_Time_in_Mr_Frosty', 'Comments']
+    biospec_cols = ['Participant ID', 'Sample ID', 'Date', 'Proc Comments', 'Time Collected', 'Time Received', 'Time Processed', 'Time Serum Frozen', 'Time Cells Frozen', 'Time in LN', 'Research_Participant_ID', 'Cohort', 'Visit_Number', 'Biospecimen_ID', 'Biospecimen_Type', 'Biospecimen_Collection_Date_Duration_From_Index', 'Biospecimen_Processing_Batch_ID', 'Initial_Volume_of_Biospecimen', 'Biospecimen_Collection_Company_Clinic', 'Biospecimen_Collector_Initials', 'Biospecimen_Collection_Year', 'Collection_Tube_Type', 'Collection_Tube_Type_Catalog_Number', 'Collection_Tube_Type_Lot_Number', 'Collection_Tube_Type_Expiration_Date', 'Storage_Time_at_2_8_Degrees_Celsius', 'Storage_Start_Time_at_2-8_Initials', 'Storage_End_Time_at_2-8_Initials', 'Biospecimen_Processing_Company_Clinic', 'Biospecimen_Processor_Initials', 'Biospecimen_Collection_to_Receipt_Duration', 'Biospecimen_Receipt_to_Storage_Duration', 'Centrifugation_Time', 'RT_Serum_Clotting_Time', 'Live_Cells_Hemocytometer_Count', 'Total_Cells_Hemocytometer_Count', 'Viability_Hemocytometer_Count', 'Live_Cells_Automated_Count', 'Total_Cells_Automated_Count', 'Viability_Automated_Count', 'Storage_Time_in_Mr_Frosty', 'Comments']
     ship_cols = ['Participant ID', 'Sample ID', 'Date', 'Study ID', 'Current Label', 'Material Type', 'Volume', 'Volume Unit', 'Volume Estimate', 'Vial Type', 'Vial Warnings', 'Vial Modifiers']
 
     exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
@@ -102,28 +104,13 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
         else:
             coll_inits = "CCT (Clinical Care Team)"
 
-        serum_freeze_time = row['serum_freeze_time']
-        cell_freeze_time = row['cell_freeze_time']
-
-        try:
-            pd.to_datetime(str(serum_freeze_time))
-        except:
-            try:
-                pd.to_datetime(str(cell_freeze_time))
-                serum_freeze_time = cell_freeze_time
-                proc_comment = str(proc_comment) + "; Freeze Times Missing (Cell)"
-            except:
-                proc_comment = str(proc_comment) + "; Freeze Times Missing (All)"
-
-        try:
-            pd.to_datetime(str(cell_freeze_time))
-        except:
-            try:
-                pd.to_datetime(str(serum_freeze_time))
-                cell_freeze_time = serum_freeze_time
-                proc_comment = str(proc_comment) + "; Freeze Times Missing (Serum)"
-            except:
-                proc_comment = str(proc_comment) + "; Freeze Times Missing (All)"
+        serum_freeze_time = pd.to_datetime(str(row['serum_freeze_time']), errors='coerce')
+        cell_freeze_time = pd.to_datetime(str(row['cell_freeze_time']), errors='coerce')
+        if pd.isna(serum_freeze_time):
+            serum_freeze_time = cell_freeze_time
+        if pd.isna(cell_freeze_time):
+            cell_freeze_time = serum_freeze_time
+        ln_time = pd.to_datetime(str(row['Time in LN']), errors='coerce')
 
         proc_inits = row['proc_inits']
         viability = row['viability']
@@ -189,7 +176,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
                 add_to['Biospecimen_ID'].append(cells_id)
                 cname = mat_row['Consumable_Name']
                 add_to['Consumable_Name'].append(cname)
-                odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], cname, lot_log)
+                _odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], cname, lot_log)
                 add_to['Consumable_Catalog_Number'].append(cat)
                 add_to['Consumable_Lot_Number'].append(lot)
                 add_to['Consumable_Expiration_Date'].append(exp)
@@ -212,7 +199,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
                 add_to['Biospecimen_ID'].append(cells_id)
                 rname = mat_row['Reagent_Name']
                 add_to['Reagent_Name'].append(rname)
-                odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], rname, lot_log)
+                _odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], rname, lot_log)
                 add_to['Reagent_Catalog_Number'].append(cat)
                 add_to['Reagent_Lot_Number'].append(lot)
                 add_to['Reagent_Expiration_Date'].append(exp)
@@ -237,7 +224,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             add_to['Aliquot_Initials'].append(proc_inits)
             tname = 'CRYOTUBE 4.5ML'
             add_to['Aliquot_Tube_Type'].append(tname)
-            odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], tname, lot_log)
+            _odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], tname, lot_log)
             add_to['Aliquot_Tube_Type_Catalog_Number'].append(cat)
             add_to['Aliquot_Tube_Type_Lot_Number'].append(lot)
             add_to['Aliquot_Tube_Type_Expiration_Date'].append(exp)
@@ -246,7 +233,6 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             print("{} for {} has no serum".format(sample_id, participant))
         if not (type(vial_count) == str or (type(vial_count) == float and pd.isna(vial_count))):
             for i in range(min(int(vial_count), 2)):
-                print(i)
                 add_to['Participant ID'].append(participant)
                 add_to['Sample ID'].append(sample_id)
                 add_to['Date'].append(row['Date'])
@@ -254,7 +240,6 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
                 add_to['Aliquot_ID'].append("{}_{}".format(cells_id, i + 1))
                 add_to['Aliquot_Volume'].append(1)
                 add_to['Aliquot_Units'].append('mL')
-
                 try:
                     if i + 1 == int(vial_count):
                         add_to['Aliquot_Concentration'].append("{:.0f}".format(last_aliq_live_cells))
@@ -263,7 +248,6 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
                 except:
                     print("Issue with aliquot for", sample_id)
                     add_to['Aliquot_Concentration'].append("{:.0f}".format(aliq_live_cells))
-
                 add_to['Aliquot_Initials'].append(proc_inits)
                 tname = 'CRYOTUBE 1.8ML'
                 add_to['Aliquot_Tube_Type'].append(tname)
@@ -289,20 +273,21 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             add_to['Time Processed'].append(proc_time)
             add_to['Time Serum Frozen'].append(serum_freeze_time)
             add_to['Time Cells Frozen'].append(cell_freeze_time)
+            add_to['Time in LN'].append(ln_time)
             add_to['Research_Participant_ID'].append(seronet_id)
             add_to['Cohort'].append(cohort)
             add_to['Visit_Number'].append(visit)
             add_to['Biospecimen_ID'].append(serum_id)
             add_to['Biospecimen_Type'].append('Serum')
             add_to['Biospecimen_Collection_Date_Duration_From_Index'].append(row['Days from Index'])
-            add_to['Biospecimen_Processing_Batch_ID'].append('Missing') # decide how to handle
+            add_to['Biospecimen_Processing_Batch_ID'].append('Please calculate using "Seronet Batch ID.xlsx"')
             add_to['Initial_Volume_of_Biospecimen'].append(sst_vol)
             add_to['Biospecimen_Collection_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
             add_to['Biospecimen_Collector_Initials'].append(coll_inits)
             add_to['Biospecimen_Collection_Year'].append(row['Date'].year)
             tname = 'SST'
             add_to['Collection_Tube_Type'].append(tname)
-            odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], tname, lot_log)
+            _odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], tname, lot_log)
             add_to['Collection_Tube_Type_Catalog_Number'].append(cat)
             add_to['Collection_Tube_Type_Lot_Number'].append(lot)
             add_to['Collection_Tube_Type_Expiration_Date'].append(exp)
@@ -311,9 +296,9 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             add_to['Storage_End_Time_at_2-8_Initials'].append('N/A')
             add_to['Biospecimen_Processing_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
             add_to['Biospecimen_Processor_Initials'].append(proc_inits)
-            time_diff = time_diff_wrapper(coll_time, rec_time, "coll to rec {}".format(sample_id))
+            time_diff = time_diff_wrapper(coll_time, rec_time, "collection to receipt {}".format(sample_id))
             add_to['Biospecimen_Collection_to_Receipt_Duration'].append(time_diff)
-            time_diff = time_diff_wrapper(rec_time, serum_freeze_time, "rec to serum store {}".format(sample_id))
+            time_diff = time_diff_wrapper(rec_time, serum_freeze_time, "receipt to serum storage {}".format(sample_id))
             add_to['Biospecimen_Receipt_to_Storage_Duration'].append(time_diff)
             time_diff = time_diff_wrapper(coll_time, proc_time, "clot time {}".format(sample_id))
             if time_diff != 'Missing':
@@ -333,6 +318,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             add_to['Time Processed'].append(proc_time)
             add_to['Time Serum Frozen'].append(serum_freeze_time)
             add_to['Time Cells Frozen'].append(cell_freeze_time)
+            add_to['Time in LN'].append(ln_time)
             add_to['Research_Participant_ID'].append(seronet_id)
             add_to['Cohort'].append(cohort)
             add_to['Visit_Number'].append(visit)
@@ -346,7 +332,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             add_to['Biospecimen_Collection_Year'].append(row['Date'].year)
             tname = 'CPT'
             add_to['Collection_Tube_Type'].append(tname)
-            odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], tname, lot_log)
+            _odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], tname, lot_log)
             add_to['Collection_Tube_Type_Catalog_Number'].append(cat)
             add_to['Collection_Tube_Type_Lot_Number'].append(lot)
             add_to['Collection_Tube_Type_Expiration_Date'].append(exp)
@@ -355,9 +341,9 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             add_to['Storage_End_Time_at_2-8_Initials'].append('N/A')
             add_to['Biospecimen_Processing_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
             add_to['Biospecimen_Processor_Initials'].append(proc_inits)
-            time_diff = time_diff_wrapper(coll_time, rec_time, "coll to rec {}".format(sample_id))
+            time_diff = time_diff_wrapper(coll_time, rec_time, "collection to receipt {}".format(sample_id))
             add_to['Biospecimen_Collection_to_Receipt_Duration'].append(time_diff)
-            time_diff = time_diff_wrapper(rec_time, cell_freeze_time, "rec to serum store {}".format(sample_id))
+            time_diff = time_diff_wrapper(rec_time, cell_freeze_time, "receipt to cell storage {}".format(sample_id))
             add_to['Biospecimen_Receipt_to_Storage_Duration'].append(time_diff)
             add_to['Centrifugation_Time'].append("N/A")
             add_to['RT_Serum_Clotting_Time'].append('N/A')
@@ -370,14 +356,8 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             if row['Freezing Method'] != 'Mr. Frosty':
                 add_to['Storage_Time_in_Mr_Frosty'].append('N/A')
             else:
-                try:
-                    add_to['Storage_Time_in_Mr_Frosty'].append(((pd.Timedelta(hours=24) + pd.Timestamp(str(cell_freeze_time))) - pd.Timestamp(str(row['Time in LN']))) / pd.Timedelta(hours=1))
-                except:
-                    if add_to['Biospecimen_Collection_Year'][-1] == 2025:
-                        print("failed year check try block: ", cell_freeze_time)
-                        print(row['Time in LN'])
-                    issues.add(sample_id)
-                    add_to['Storage_Time_in_Mr_Frosty'].append('PLEASE FILL')
+                time_diff = time_diff_wrapper(cell_freeze_time, ln_time + pd.Timedelta(hours=24),"Time in Mr Frosty {}".format(sample_id))
+                add_to['Storage_Time_in_Mr_Frosty'].append(time_diff)
             add_to['Comments'].append('')
         '''
         Just Kidding Shipping Manifest
