@@ -249,8 +249,8 @@ def query_intake(participants=None, include_research=False, use_cache=False, upd
             all_samples.to_hdf(util.tracking + 'intake.h5', key='intake_info')
     if participants is not None:
         samples = all_samples.query('participant_id in @participants').copy()
+    all_samples['Date Collected'] = pd.to_datetime(all_samples['Date Collected'], errors='coerce')
     if from_date is not None:
-        all_samples['Date Collected'] = pd.to_datetime(all_samples['Date Collected'])
         dt = pd.to_datetime(from_date)
         samples = all_samples.query('`Date Collected` >= @dt')
     else:
