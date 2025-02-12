@@ -115,7 +115,7 @@ def pull_from_source(debug=False):
     shared_samples = pd.read_excel(util.shared_samples, sheet_name='Released Samples')
     no_pbmcs = set([str(sid).strip().upper() for sid in shared_samples[shared_samples['Sample Type'] == 'PBMC']['Sample ID'].unique()])
     proc_unfiltered = query_dscf(sid_list=samples_of_interest, no_pbmcs=no_pbmcs)
-    cam_df = transform_cam(debug=debug).drop_duplicates(subset='sample_id').set_index('sample_id')
+    cam_df = transform_cam(debug=False).drop_duplicates(subset='sample_id').set_index('sample_id')
     cam_df['coll_time'] = cam_df['Time Collected'].fillna(cam_df['Time'])
     cam_df['coll_inits'] = cam_df['Phlebotomist'].fillna('CCT (Clinical Care Team)')
     proc_unfiltered['coll_time'] = proc_unfiltered.apply(lambda row: cam_df.loc[row.name, 'coll_time'] if row.name in cam_df.index else row['Time Collected'], axis=1)

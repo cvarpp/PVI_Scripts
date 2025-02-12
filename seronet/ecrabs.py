@@ -6,7 +6,7 @@ from seronet.d4_all_data import pull_from_source
 from helpers import clean_sample_id
 from lots_consolidated import compress_lots
 
-PVI_list = ['MVK','mvk','NL','nl','ACA','aca']
+PVI_list = ['MVK','NL','ACA','JN']
 
 def process_lots():
     equip_lots = compress_lots().set_index(['Date Used', 'Material'])
@@ -22,7 +22,7 @@ def get_catalog_lot_exp(coll_date, material, lot_log):
 
 def time_diff_wrapper(t_start, t_end, annot):
     try:
-        time_diff = (pd.to_datetime(t_end, errors='coerce') - pd.to_datetime(t_start, errors='coerce'))
+        time_diff = (pd.to_datetime(str(t_end), errors='coerce') - pd.to_datetime(str(t_start), errors='coerce'))
         if pd.isna(time_diff):
             time_diff = 'Missing'
         else:
@@ -98,10 +98,8 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
         proc_time = row['proc_time']
         coll_time = row['coll_time']
         #print(row['coll_inits'], type(row['coll_inits']))
-        
-        if row['coll_inits'] in PVI_list:
-            coll_inits = row['coll_inits']
-        else:
+        coll_inits = str(row['coll_inits']).strip().upper()
+        if coll_inits not in PVI_list:
             coll_inits = "CCT (Clinical Care Team)"
 
         serum_freeze_time = pd.to_datetime(str(row['serum_freeze_time']), errors='coerce')
