@@ -84,7 +84,7 @@ def write_clinical(input_df, output_fname, debug=False):
         visit_date = row_outer['Date']
         participant = row_outer['Participant ID']
         study = participant_study[participant]
-        # index_date = row_outer['Index Date'].date()
+        # index_date = row_outer['Index Date']
         # days_from_index = int((visit_date - index_date).days)
         days_from_index = row_outer['Biospecimen_Collection_Date_Duration_From_Index']
         index_date = visit_date - datetime.timedelta(days=days_from_index)
@@ -162,13 +162,13 @@ def write_clinical(input_df, output_fname, debug=False):
             add_to['Comments'].append('')
         else:
             for idx, row in source_df[source_df['Participant ID'] == participant].sort_values('Report_Time').iterrows():
-                if row['Reported'] == 'No' and row['Report_Time'].date() < visit_date:
+                if row['Reported'] == 'No' and pd.to_datetime(row['Report_Time'], errors='coerce')  < visit_date:
                     source_df.loc[idx, 'Reported'] = 'Yes'
                     for col in covid_cols[3:-1]:
                         if 'Date' in col:
                             cropped_col = col[:-20] # drop "Duration_From_Index"
                             try:
-                                add_to[col].append(int((row[cropped_col].date() - index_date).days))
+                                add_to[col].append(int((row[cropped_col] - index_date).days))
                             except:
                                 add_to[col].append(row[cropped_col])
                         else:
@@ -202,13 +202,13 @@ def write_clinical(input_df, output_fname, debug=False):
             add_to['Comments'].append('')
         else:
             for idx, row in source_df[source_df['Participant ID'] == participant].iterrows():
-                if row['Reported'] == 'No' and row['SARS-CoV-2_Vaccination_Date'].date() < visit_date:
+                if row['Reported'] == 'No' and pd.to_datetime(row['SARS-CoV-2_Vaccination_Date'], errors='coerce') < visit_date:
                     source_df.loc[idx, 'Reported'] = 'Yes'
                     for col in vax_cols[3:-1]:
                         if 'Date' in col:
                             cropped_col = col[:-20] # drop "_From_Index"
                             try:
-                                add_to[col].append(int((row[cropped_col].date() - index_date).days))
+                                add_to[col].append(int((row[cropped_col] - index_date).days))
                             except:
                                 if row[cropped_col] in ["N/A", "Unknown", "Not Reported"]:
                                     add_to[col].append(row[cropped_col])
@@ -252,22 +252,22 @@ def write_clinical(input_df, output_fname, debug=False):
         #     add_to['Comments'].append('No Treatment Reported')
         for idx, row in source_df[(source_df['Participant ID'] == participant) & source_df['Report_Time'].apply(lambda val: type(val) != str)].sort_values('Report_Time').iterrows():
             try:
-                if row['Reported'] != 'Yes' and row['Report_Time'].date() < visit_date:
+                if row['Reported'] != 'Yes' and pd.to_datetime(row['Report_Time'], errors='coerce') < visit_date:
                     for col in meds_cols[3:-2]:
                         if 'Date' in col:
                             cropped_col = col[:-20] # drop "Duration_From_Index"
                             if cropped_col == 'Start_Date' and source_df.loc[idx, 'Reported'] == 'Partial':
                                 add_to[col].append('Ongoing')
-                            elif cropped_col == 'Stop_Date' and type(row[cropped_col]) == datetime.datetime and row[cropped_col].date() > visit_date:
+                            elif cropped_col == 'Stop_Date' and type(row[cropped_col]) == datetime.datetime and row[cropped_col] > visit_date:
                                 add_to[col].append('Ongoing')
                             else:
                                 try:
                                     if type(row[cropped_col]) == datetime.datetime:
-                                        add_to[col].append(int((row[cropped_col].date() - index_date).days))
+                                        add_to[col].append(int((row[cropped_col] - index_date).days))
                                     else:
                                         add_to[col].append(row[cropped_col])
                                 except:
-                                    print(participant, visit, sample_id, col, row[cropped_col].date())
+                                    print(participant, visit, sample_id, col, row[cropped_col])
                                     add_to[col].append(row[cropped_col])
                         else:
                             add_to[col].append(row[col])
@@ -276,7 +276,7 @@ def write_clinical(input_df, output_fname, debug=False):
                     else:
                         add_to['Update'].append('Not Reported')
                     add_to['Comments'].append(row['Comments'])
-                    if type(row['Stop_Date']) == datetime.datetime and row['Stop_Date'].date() <= visit_date:
+                    if type(row['Stop_Date']) == datetime.datetime and row['Stop_Date'] <= visit_date:
                         source_df.loc[idx, 'Reported'] = 'Yes'
                     else:
                         source_df.loc[idx, 'Reported'] = 'Partial'
@@ -330,7 +330,7 @@ def write_clinical(input_df, output_fname, debug=False):
                         add_to[col].append("N/A")
                     else:
                         try:
-                            add_to[col].append(int((pd.to_datetime(source_df.loc[seronet_id, cropped_col]).date() - index_date).days))
+                            add_to[col].append(int((pd.to_datetime(source_df.loc[seronet_id, cropped_col]) - index_date).days))
                         except:
                             add_to[col].append("N/A")
                 else:

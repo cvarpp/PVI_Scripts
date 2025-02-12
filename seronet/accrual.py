@@ -16,7 +16,7 @@ from helpers import ValuesToClass
 def lost_calculate(row):
     if row['Date'] != row['Last_Date']:
         return 'No'
-    elif (datetime.date.today() - row['Date']).days < 300:
+    elif (pd.Timestamp.now() - row['Date']).days < 300:
         return 'No'
     else:
         return 'Unknown'

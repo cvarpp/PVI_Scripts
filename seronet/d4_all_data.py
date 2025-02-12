@@ -129,7 +129,7 @@ def pull_from_source(debug=False):
     proc_cols = ['Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_time', 'coll_inits', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'Cells in Last Aliquot', 'Total Cell Count (x10^6)', 'Freezing Method', 'Time in LN', 'proc_comment']
     key_cols = ['Cohort', 'Vaccine', '1st Dose Date', '2nd Dose Date', '3rd Dose Date', '3rd Dose Vaccine', 'Boost Date', 'Boost Vaccine', 'Boost 2 Date', 'Boost 2 Vaccine', 'Baseline Date']
 
-    cutoff_date = pd.to_datetime('2022-11-20').date()
+    cutoff_date = pd.to_datetime('2022-11-20')
     samples = samples.join(sample_info.loc[:, proc_cols], how='inner').join(source_df.loc[:, key_cols], on='participant_id')
     samples['Cohort'] = samples['Cohort'].fillna('PRIORITY')
     samples = samples[(samples['Cohort'] != 'IRIS') | (samples['Date Collected'] <= cutoff_date)].pipe(seronet_annotate)
@@ -147,7 +147,7 @@ def pull_from_source(debug=False):
     days = ['Days from Index', 'Days to 1st', 'Days to 2nd', 'Days to 3rd', 'Days to Boost', 'Days to Boost 2', 'Post-Baseline']
     dates = ['Index Date', '1st Dose Date', '2nd Dose Date', '3rd Dose Date', 'Boost Date', 'Boost 2 Date', 'Baseline Date']
     for day_col, date_col in zip(days, dates):
-        samples[day_col] = (samples['Date Collected'] - samples[date_col]).dt.days
+        samples[day_col] = (pd.to_datetime(samples['Date Collected'], errors='coerce') - pd.to_datetime(samples[date_col], errors='coerce')).dt.days
     samples['Sample ID']=  samples.index.to_numpy()
     report = samples.rename(
         columns={'participant_id': 'Participant ID', 'Date Collected': 'Date', 'Visit Type / Samples Needed': 'Visit Type'}
