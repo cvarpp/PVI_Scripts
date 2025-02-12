@@ -37,7 +37,6 @@ def time_diff_wrapper(t_start, t_end, annot):
     return time_diff
 
 def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_datetime('1/1/2040'), output_fname='tmp', debug=False):
-    print (source.shape)
     issues = set()
     equip_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Equipment_ID', 'Equipment_Type', 'Equipment_Calibration_Due_Date', 'Comments']
     consum_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Consumable_Name', 'Consumable_Catalog_Number', 'Consumable_Lot_Number', 'Consumable_Expiration_Date', 'Comments']
@@ -382,7 +381,6 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
     for sname, df2b in future_output.items():
         df = pd.DataFrame(df2b)
         output[sname] = df
-    print(output)
     if not debug:
         with pd.ExcelWriter(util.proc_d4 + '{}.xlsx'.format(output_fname)) as writer:
             for sname, df in output.items():
