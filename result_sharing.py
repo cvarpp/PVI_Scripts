@@ -80,7 +80,7 @@ if __name__ == '__main__':
             args = ValuesToClass(values)        
 
     report = make_report(args.use_cache)
-    recency_cutoff = date.today() - datetime.timedelta(days=args.recency)
+    recency_cutoff = datetime.date.today() - datetime.timedelta(days=args.recency)
     report_old = report[report['Date Collected'] < recency_cutoff]
     report_new = report[report['Date Collected'] >= recency_cutoff]
     report_new_emails = report_new[~report_new['Email'].isna()]
