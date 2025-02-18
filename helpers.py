@@ -264,7 +264,7 @@ def coerce_date(val):
     A shorter wrapper for `apply`ing to create typed date columns from
     potentially messy data.
     '''
-    return pd.to_datetime(val, errors='coerce').date()
+    return pd.to_datetime(val, errors='coerce')
 
 def permissive_datemax(date_list, comp_date):
     '''
@@ -274,7 +274,7 @@ def permissive_datemax(date_list, comp_date):
 
     Specifically useful for repeated COVID infections and vaccinations.
     '''
-    placeholder = pd.to_datetime('1.1.1950').date()
+    placeholder = pd.to_datetime('1.1.1950')
     max_date = placeholder
     for date_ in date_list:
         date_ = coerce_date(date_)
