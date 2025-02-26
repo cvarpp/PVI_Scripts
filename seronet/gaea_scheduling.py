@@ -19,10 +19,11 @@ if __name__ == '__main__':
     gaea_tracker = pd.ExcelFile(util.gaea_folder + 'GAEA Tracker.xlsx')
     participant_schedules = pd.read_excel(gaea_tracker, sheet_name='2024-25 Vaccine Samples')
     participant_info = pd.read_excel(gaea_tracker, sheet_name='Summary', index_col='Participant ID')
-    visit_cols = ['Day 30 Due', 'Day 60 Due', 'Day 90 Due', 'Day 180 Due', 'Day 360 Due']
+    visit_cols = ['Day 30 Due', 'Day 60 Due', 'Day 90 Due', 'Day 120 Due', 'Day 180 Due', 'Day 360 Due']
     all_visit_due = participant_schedules.set_index('Participant ID').loc[:, visit_cols].stack().reset_index()
     all_visit_due.columns = ['Participant ID', 'Visit Kind', 'Date']
-    all_visit_due['Last in Window'] = pd.to_datetime(all_visit_due['Date'], errors='coerce') + datetime.timedelta(days=7)
+    all_visit_due['Last in Window'] = pd.to_datetime(all_visit_due['Date'], errors='coerce') + datetime.timedelta(days=11)
+    all_visit_due['First in Window'] = pd.to_datetime(all_visit_due['Date'], errors='coerce') + datetime.timedelta(days=11)
     not_too_late_filter = all_visit_due['Last in Window'] >= date_of_interest
     next_visits = all_visit_due[not_too_late_filter].drop_duplicates(subset='Participant ID').set_index('Participant ID')
 
@@ -32,8 +33,8 @@ if __name__ == '__main__':
             next_visits.loc[day,'Date'] = next_visits.loc[day,'Date'] - datetime.timedelta(days=1)
         elif day_of_week.weekday() == 6:
             next_visits.loc[day,'Date'] = next_visits.loc[day,'Date'] + datetime.timedelta(days=1) 
-    visit_types = ['Day 30 Post COVID Vaccine', 'Day 60 Post COVID Vaccine', 'Day 90 Post COVID Vaccine', 'Day 180 Post COVID Vaccine', 'Day 360 Post COVID Vaccine']
-    timepoints = ['1 Month', '2 Month', '3 Month', '6 Month', '1 Year']
+    visit_types = ['Day 30 Post COVID Vaccine', 'Day 60 Post COVID Vaccine', 'Day 90 Post COVID Vaccine', 'Day 120 Post COVID Vaccine', 'Day 180 Post COVID Vaccine', 'Day 360 Post COVID Vaccine']
+    timepoints = ['1 Month', '2 Month', '3 Month', '4 Month', '6 Month', '1 Year']
     visit_key = {'Name':visit_cols, 'Type': visit_types, 'Timepoint': timepoints}
     key_frame = pd.DataFrame.from_dict(visit_key).set_index('Name')
     
@@ -47,7 +48,7 @@ if __name__ == '__main__':
             if due_date[pid] == day_check:
                 pts_due.append(pid)
    
-    table = {'Name':[], 'Study':[], 'Visit Details':[], 'NoF':[], 'ID':[], 'Email':[], 'Timepoint':[], 'Visit Date':[], 'Must See By': []}
+    table = {'Name':[], 'Study':[], 'Visit Details':[], 'NoF':[], 'ID':[], 'Email':[], 'Timepoint':[], 'Visit Date':[], 'Can See Starting':[], 'Must See By':[]}
     for pt in pts_due:
         table['Name'].append(scheduling_stuff.loc[pt, 'Name'])
         table['Study'].append('GAEA')
@@ -57,6 +58,7 @@ if __name__ == '__main__':
         table['Email'].append(scheduling_stuff.loc[pt, 'Email'])
         table['Timepoint'].append(key_frame.loc[scheduling_stuff.loc[pt, 'Visit Kind'], 'Timepoint'])
         table['Visit Date'].append(scheduling_stuff.loc[pt, 'Date'].strftime("%A, %B %d, %Y"))
+        table['Can See Starting'].append(scheduling_stuff.loc[pt, 'Last in Window'].strftime("%A, %B %d, %Y"))
         table['Must See By'].append(scheduling_stuff.loc[pt, 'Last in Window'].strftime("%A, %B %d, %Y"))
     output = pd.DataFrame.from_dict(table)
 
