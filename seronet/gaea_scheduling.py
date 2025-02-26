@@ -23,7 +23,7 @@ if __name__ == '__main__':
     all_visit_due = participant_schedules.set_index('Participant ID').loc[:, visit_cols].stack().reset_index()
     all_visit_due.columns = ['Participant ID', 'Visit Kind', 'Date']
     all_visit_due['Last in Window'] = pd.to_datetime(all_visit_due['Date'], errors='coerce') + datetime.timedelta(days=11)
-    all_visit_due['First in Window'] = pd.to_datetime(all_visit_due['Date'], errors='coerce') + datetime.timedelta(days=11)
+    all_visit_due['First in Window'] = pd.to_datetime(all_visit_due['Date'], errors='coerce') - datetime.timedelta(days=11)
     not_too_late_filter = all_visit_due['Last in Window'] >= date_of_interest
     next_visits = all_visit_due[not_too_late_filter].drop_duplicates(subset='Participant ID').set_index('Participant ID')
 
@@ -58,11 +58,11 @@ if __name__ == '__main__':
         table['Email'].append(scheduling_stuff.loc[pt, 'Email'])
         table['Timepoint'].append(key_frame.loc[scheduling_stuff.loc[pt, 'Visit Kind'], 'Timepoint'])
         table['Visit Date'].append(scheduling_stuff.loc[pt, 'Date'].strftime("%A, %B %d, %Y"))
-        table['Can See Starting'].append(scheduling_stuff.loc[pt, 'Last in Window'].strftime("%A, %B %d, %Y"))
+        table['Can See Starting'].append(scheduling_stuff.loc[pt, 'First in Window'].strftime("%A, %B %d, %Y"))
         table['Must See By'].append(scheduling_stuff.loc[pt, 'Last in Window'].strftime("%A, %B %d, %Y"))
     output = pd.DataFrame.from_dict(table)
 
-    destination = util.gaea_folder + 'GAEA Scheduling Week of {}.xlsx'.format(date_of_interest.date())
+    destination = util.gaea_folder + 'GAEA Scheduling Week of {}.xlsx'.format(date_of_interest.date().strftime("%m.%d.%Y"))
     with pd.ExcelWriter(destination) as writer:
         output.to_excel(writer, sheet_name='{}-{}'.format(date_of_interest.strftime("%m.%d.%y"), (date_of_interest + datetime.timedelta(days=4)).strftime("%m.%d.%y")), index=False)
         print("Written to", destination)
