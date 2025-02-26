@@ -4,6 +4,7 @@ import argparse
 import util
 from cam_convert import transform_cam
 from helpers import query_intake, query_dscf, clean_sample_id, try_datediff, map_dates
+import warnings
 
 def sufficient(val):
     try:
@@ -29,10 +30,12 @@ def seronet_annotate(df):
     return df
 
 def cohort_data():
-    iris_data = pd.read_excel(util.iris_folder + 'Participant Tracking - IRIS.xlsx', sheet_name='Main Project', header=4).dropna(subset=['Participant ID']).assign(Cohort='IRIS', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
-    titan_data = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Tracker', header=4).rename(columns={'Umbrella Corresponding Participant ID': 'Participant ID'}).dropna(subset=['Participant ID']).assign(Cohort='TITAN', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
-    mars_data = pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name='Pt List').dropna(subset=['Participant ID']).assign(Cohort='MARS', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
-    gaea_data = pd.read_excel(util.gaea_folder + 'GAEA Tracker.xlsx', sheet_name='Summary').dropna(subset=['Participant ID']).assign(Cohort='GAEA', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
+        iris_data = pd.read_excel(util.iris_folder + 'Participant Tracking - IRIS.xlsx', sheet_name='Main Project', header=4).dropna(subset=['Participant ID']).assign(Cohort='IRIS', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
+        titan_data = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Tracker', header=4).rename(columns={'Umbrella Corresponding Participant ID': 'Participant ID'}).dropna(subset=['Participant ID']).assign(Cohort='TITAN', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
+        mars_data = pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name='Pt List').dropna(subset=['Participant ID']).assign(Cohort='MARS', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
+        gaea_data = pd.read_excel(util.gaea_folder + 'GAEA Tracker.xlsx', sheet_name='Summary').dropna(subset=['Participant ID']).assign(Cohort='GAEA', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
     participants = np.concatenate((mars_data.index.to_numpy(),
                                    titan_data.index.to_numpy(),
                                    iris_data.index.to_numpy(),
@@ -112,7 +115,9 @@ def pull_from_source(debug=False):
     samples = samples.loc[~samples.index.isin(exclude_samples), :].copy()
     samples_of_interest = samples.index.to_numpy()
 
-    shared_samples = pd.read_excel(util.shared_samples, sheet_name='Released Samples')
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
+        shared_samples = pd.read_excel(util.shared_samples, sheet_name='Released Samples')
     no_pbmcs = set([str(sid).strip().upper() for sid in shared_samples[shared_samples['Sample Type'] == 'PBMC']['Sample ID'].unique()])
     proc_unfiltered = query_dscf(sid_list=samples_of_interest, no_pbmcs=no_pbmcs)
     cam_df = transform_cam(debug=debug).drop_duplicates(subset='sample_id').set_index('sample_id')

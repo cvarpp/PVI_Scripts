@@ -11,7 +11,7 @@ from seronet.ecrabs import make_ecrabs
 from seronet.clinical_forms import write_clinical
 import os
 from helpers import ValuesToClass
-
+import warnings
 
 def lost_calculate(row):
     if row['Date'] != row['Last_Date']:
@@ -52,14 +52,16 @@ def yes_no(val):
 
 def accrue(args):
     intermediate = 'monthly_report'
-    if not args.use_cache:
-        all_data = pull_from_source(args.debug).query('Date <= @args.report_end').copy()
-        ecrabs = make_ecrabs(all_data, output_fname=intermediate, debug=args.debug)
-        dfs_clin = write_clinical(pd.DataFrame(ecrabs['Biospecimen']), 'monthly_tmp', debug=args.debug)
-    else:
-        all_data = pd.read_excel(util.unfiltered, keep_default_na=False).query('Date <= @args.report_end').copy()
-        dfs_clin = pd.read_excel(util.cross_d4 + 'monthly_tmp.xlsx', sheet_name = None, keep_default_na=False)
-    seronet_key = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name=None)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
+        if not args.use_cache:
+            all_data = pull_from_source(args.debug).query('Date <= @args.report_end').copy()
+            ecrabs = make_ecrabs(all_data, output_fname=intermediate, debug=args.debug)
+            dfs_clin = write_clinical(pd.DataFrame(ecrabs['Biospecimen']), 'monthly_tmp', debug=args.debug)
+        else:
+            all_data = pd.read_excel(util.unfiltered, keep_default_na=False).query('Date <= @args.report_end').copy()
+            dfs_clin = pd.read_excel(util.cross_d4 + 'monthly_tmp.xlsx', sheet_name = None, keep_default_na=False)
+        seronet_key = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name=None)
     exclusions = seronet_key['Exclusions']
     exclude_ppl = set(exclusions['Participant ID'].unique())
     exclude_ids = set(exclusions['Research_Participant_ID'].unique())
@@ -86,7 +88,7 @@ def accrue(args):
     vax_data['Visit_Number'] = vax_data.apply(lambda row: vax_visits[(row['Research_Participant_ID'], row['Visit_Number'])], axis=1)
     index_to_baseline = all_data.drop_duplicates(subset='Seronet ID').set_index('Seronet ID').loc[:, 'Days from Index']
     vax_data[vax_cols[-1]] = vax_data[orig_date].apply(lambda val: 0 if val == 'N/A' else val) - vax_data['Research_Participant_ID'].apply(lambda val: index_to_baseline[val])
-    vax_data.loc[(vax_data[orig_date] == 'N/A'), vax_cols[-1]] = 'N/A'
+    vax_data.loc[(vax_data[orig_date] == 'N/A'), vax_cols[-1]] = np.nan
 
     sample_cols = ['Site_Cohort_Name', 'Primary_Cohort', 'Research_Participant_ID', 'Visit_Number', 'Visit_Date_Duration_From_Visit_1', 'SARS_CoV_2_Infection_Status', 'Serum_Shipped_To_FNL', 'Serum_Volume_For_FNL', 'PBMC_Shipped_To_FNL', 'Num_PBMC_Vials_For_FNL', 'PBMC_Concentration', 'Unscheduled_Visit', 'Unscheduled_Visit_Purpose', 'Lost_To_FollowUp', 'Final_Visit', 'Collected_In_This_Reporting_Period']
     keep_cols = ['Seronet ID', 'Cohort', 'Days from Index', 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'Sample ID', 'Date']

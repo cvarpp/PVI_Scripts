@@ -7,6 +7,8 @@ import pandas as pd
 import numpy as np
 import util
 import os
+import warnings
+
 class ValuesToClass(object):
     def __init__(self,values):
         for key in values:
@@ -137,7 +139,9 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=Fals
                     'Date of specimen processed': 'Date Processing Started'}
         crp_samples = dscf_info.parse(sheet_name='CRP').rename(columns=correct_crp)
         crp_samples['# cells per aliquot'] = crp_samples.apply(fallible(lambda row: row['Cell Count'] / row['# of aliquots frozen']), axis=1)
-        crp_samples.loc[crp_samples['Total volume of serum after second spin (ml)'].str.upper().str.strip() != 'X', 'Total volume of serum (mL)'] = crp_samples.loc[crp_samples['Total volume of serum after second spin (ml)'].str.upper().str.strip() != 'X', 'Total volume of serum after second spin (ml)']
+        crp_samples['Total volume of serum after second spin (ml)'] = pd.to_numeric(crp_samples['Total volume of serum after second spin (ml)'], errors='coerce')
+        second_spin = pd.isna(crp_samples['Total volume of serum after second spin (ml)'])
+        crp_samples.loc[second_spin, 'Total volume of serum (mL)'] = crp_samples.loc[second_spin, 'Total volume of serum after second spin (ml)']
         date_cols = ['Date Processing Started']
         correct_new = {'# PBMCs per Aliquot (except last)': '# cells per aliquot',
                     '# Aliquots': '# of aliquots frozen',
@@ -147,7 +151,9 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=Fals
                     'Cell Tube Volume (mL)': 'CPT/EDTA VOL',
                     'Time in -80C (Serum)': 'Time put in -80: SERUM',
                     'Time in Freezing Device': 'Time put in -80: PBMC',}
-        new_samples = pd.read_excel(util.proc + 'Processing Notebook.xlsx', sheet_name='Specimen Dashboard', header=1).rename(columns=correct_new)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
+            new_samples = pd.read_excel(util.proc + 'Processing Notebook.xlsx', sheet_name='Specimen Dashboard', header=1).rename(columns=correct_new)
         dataframe_list = [bsl2p_archive, bsl2_archive, bsl2p_samples, bsl2_samples, crp_samples, new_samples]
         all_samples = (pd.concat(dataframe_list)
                         .assign(sample_id=clean_sample_id)
@@ -228,9 +234,12 @@ def query_intake(participants=None, include_research=False, use_cache=False, upd
         all_samples = pd.read_hdf(util.tracking + 'intake.h5', key='intake_info')
     else:
         drop_cols = ['Date Processed', 'Tubes Pulled?', 'Process Location', 'Box #', 'Specimen Type Sent to Patho', 'Date Given to Patho', 'Delivered by', 'Received by', 'Results received', 'RT-QPCR Result NS (Clinical)', 'Viability', 'Notes', 'Blood Collector Initials', 'New or Follow-up?', 'Participant ID', 'Sample ID', 'Ab Detection S/P Result (Clinical) (Titer or Neg)', 'Ab Concentration (Units - AU/mL)']
-        intake_source = pd.ExcelFile(util.intake)
-        intake = intake_source.parse(sheet_name='Sample Intake Log', header=util.header_intake)
-        latest_intake = pd.read_excel(util.tracking + 'Sample Intake Log.xlsx', sheet_name='Sample Intake Log', header=6)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
+            intake_source = pd.ExcelFile(util.intake)
+            intake = intake_source.parse(sheet_name='Sample Intake Log', header=util.header_intake)
+            latest_intake = pd.read_excel(util.tracking + 'Sample Intake Log.xlsx', sheet_name='Sample Intake Log', header=6)
+        drop_cols = [col for col in drop_cols if col in latest_intake.columns]
         date_cols = ['Date Collected']
         all_samples = (pd.concat([intake, latest_intake]).dropna(subset=['Participant ID'])
                             .assign(participant_id=lambda df: df['Participant ID'].str.strip().str.upper(),

@@ -2,6 +2,7 @@ import pandas as pd
 import datetime
 import argparse
 import util
+import warnings
 
 # Priority does not use CRF or CPT
 
@@ -41,14 +42,16 @@ def write_clinical(input_df, output_fname, debug=False):
     gaea_data = util.gaea_folder + 'GAEA for D4 Long.xlsx'
     participant_study = input_df.drop_duplicates(subset='Participant ID').set_index('Participant ID')['Cohort']
 
-    exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
+        exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
     exclude_ppl = set(exclusions['Participant ID'].unique())
     exclude_ids = set(exclusions['Research_Participant_ID'].unique())
     exclude_filter = (input_df['Participant ID'].apply(lambda val: val not in exclude_ppl) & 
                         input_df['Research_Participant_ID'].apply(lambda val: val not in exclude_ids))
     all_samples = input_df[exclude_filter].copy()
     specimen_ids = all_samples['Biospecimen_ID'].unique() # samples to include 
-    one_per = all_samples.drop_duplicates(subset=['Research_Participant_ID', 'Visit_Number'])
+    one_per = all_samples.drop_duplicates(subset=['Research_Participant_ID', 'Visit_Number']).copy()
     one_per['Serum'] = one_per.apply(lambda row: '{}_1{}'.format(row['Research_Participant_ID'], str(row['Visit_Number']).strip("bBaseline()").zfill(2)) in specimen_ids, axis=1)
     one_per['PBMC'] = one_per.apply(lambda row: '{}_2{}'.format(row['Research_Participant_ID'], str(row['Visit_Number']).strip("bBaseline()").zfill(2)) in specimen_ids, axis=1)
     one_per['Biospecimens_Collected'] = one_per.apply(specimenize, axis=1)
@@ -68,12 +71,15 @@ def write_clinical(input_df, output_fname, debug=False):
 
     current_input = {}
     cohort_df_names = [iris_data, mars_data, titan_data, priority_data, gaea_data]
-    current_input['Baseline'] = pd.concat([pd.read_excel(df_name, sheet_name='Baseline Info', keep_default_na=False).set_index('Research_Participant_ID') for df_name in cohort_df_names])
-    current_input['COVID'] = pd.concat([pd.read_excel(df_name, sheet_name='COVID Infections', keep_default_na=False) for df_name in cohort_df_names]).reset_index()
-    current_input['Vax'] = pd.concat([pd.read_excel(df_name, sheet_name='COVID Vaccinations', keep_default_na=False) for df_name in cohort_df_names]).reset_index()
-    current_input['Meds'] = pd.concat([pd.read_excel(df_name, sheet_name='Medications', keep_default_na=False) for df_name in cohort_df_names]).reset_index()
-    current_input['Transplant'] = pd.read_excel(titan_data, sheet_name='Transplant-Specific', keep_default_na=False).set_index('Research_Participant_ID')
-    current_input['Cancer'] = pd.read_excel(mars_data, sheet_name='Cancer-specific', keep_default_na=False).set_index('Research_Participant_ID')
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
+        current_input['Baseline'] = pd.concat([pd.read_excel(df_name, sheet_name='Baseline Info', keep_default_na=False).set_index('Research_Participant_ID') for df_name in cohort_df_names])
+        current_input['COVID'] = pd.concat([pd.read_excel(df_name, sheet_name='COVID Infections', keep_default_na=False) for df_name in cohort_df_names]).reset_index()
+        current_input['Vax'] = pd.concat([pd.read_excel(df_name, sheet_name='COVID Vaccinations', keep_default_na=False) for df_name in cohort_df_names]).reset_index()
+        current_input['Meds'] = pd.concat([pd.read_excel(df_name, sheet_name='Medications', keep_default_na=False) for df_name in cohort_df_names]).reset_index()
+        current_input['Transplant'] = pd.read_excel(titan_data, sheet_name='Transplant-Specific', keep_default_na=False).set_index('Research_Participant_ID')
+        current_input['Cancer'] = pd.read_excel(mars_data, sheet_name='Cancer-specific', keep_default_na=False).set_index('Research_Participant_ID')
     current_input['Meds']['Reported'] = 'No'
     current_input['Vax']['Reported'] = 'No'
     current_input['COVID']['Reported'] = 'No'
