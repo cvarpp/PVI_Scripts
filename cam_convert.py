@@ -1,27 +1,18 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu May 26 11:11:43 2022
-
-@author: bmona
-"""
-#%%
 import pandas as pd
 import util
 import datetime
 import argparse
-from helpers import clean_sample_id
+from helpers import clean_sample_id, coerce_date
+import warnings
 
-def clean_date(s):
-    '''
-    Converts a series of strings to datetime.date objects
-    '''
-    return pd.to_datetime(s, errors='coerce').dt.date
 
 def pull_archive(output_fname=util.clin_ops + 'CAM Archive/Archive Long.xlsx'):
     '''
     Pulls all CAM Archive data into a single dataframe
     '''
-    cam_archive = pd.read_excel(util.clin_ops + 'CAM Archive/CAM Archive.xlsx', sheet_name=None, header=None)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
+        cam_archive = pd.read_excel(util.clin_ops + 'CAM Archive/CAM Archive.xlsx', sheet_name=None, header=None)
 
     sheet_df_arch = []
     shared_header_1 = ['Date', 'Time', 'Time collected', 'Patient Name', 'Study',
@@ -62,11 +53,14 @@ def pull_archive(output_fname=util.clin_ops + 'CAM Archive/Archive Long.xlsx'):
 def transform_cam(update=False, debug=False):
 
     long_archive = util.clin_ops + 'CAM Archive/Archive Long.xlsx'
-    if update:
-        cam_arch = pull_archive(output_fname=long_archive)
-    else:
-        cam_arch = pd.read_excel(long_archive)
-    cam_active = pd.read_excel(util.clin_ops + 'CAM Clinic Schedule.xlsx', sheet_name=None, header=None)
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
+        if update:
+            cam_arch = pull_archive(output_fname=long_archive)
+        else:
+            cam_arch = pd.read_excel(long_archive)
+        cam_active = pd.read_excel(util.clin_ops + 'CAM Clinic Schedule.xlsx', sheet_name=None, header=None)
     shared_header_1 = ['Date', 'Time', 'Time collected', 'Patient Name', 'Study',
         'Visit Type / Samples Needed', 'New or Follow-up?', 'Participant ID',
         'Sample ID', 'Visit Coordinator', 'Internal Notes']
@@ -94,7 +88,7 @@ def transform_cam(update=False, debug=False):
     idx_cols = ['Date', 'Time', 'Participant ID', 'Sample ID']
     cam_both = (pd.concat([cam_act, cam_arch]).drop_duplicates(subset=idx_cols)
                     .query('`Participant ID` not in @exclude')
-                    .assign(Date = lambda df: clean_date(df['Date']),
+                    .assign(Date = lambda df: coerce_date(df['Date']).dt.date,
                             idx=lambda df: df.loc[:, idx_cols].astype(str).sum(axis=1),
                             sample_id=clean_sample_id)
                     .sort_values(by='Date', ascending=False)
