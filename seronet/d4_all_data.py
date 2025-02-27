@@ -4,6 +4,7 @@ import argparse
 import util
 from cam_convert import transform_cam
 from helpers import query_intake, query_dscf, clean_sample_id, try_datediff, map_dates
+import warnings
 
 def sufficient(val):
     try:
@@ -29,10 +30,12 @@ def seronet_annotate(df):
     return df
 
 def cohort_data():
-    iris_data = pd.read_excel(util.iris_folder + 'Participant Tracking - IRIS.xlsx', sheet_name='Main Project', header=4).dropna(subset=['Participant ID']).assign(Cohort='IRIS', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
-    titan_data = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Tracker', header=4).rename(columns={'Umbrella Corresponding Participant ID': 'Participant ID'}).dropna(subset=['Participant ID']).assign(Cohort='TITAN', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
-    mars_data = pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name='Pt List').dropna(subset=['Participant ID']).assign(Cohort='MARS', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
-    gaea_data = pd.read_excel(util.gaea_folder + 'GAEA Tracker.xlsx', sheet_name='Summary').dropna(subset=['Participant ID']).assign(Cohort='GAEA', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
+        iris_data = pd.read_excel(util.iris_folder + 'Participant Tracking - IRIS.xlsx', sheet_name='Main Project', header=4).dropna(subset=['Participant ID']).assign(Cohort='IRIS', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
+        titan_data = pd.read_excel(util.titan_folder + 'TITAN Participant Tracker.xlsx', sheet_name='Tracker', header=4).rename(columns={'Umbrella Corresponding Participant ID': 'Participant ID'}).dropna(subset=['Participant ID']).assign(Cohort='TITAN', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
+        mars_data = pd.read_excel(util.mars_folder + 'MARS tracker.xlsx', sheet_name='Pt List').dropna(subset=['Participant ID']).assign(Cohort='MARS', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
+        gaea_data = pd.read_excel(util.gaea_folder + 'GAEA Tracker.xlsx', sheet_name='Summary').dropna(subset=['Participant ID']).assign(Cohort='GAEA', PID=lambda df: df['Participant ID'].str.upper().str.strip()).set_index('PID')
     participants = np.concatenate((mars_data.index.to_numpy(),
                                    titan_data.index.to_numpy(),
                                    iris_data.index.to_numpy(),
@@ -112,24 +115,26 @@ def pull_from_source(debug=False):
     samples = samples.loc[~samples.index.isin(exclude_samples), :].copy()
     samples_of_interest = samples.index.to_numpy()
 
-    shared_samples = pd.read_excel(util.shared_samples, sheet_name='Released Samples')
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
+        shared_samples = pd.read_excel(util.shared_samples, sheet_name='Released Samples')
     no_pbmcs = set([str(sid).strip().upper() for sid in shared_samples[shared_samples['Sample Type'] == 'PBMC']['Sample ID'].unique()])
     proc_unfiltered = query_dscf(sid_list=samples_of_interest, no_pbmcs=no_pbmcs)
     cam_df = transform_cam(debug=debug).drop_duplicates(subset='sample_id').set_index('sample_id')
     cam_df['coll_time'] = cam_df['Time Collected'].fillna(cam_df['Time'])
     cam_df['coll_inits'] = cam_df['Phlebotomist'].fillna('CCT (Clinical Care Team)')
     proc_unfiltered['coll_time'] = proc_unfiltered.apply(lambda row: cam_df.loc[row.name, 'coll_time'] if row.name in cam_df.index else row['Time Collected'], axis=1)
-    proc_unfiltered['coll_inits'] = proc_unfiltered.apply(lambda row: cam_df.loc[row.name, 'coll_inits'] if row.name in cam_df.index else 'CCT (Clinical Care Team)')
+    proc_unfiltered['coll_inits'] = proc_unfiltered.apply(lambda row: cam_df.loc[row.name, 'coll_inits'] if row.name in cam_df.index else 'CCT (Clinical Care Team)', axis=1)
     serum_or_cells = proc_unfiltered['Volume of Serum Collected (mL)'].apply(sufficient) | proc_unfiltered['PBMC concentration per mL (x10^6)'].apply(sufficient)
     if not debug:
         proc_unfiltered[~serum_or_cells].to_excel(util.script_output + 'missing_info.xlsx', index=False)
     sample_info = proc_unfiltered[serum_or_cells].copy()
     sample_info.loc[sample_info['Volume of Serum Collected (mL)'] > 4.5, 'Volume of Serum Collected (mL)'] = 4.5
 
-    proc_cols = ['Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_time', 'coll_inits', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'proc_comment']
+    proc_cols = ['Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_time', 'coll_inits', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability', 'cpt_vol', 'sst_vol', 'Cells in Last Aliquot', 'Total Cell Count (x10^6)', 'Freezing Method', 'Time in LN', 'proc_comment']
     key_cols = ['Cohort', 'Vaccine', '1st Dose Date', '2nd Dose Date', '3rd Dose Date', '3rd Dose Vaccine', 'Boost Date', 'Boost Vaccine', 'Boost 2 Date', 'Boost 2 Vaccine', 'Baseline Date']
 
-    cutoff_date = pd.to_datetime('2022-11-20').date()
+    cutoff_date = pd.to_datetime('2022-11-20')
     samples = samples.join(sample_info.loc[:, proc_cols], how='inner').join(source_df.loc[:, key_cols], on='participant_id')
     samples['Cohort'] = samples['Cohort'].fillna('PRIORITY')
     samples = samples[(samples['Cohort'] != 'IRIS') | (samples['Date Collected'] <= cutoff_date)].pipe(seronet_annotate)
@@ -142,12 +147,12 @@ def pull_from_source(debug=False):
                 'Visit Type', 'Qualitative', 'Quantitative', 'Spike endpoint', 'AUC', 'Log2AUC',
                 'Volume of Serum Collected (mL)', 'PBMC concentration per mL (x10^6)', '# of PBMC vials', 'coll_inits',
                 'coll_time', 'rec_time', 'proc_time', 'serum_freeze_time', 'cell_freeze_time', 'proc_inits', 'viability',
-                'cpt_vol', 'sst_vol', 'proc_comment']
+                'cpt_vol', 'sst_vol', 'Cells in Last Aliquot', 'Total Cell Count (x10^6)', 'Freezing Method', 'Time in LN', 'proc_comment']
 
     days = ['Days from Index', 'Days to 1st', 'Days to 2nd', 'Days to 3rd', 'Days to Boost', 'Days to Boost 2', 'Post-Baseline']
     dates = ['Index Date', '1st Dose Date', '2nd Dose Date', '3rd Dose Date', 'Boost Date', 'Boost 2 Date', 'Baseline Date']
     for day_col, date_col in zip(days, dates):
-        samples[day_col] = (samples['Date Collected'] - samples[date_col]).dt.days
+        samples[day_col] = (pd.to_datetime(samples['Date Collected'], errors='coerce') - pd.to_datetime(samples[date_col], errors='coerce')).dt.days
     samples['Sample ID']=  samples.index.to_numpy()
     report = samples.rename(
         columns={'participant_id': 'Participant ID', 'Date Collected': 'Date', 'Visit Type / Samples Needed': 'Visit Type'}

@@ -7,6 +7,8 @@ import pandas as pd
 import numpy as np
 import util
 import os
+import warnings
+
 class ValuesToClass(object):
     def __init__(self,values):
         for key in values:
@@ -137,9 +139,11 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=Fals
                     'Date of specimen processed': 'Date Processing Started'}
         crp_samples = dscf_info.parse(sheet_name='CRP').rename(columns=correct_crp)
         crp_samples['# cells per aliquot'] = crp_samples.apply(fallible(lambda row: row['Cell Count'] / row['# of aliquots frozen']), axis=1)
-        crp_samples.loc[crp_samples['Total volume of serum after second spin (ml)'].str.upper().str.strip() != 'X', 'Total volume of serum (mL)'] = crp_samples.loc[crp_samples['Total volume of serum after second spin (ml)'].str.upper().str.strip() != 'X', 'Total volume of serum after second spin (ml)']
+        crp_samples['Total volume of serum after second spin (ml)'] = pd.to_numeric(crp_samples['Total volume of serum after second spin (ml)'], errors='coerce')
+        second_spin = pd.isna(crp_samples['Total volume of serum after second spin (ml)'])
+        crp_samples.loc[second_spin, 'Total volume of serum (mL)'] = crp_samples.loc[second_spin, 'Total volume of serum after second spin (ml)']
         date_cols = ['Date Processing Started']
-        correct_new = {'# PBMCs per Aliquot': '# cells per aliquot',
+        correct_new = {'# PBMCs per Aliquot (except last)': '# cells per aliquot',
                     '# Aliquots': '# of aliquots frozen',
                     'Total Plasma Vol. (mL)': 'Total volume of plasma (mL)',
                     'Total Serum Vol. (mL)': 'Total volume of serum (mL)',
@@ -147,16 +151,17 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=Fals
                     'Cell Tube Volume (mL)': 'CPT/EDTA VOL',
                     'Time in -80C (Serum)': 'Time put in -80: SERUM',
                     'Time in Freezing Device': 'Time put in -80: PBMC',}
-        new_samples = pd.read_excel(util.proc + 'Processing Notebook.xlsx', sheet_name='Specimen Dashboard', header=1).rename(columns=correct_new)
-        
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
+            new_samples = pd.read_excel(util.proc + 'Processing Notebook.xlsx', sheet_name='Specimen Dashboard', header=1).rename(columns=correct_new)
         dataframe_list = [bsl2p_archive, bsl2_archive, bsl2p_samples, bsl2_samples, crp_samples, new_samples]
-        
         all_samples = (pd.concat(dataframe_list)
                         .assign(sample_id=clean_sample_id)
                         .drop_duplicates(subset=['sample_id'], keep='last')
                         .assign(serum_vol=clean_serum)
                         .pipe(clean_cells, no_pbmcs)
                         .pipe(map_dates, date_cols))
+        all_samples['Cells in Last Aliquot'] = all_samples['Cells in Last Aliquot'].fillna(all_samples['pbmc_conc'])
         if update_cache:
             if not os.path.exists('local_cache/'):
                 os.mkdir('local_cache/')
@@ -229,9 +234,12 @@ def query_intake(participants=None, include_research=False, use_cache=False, upd
         all_samples = pd.read_hdf(util.tracking + 'intake.h5', key='intake_info')
     else:
         drop_cols = ['Date Processed', 'Tubes Pulled?', 'Process Location', 'Box #', 'Specimen Type Sent to Patho', 'Date Given to Patho', 'Delivered by', 'Received by', 'Results received', 'RT-QPCR Result NS (Clinical)', 'Viability', 'Notes', 'Blood Collector Initials', 'New or Follow-up?', 'Participant ID', 'Sample ID', 'Ab Detection S/P Result (Clinical) (Titer or Neg)', 'Ab Concentration (Units - AU/mL)']
-        intake_source = pd.ExcelFile(util.intake)
-        intake = intake_source.parse(sheet_name='Sample Intake Log', header=util.header_intake)
-        latest_intake = pd.read_excel(util.tracking + 'Sample Intake Log.xlsx', sheet_name='Sample Intake Log', header=6)
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
+            intake_source = pd.ExcelFile(util.intake)
+            intake = intake_source.parse(sheet_name='Sample Intake Log', header=util.header_intake)
+            latest_intake = pd.read_excel(util.tracking + 'Sample Intake Log.xlsx', sheet_name='Sample Intake Log', header=6)
+        drop_cols = [col for col in drop_cols if col in latest_intake.columns]
         date_cols = ['Date Collected']
         all_samples = (pd.concat([intake, latest_intake]).dropna(subset=['Participant ID'])
                             .assign(participant_id=lambda df: df['Participant ID'].str.strip().str.upper(),
@@ -266,7 +274,7 @@ def coerce_date(val):
     A shorter wrapper for `apply`ing to create typed date columns from
     potentially messy data.
     '''
-    return pd.to_datetime(val, errors='coerce').date()
+    return pd.to_datetime(val, errors='coerce')
 
 def permissive_datemax(date_list, comp_date):
     '''
@@ -276,7 +284,7 @@ def permissive_datemax(date_list, comp_date):
 
     Specifically useful for repeated COVID infections and vaccinations.
     '''
-    placeholder = pd.to_datetime('1.1.1950').date()
+    placeholder = pd.to_datetime('1.1.1950')
     max_date = placeholder
     for date_ in date_list:
         date_ = coerce_date(date_)
@@ -294,7 +302,6 @@ def map_dates(df, date_cols):
         df[col] = df[col].apply(coerce_date)
     return df
 
-
 def corned_beef(userkey):
     try:
         locked = zf.ZipFile(util.script_folder + 'data/Corned_Beef_reference.zip', 'r')
@@ -308,3 +315,35 @@ def corned_beef(userkey):
         return("Validated")
     else:
         return None
+
+def immune_history(vaccine_dates, vaccine_types, infection_dates, visit_date):
+   '''
+   Returns a string listing all of a participant's previous immune events on a given 'visit_date'.
+   
+   'vaccine_dates', 'vaccine types', and 'infection dates'  are all lists.
+
+   Example Application: sample_info['Immune History'] = sample_info.apply(lambda row: immune_history(row[vaccine_date_cols], row[vaccine_type_cols], row[infection_date_cols], row['Date Collected']), axis=1)
+   '''
+   events = {'Event Date':[], 'Event Type':[]}
+   for date, type in zip(vaccine_dates, vaccine_types):
+      if pd.to_datetime(date) < pd.to_datetime(visit_date):
+         events['Event Date'].append(date)
+      if pd.to_datetime(date) < pd.to_datetime(visit_date) and pd.to_datetime(date) >= pd.to_datetime('2024-08-29'):
+         if 'novavax' in str(type).lower():
+            events['Event Type'].append('JN1')
+         else:
+            events['Event Type'].append('KP2')
+      elif pd.to_datetime(date) < pd.to_datetime(visit_date) and pd.to_datetime(date) >= pd.to_datetime('2023-08-29'):
+         events['Event Type'].append('XBB')
+      elif pd.to_datetime(date) < pd.to_datetime(visit_date) and pd.to_datetime(date) >= pd.to_datetime('2022-08-29'):
+         events['Event Type'].append('BvB')
+      elif pd.to_datetime(date) < pd.to_datetime(visit_date):
+         events['Event Type'].append('V') 
+   for infection in infection_dates:
+      if pd.to_datetime(infection) < pd.to_datetime(visit_date):
+         events['Event Date'].append(infection)
+         events['Event Type'].append('I') 
+   events_frame = pd.DataFrame.from_dict(events).set_index('Event Date')
+   events_sorted = events_frame.sort_index()
+   history = "-".join(events_sorted['Event Type'])
+   return history
