@@ -14,7 +14,7 @@ if __name__ == '__main__':
     newCol = 'Ab Detection S/P Result (Clinical) (Titer or Neg)'
     newCol2 = 'Ab Concentration (Units - AU/mL)'
     vaccine_stuff = {}
-    columns = ['Participant ID', 'Timepoint', 'Vaccine Type', 'Vaccine Date']
+    columns = ['Participant ID', 'Timepoint', 'Vaccine Type', 'Vaccine Lot', 'Vaccine Date']
     exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
     exclude_ppl = set(exclusions['Participant ID'].unique())
     
@@ -35,6 +35,7 @@ if __name__ == '__main__':
         if str(vaccine).upper()[:1] == 'J' and str(vaccine).upper()[:2] != 'JA':
             vaccine = 'Johnson & Johnson'
         date_1 = mars_data.loc[participant, 'Vaccine #1 Date']
+        lot_1 = mars_data.loc[participant, 'Vaccine #1 Lot']
         if type(date_1) in [datetime.datetime, pd.Timestamp]:
             vaccine_stuff['Participant ID'].append(participant)
             if type(vaccine) == str and vaccine[:2].upper() == 'JO':
@@ -43,22 +44,26 @@ if __name__ == '__main__':
             else:
                 vaccine_stuff['Timepoint'].append('Dose 1 of 2')
                 vaccine_stuff['Vaccine Type'].append(str(vaccine).capitalize().strip())
+            vaccine_stuff['Vaccine Lot'].append(lot_1)
             vaccine_stuff['Vaccine Date'].append(date_1)
         date_2 = mars_data.loc[participant, 'Vaccine #2 Date']
+        lot_2 = mars_data.loc[participant, 'Vaccine #2 Lot']
         if type(date_2) in [datetime.datetime, pd.Timestamp]:
             vaccine_stuff['Participant ID'].append(participant)
             vaccine_stuff['Timepoint'].append('Dose 2 of 2')
             vaccine_stuff['Vaccine Type'].append(str(vaccine).capitalize().strip())
+            vaccine_stuff['Vaccine Lot'].append(lot_2)
             vaccine_stuff['Vaccine Date'].append(date_2)
-        boost_cols = [['3rd Vaccine', '3rd Vaccine Type '], ['4th vaccine', '4th Vaccine Type'], ['5th vaccine', '5th Vaccine Type'],
-                      ['6th vaccine', '6th vaccine type'], ['7th vaccine', '7th vaccine type'], ['8th vaccine', '8th vaccine type'],
-                      ['9th vaccine', '9th vaccine type']]
+        boost_cols = [['3rd Vaccine', '3rd Vaccine Type', '3rd Vaccine Lot'], ['4th vaccine', '4th Vaccine Type', '4th Vaccine Lot'], ['5th vaccine', '5th Vaccine Type', '5th Vaccine Lot'],
+                      ['6th vaccine', '6th vaccine type', '6th Vaccine Lot'], ['7th vaccine', '7th vaccine type', '7th Vaccine Lot'], ['8th vaccine', '8th vaccine type', '8th Vaccine Lot'],
+                      ['9th vaccine', '9th vaccine type', '9th Vaccine Lot']]
         timepoint_cols = ['Dose 3', 'Booster 1', 'Booster 2', 'Booster 3', 'Booster 4', 'Booster 5', 'Booster 6']
         for i, vals in enumerate(boost_cols):
-            dt, tp = vals
+            dt, tp, lt = vals
             date_boost = mars_data.loc[participant, dt]
             date_boost_dt = pd.to_datetime(date_boost, errors='coerce')
             boost_type = mars_data.loc[participant, tp]
+            boost_lot = mars_data.loc[participant, lt]
             if date_boost_dt >= pd.to_datetime('2024-08-29'):
                 boost_type = str(boost_type).split()[0]
                 if 'novavax' in str(boost_type).lower():
@@ -83,6 +88,7 @@ if __name__ == '__main__':
                     vaccine_stuff['Timepoint'].append('Dose 2' + addendum)
                 else:
                     vaccine_stuff['Timepoint'].append(timepoint_cols[i] + addendum)
+                vaccine_stuff['Vaccine Lot'].append(boost_lot)
                 vaccine_stuff['Vaccine Date'].append(date_boost)
     # pd.DataFrame(vaccine_stuff).to_excel(util.seronet_vax + 'mars_vaccines.xlsx', index=False)
     from_tracker = pd.DataFrame(vaccine_stuff).rename(columns={'Timepoint': 'Vaccination_Status'}).set_index(['Participant ID', 'Vaccination_Status'])
@@ -120,6 +126,7 @@ if __name__ == '__main__':
         if str(vaccine).upper()[:1] == 'J' and str(vaccine).upper()[:2] != 'JA':
             vaccine = 'Johnson & Johnson'
         date_1 = gaea_data.loc[participant, 'Dose #1 Date']
+        lot_1 = gaea_data.loc[participant, 'Dose #1 Lot']
         if type(date_1) in [datetime.datetime, pd.Timestamp]:
             vaccine_stuff['Participant ID'].append(participant)
             if type(vaccine) == str and vaccine[:2].upper() == 'JO':
@@ -128,21 +135,25 @@ if __name__ == '__main__':
                 vaccine_stuff['Timepoint'].append('Dose 1 of 2')
             vaccine_stuff['Vaccine Type'].append(vaccine)
             vaccine_stuff['Vaccine Date'].append(date_1)
+            vaccine_stuff['Vaccine Lot'].append(lot_1)
         date_2 = gaea_data.loc[participant, 'Dose #2 Date']
+        lot_2 = gaea_data.loc[participant, 'Dose #2 Lot']
         if type(date_2) in [datetime.datetime, pd.Timestamp]:
             vaccine_stuff['Participant ID'].append(participant)
             vaccine_stuff['Timepoint'].append('Dose 2 of 2')
             vaccine_stuff['Vaccine Type'].append(vaccine)
             vaccine_stuff['Vaccine Date'].append(date_2)
-        boost_cols = [['3rd Vaccine Date', '3rd Vaccine Type '], ['4th Vaccine Date', '4th Vaccine Type'], ['5th Vaccine Date', '5th Vaccine Type'],
-                      ['6th Vaccine Date', '6th Vaccine Type'], ['7th Vaccine Date', '7th Vaccine Type'], ['8th Vaccine Date', '8th Vaccine Type'],
-                      ['9th Vaccine Date', '9th Vaccine Type']]
+            vaccine_stuff['Vaccine Lot'].append(lot_2)
+        boost_cols = [['3rd Vaccine Date', '3rd Vaccine Type', '3rd Vaccine Lot'], ['4th Vaccine Date', '4th Vaccine Type', '4th Vaccine Lot'], ['5th Vaccine Date', '5th Vaccine Type', '5th Vaccine Lot'],
+                      ['6th Vaccine Date', '6th Vaccine Type', '6th Vaccine Lot'], ['7th Vaccine Date', '7th Vaccine Type', '7th Vaccine Lot'], ['8th Vaccine Date', '8th Vaccine Type', '8th Vaccine Lot'],
+                      ['9th Vaccine Date', '9th Vaccine Type', '9th Vaccine Lot']]
         timepoint_cols = ['Booster 1', 'Booster 2', 'Booster 3', 'Booster 4', 'Booster 5', 'Booster 6', 'Booster 7']
         for i, vals in enumerate(boost_cols):
-            dt, tp = vals
+            dt, tp, lt = vals
             date_boost = gaea_data.loc[participant, dt]
             date_boost_dt = pd.to_datetime(date_boost, errors='coerce')
             boost_type = gaea_data.loc[participant, tp]
+            boost_lot = gaea_data.loc[participant, lt]
             if date_boost_dt >= pd.to_datetime('2024-08-29'):
                 boost_type = str(boost_type).split()[0]
                 if 'novavax' in str(boost_type).lower():
@@ -161,6 +172,7 @@ if __name__ == '__main__':
                 vaccine_stuff['Participant ID'].append(participant)
                 vaccine_stuff['Timepoint'].append(timepoint_cols[i] + addendum)
                 vaccine_stuff['Vaccine Type'].append(boost_type)
+                vaccine_stuff['Vaccine Lot'].append(boost_lot)
                 vaccine_stuff['Vaccine Date'].append(date_boost)
     #pd.DataFrame(vaccine_stuff).to_excel(util.seronet_vax + 'gaea_vaccines.xlsx', index=False)
     from_tracker = pd.DataFrame(vaccine_stuff).rename(columns={'Timepoint': 'Vaccination_Status'}).set_index(['Participant ID', 'Vaccination_Status'])
