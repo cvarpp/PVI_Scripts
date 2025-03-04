@@ -79,8 +79,8 @@ class PrintSession():
         self.sample_ids = print_planning.loc[box_range, 'Sample ID'].to_numpy()
 
     def make_output_path(self):
-        output_suffix = " 3CPTs" if self.kit_type == 'SERONET_RTC' else " 2CPTs" if self.kit_type == 'SERONET' else ""
-        workbook_name = f"TESTING {print_type} {self.box_start}-{self.box_end}{output_suffix}".strip()
+        output_prefix = "3CPTs " if self.kit_type == 'SERONET_RTC' else "2CPTs " if self.kit_type == 'SERONET' else ""
+        workbook_name = f"{output_prefix}{print_type} {self.box_start}-{self.box_end}".strip()
         self.output_path = os.path.join(util.tube_print, 'Future Sheets',
                                         self.kit_info['Future Sheets Folder'], f"{workbook_name}.xlsx")
 
