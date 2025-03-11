@@ -91,6 +91,8 @@ class PrintSession():
         if self.kits:
             self.write_bradys()
             self.write_kits()
+        if self.kit_type == 'NPS':
+            self.future_workbook['0 - Brady'] = pd.DataFrame({'Sample ID': self.sample_ids})
         for round_num in range(self.kit_info['Rounds per Print Session']):
             sid_count = self.kit_info['IDs per Round']
             sids = self.sample_ids[round_num * sid_count:(round_num + 1) * sid_count]
