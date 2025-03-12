@@ -33,7 +33,7 @@ def write_clinical(input_df, output_fname, debug=False):
     meds_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Health_Condition_Or_Disease', 'Treatment', 'Dosage', 'Dosage_Units', 'Dosage_Regimen', 'Start_Date_Duration_From_Index', 'Stop_Date_Duration_From_Index', 'Update', 'Comments']
     auto_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Autoimmune_Condition', 'Autoimmune_Condition_ICD10_code', 'Year_Of_Diagnosis_Duration_to_Index', 'Antibody_Name', 'Antibody_Present', 'Update', 'Comments']
     trans_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Organ Transplant', 'Organ_Transplant_Other', 'Number_of_Hematopoietic_Cell_Transplants', 'Number_Of_Solid_Organ_Transplants', 'Date_of_Latest_Hematopoietic_Cell_Transplant_Duration_From_Index', 'Date_of_Latest_Solid_Organ_Transplant_Duration_From_Index', 'Update', 'Comments']
-    cancer_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Cancer', 'ICD_10_Code', 'Year_Of_Diagnosis_Duration_From_Index', 'Cured', 'In_Remission', 'In_Unspecified_Therapy', 'Chemotherapy', 'Radiation Therapy', 'Surgery', 'Update', 'Comments']
+    cancer_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Cancer', 'Cancer_Provenance', 'ICD_10_Code', 'ICD_10_Code_Provenance', 'Year_Of_Diagnosis_Duration_From_Index', 'Cured', 'Cured_Provenance', 'In_Remission', 'In_Remission_Provenance', 'In_Unspecified_Therapy', 'In_Unspecified_Therapy_Provenance', 'Chemotherapy', 'Chemotherapy_Provenance', 'Radiation Therapy', 'Radiation Therapy_Provenance', 'Surgery', 'Surgery_Provenance', 'Update', 'Comments']
 
     iris_data = util.iris_folder + 'IRIS for D4 Long.xlsx'
     mars_data = util.mars_folder + 'MARS for D4 Long.xlsx'
@@ -356,6 +356,8 @@ def write_clinical(input_df, output_fname, debug=False):
             add_to['Cohort'].append(study)
             add_to['Visit_Number'].append(visit)
             for col in cancer_cols[3:-2]:
+                if 'Provenance' in col:
+                    add_to[col].append('EMR')
                 if 'Year' in col:
                     cropped_col = col[:-20] # drop "Duration_From_Index"
                     if str(source_df.loc[seronet_id, cropped_col]).lower() == "not reported":
