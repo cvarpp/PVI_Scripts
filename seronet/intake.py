@@ -50,7 +50,7 @@ def make_intake(df_accrual, ecrabs, dfs_clin, seronet_key):
     vax_df = dfs_clin['Vax']
     kp2_df = vax_df[vax_df['Vaccination_Status'].str.contains('KP.2|JN.1')].set_index('Research_Participant_ID')
     snet_key = seronet_key['Source']
-    current_key = snet_key[snet_key['Submission'].str.contains('Intake')]
+    current_key = snet_key[snet_key['Submission'].str.contains('Intake')] - snet_key[snet_key['Submission'].str.contains('{}_Intake').format(collection_month)]
     intake_df = (intake_df.join(aliquot_df, rsuffix='_1')
                           .join(kp2_df, rsuffix='_1', on ='Research_Participant_ID'))
     intake_df = intake_df[intake_df['Sample ID'].isin(samples_in_period)]
@@ -76,14 +76,20 @@ def make_intake(df_accrual, ecrabs, dfs_clin, seronet_key):
     intake_df['Submission'] = str(collection_month) + '_Intake'
     add_to_source = intake_df.reset_index().loc[:, source_col_order]
     #Filter ecrabs and dfs_clin based on sids in add to intake
-    input_dfs = ecrabs, dfs_clin
     filter_vals = in_window_df['Sample ID'].astype(str).unique()
     suffix = collection_month
     if len(suffix) > 0:
         suffix = '_' + suffix
-    with pd.ExcelWriter(output_folder + 'monthly_all_filtered{}.xlsx'.format(suffix)) as writer:
-        for df in input_dfs:
-            for sname, sheet in df.items():
+    with pd.ExcelWriter(output_folder + 'monthly_processing_filtered{}.xlsx'.format(suffix)) as writer:
+            for sname, sheet in ecrabs.items():
+                try:
+                    sheet = sheet[sheet['Sample ID'].astype(str).isin(filter_vals)]
+                    sheet.to_excel(writer, sheet_name=sname, index=False, na_rep='N/A')
+                except:
+                    print(sname, "not included")
+                    continue
+    with pd.ExcelWriter(output_folder + 'monthly_clinical_filtered{}.xlsx'.format(suffix)) as writer:
+            for sname, sheet in dfs_clin.items():
                 try:
                     sheet = sheet[sheet['Sample ID'].astype(str).isin(filter_vals)]
                     sheet.to_excel(writer, sheet_name=sname, index=False, na_rep='N/A')
