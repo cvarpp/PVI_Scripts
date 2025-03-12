@@ -28,8 +28,7 @@ def days_from_vax(idxtocollection, idxtovaccination):
 def in_window(key, rpid, days):
     tps = [30, 60, 90, 120, 180, 360]
     if days == 'Pre-Vaccine':
-        key = key[key['Submission'].str.contains('Intake')]
-        if rpid in key['Research_Participant_ID']:
+        if rpid in key['Research_Participant_ID'].unique():
             return 'No'
         else:
             return 'Yes'
@@ -50,11 +49,13 @@ def make_intake(df_accrual, ecrabs, dfs_clin, seronet_key):
     aliquot_df = ecrabs['Aliquot'].drop_duplicates(subset='Biospecimen_ID').set_index('Biospecimen_ID')
     vax_df = dfs_clin['Vax']
     kp2_df = vax_df[vax_df['Vaccination_Status'].str.contains('KP.2|JN.1')].set_index('Research_Participant_ID')
+    snet_key = seronet_key['Source']
+    current_key = snet_key[snet_key['Submission'].str.contains('Intake')]
     intake_df = (intake_df.join(aliquot_df, rsuffix='_1')
                           .join(kp2_df, rsuffix='_1', on ='Research_Participant_ID'))
     intake_df = intake_df[intake_df['Sample ID'].isin(samples_in_period)]
     intake_df['Days from KP.2'] = intake_df.apply(lambda row: days_from_vax(row['Biospecimen_Collection_Date_Duration_From_Index'], row['SARS-CoV-2_Vaccination_Date_Duration_From_Index']), axis=1)
-    intake_df['In Window?'] = intake_df.apply(lambda row: in_window(seronet_key['Source'], row['Research_Participant_ID'], row['Days from KP.2']), axis=1)
+    intake_df['In Window?'] = intake_df.apply(lambda row: in_window(current_key, row['Research_Participant_ID'], row['Days from KP.2']), axis=1)
     #Create Add to Intake Sheet
     intake_df.rename(columns={'Visit_Number':'Visit_ID', 'Aliquot_Volume':'Total Volume/Sample Yield'}, inplace=True)
     intake_df['Sunday_Prior_To_Visit_1'] = intake_df.apply(lambda row: baseline_sunday(row['Visit_ID'], row['Date']), axis=1)
