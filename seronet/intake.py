@@ -81,8 +81,12 @@ def make_intake(df_accrual, ecrabs, dfs_clin, seronet_key):
     suffix = collection_month
     if len(suffix) > 0:
         suffix = '_' + suffix
+    ecrabs.update({'Baseline':dfs_clin['Baseline'], 'FollowUp':dfs_clin['FollowUp']})    
+    biospec_sheets = ecrabs
+    clinical_sheets = {'COVID':dfs_clin['COVID'], 'Vax':dfs_clin['Vax'], 'Meds':dfs_clin['Meds'], 'Cancer':dfs_clin['Cancer']}
+    print(biospec_sheets.items(), clinical_sheets.items())
     with pd.ExcelWriter(output_folder + 'monthly_processing_filtered{}.xlsx'.format(suffix)) as writer:
-            for sname, sheet in ecrabs.items():
+            for sname, sheet in biospec_sheets.items():
                 try:
                     sheet = sheet[sheet['Sample ID'].astype(str).isin(filter_vals)]
                     sheet.to_excel(writer, sheet_name=sname, index=False, na_rep='N/A')
@@ -90,7 +94,7 @@ def make_intake(df_accrual, ecrabs, dfs_clin, seronet_key):
                     print(sname, "not included")
                     continue
     with pd.ExcelWriter(output_folder + 'monthly_clinical_filtered{}.xlsx'.format(suffix)) as writer:
-            for sname, sheet in dfs_clin.items():
+            for sname, sheet in clinical_sheets.items():
                 try:
                     sheet = sheet[sheet['Sample ID'].astype(str).isin(filter_vals)]
                     sheet.to_excel(writer, sheet_name=sname, index=False, na_rep='N/A')
