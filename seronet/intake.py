@@ -50,12 +50,13 @@ def make_intake(df_accrual, ecrabs, dfs_clin, seronet_key):
     vax_df = dfs_clin['Vax']
     kp2_df = vax_df[vax_df['Vaccination_Status'].str.contains('KP.2|JN.1')].set_index('Research_Participant_ID')
     snet_key = seronet_key['Source']
-    current_key = snet_key[snet_key['Submission'].str.contains('Intake')] - snet_key[snet_key['Submission'].str.contains('{}_Intake').format(collection_month)]
+    current_key = snet_key[snet_key['Submission'].str.contains('Intake')]
+    key_no_current_month = current_key[~current_key['Submission'].str.contains(collection_month)]
     intake_df = (intake_df.join(aliquot_df, rsuffix='_1')
                           .join(kp2_df, rsuffix='_1', on ='Research_Participant_ID'))
     intake_df = intake_df[intake_df['Sample ID'].isin(samples_in_period)]
     intake_df['Days from KP.2'] = intake_df.apply(lambda row: days_from_vax(row['Biospecimen_Collection_Date_Duration_From_Index'], row['SARS-CoV-2_Vaccination_Date_Duration_From_Index']), axis=1)
-    intake_df['In Window?'] = intake_df.apply(lambda row: in_window(current_key, row['Research_Participant_ID'], row['Days from KP.2']), axis=1)
+    intake_df['In Window?'] = intake_df.apply(lambda row: in_window(key_no_current_month, row['Research_Participant_ID'], row['Days from KP.2']), axis=1)
     #Create Add to Intake Sheet
     intake_df.rename(columns={'Visit_Number':'Visit_ID', 'Aliquot_Volume':'Total Volume/Sample Yield'}, inplace=True)
     intake_df['Sunday_Prior_To_Visit_1'] = intake_df.apply(lambda row: baseline_sunday(row['Visit_ID'], row['Date']), axis=1)
@@ -100,8 +101,7 @@ def make_intake(df_accrual, ecrabs, dfs_clin, seronet_key):
             add_to_intake.to_excel(writer, sheet_name = 'Intake', index=False, na_rep='N/A')
             add_to_oow.to_excel(writer, sheet_name = 'SNet Key OOW', index=False, na_rep='N/A')
             add_to_source.to_excel(writer, sheet_name = 'SNet Key Source', index=False, na_rep='N/A')
-
-    print('Written to', output_folder)
+    print('Written to', output_folder, 'intake.xlsx')
     return add_to_intake
 
 if __name__ == '__main__':
