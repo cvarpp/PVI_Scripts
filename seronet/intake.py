@@ -84,7 +84,6 @@ def make_intake(df_accrual, ecrabs, dfs_clin, seronet_key):
     ecrabs.update({'Baseline':dfs_clin['Baseline'], 'FollowUp':dfs_clin['FollowUp']})    
     biospec_sheets = ecrabs
     clinical_sheets = {'COVID':dfs_clin['COVID'], 'Vax':dfs_clin['Vax'], 'Meds':dfs_clin['Meds'], 'Cancer':dfs_clin['Cancer']}
-    print(biospec_sheets.items(), clinical_sheets.items())
     with pd.ExcelWriter(output_folder + 'monthly_processing_filtered{}.xlsx'.format(suffix)) as writer:
             for sname, sheet in biospec_sheets.items():
                 try:
