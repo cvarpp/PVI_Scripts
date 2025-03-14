@@ -175,8 +175,12 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
                 _odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], cname, lot_log)
                 add_to['Consumable_Catalog_Number'].append(cat)
                 add_to['Consumable_Lot_Number'].append(lot)
-                add_to['Consumable_Expiration_Date'].append(exp)
-                add_to['Comments'].append('')
+                if exp == 'Unavailable':
+                    add_to['Consumable_Expiration_Date'].append('N/A')
+                    add_to['Comments'].append('Expiration date unavailable')  
+                else:  
+                    add_to['Consumable_Expiration_Date'].append(exp)
+                    add_to['Comments'].append('')
         '''
         Reagents Next
         '''
