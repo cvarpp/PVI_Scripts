@@ -104,7 +104,7 @@ def make_intake(df_accrual, ecrabs, dfs_clin, seronet_key):
             add_to_intake.to_excel(writer, sheet_name = 'Intake', index=False, na_rep='N/A')
             add_to_oow.to_excel(writer, sheet_name = 'SNet Key OOW', index=False, na_rep='N/A')
             add_to_source.to_excel(writer, sheet_name = 'SNet Key Source', index=False, na_rep='N/A')
-    print('Written to', output_folder, 'intake.xlsx')
+    print('Written to', output_folder + 'intake.xlsx')
     return add_to_intake
 
 if __name__ == '__main__':
