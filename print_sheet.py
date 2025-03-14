@@ -67,8 +67,10 @@ class PrintSession():
             self.instructions = pd.read_excel(templates, sheet_name=kit_type)
         else:
             self.instructions = None
-        if self.kits:
+        if self.kits or kit_type == 'NPS':
             self.bradys = pd.read_excel(templates, sheet_name=f"{kit_type.replace('_RTC', '')} Brady")
+        else:
+            self.bradys = None
         self.get_sample_ids()
         self.make_output_path()
 
@@ -88,11 +90,10 @@ class PrintSession():
         self.future_workbook = {}
         if self.instructions is not None:
             self.write_instructions()
-        if self.kits:
+        if self.bradys is not None:
             self.write_bradys()
+        if self.kits:
             self.write_kits()
-        if self.kit_type == 'NPS':
-            self.future_workbook['0 - Brady'] = pd.DataFrame({'Sample ID': self.sample_ids})
         for round_num in range(self.kit_info['Rounds per Print Session']):
             sid_count = self.kit_info['IDs per Round']
             sids = self.sample_ids[round_num * sid_count:(round_num + 1) * sid_count]
@@ -104,7 +105,8 @@ class PrintSession():
             self.write_fivemls()
         with pd.ExcelWriter(self.output_path) as writer:
             for sheet_name, dataframe in self.future_workbook.items():
-                dataframe.to_excel(writer, sheet_name=sheet_name, index=False, header=False)
+                include_header = 'Brady' in sheet_name
+                dataframe.to_excel(writer, sheet_name=sheet_name, index=False, header=include_header)
 
     def write_instructions(self):
         sid_replacer = {f'Sample {i + 1}': sid for i, sid in enumerate(self.sample_ids)}
