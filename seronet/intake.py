@@ -59,6 +59,7 @@ def make_intake(df_accrual, ecrabs, dfs_clin, seronet_key):
     intake_df['In Window?'] = intake_df.apply(lambda row: in_window(key_no_current_month, row['Research_Participant_ID'], row['Days from KP.2']), axis=1)
     #Create Add to Intake Sheet
     intake_df.rename(columns={'Visit_Number':'Visit_ID', 'Aliquot_Volume':'Total Volume/Sample Yield'}, inplace=True)
+    intake_df.loc[intake_df['Biospecimen_Type'] == 'PBMC', 'Total Volume/Sample Yield'] = 'N/A'
     intake_df['Sunday_Prior_To_Visit_1'] = intake_df.apply(lambda row: baseline_sunday(row['Visit_ID'], row['Date']), axis=1)
     intake_df['Purpose of Visit'] = 'Post-Vaccine'
     intake_col_order = ['Research_Participant_ID', 'Cohort', 'Visit_ID', 'Biospecimen_ID', 'Biospecimen_Type', 'Initial_Volume_of_Biospecimen',
@@ -119,8 +120,8 @@ if __name__ == '__main__':
 
         layout = [[sg.Text('Intake')],
                   [sg.Checkbox("Debug", key='debug', default=False)],
-                  [sg.Text('Start date'), sg.Input(key='report_start', default_text='1/25/2025'), sg.CalendarButton(button_text="choose date",close_when_date_chosen=True, target="report_start", format='%m/%d/%Y')],
-                        [sg.Text('End date'), sg.Input(key='report_end', default_text='2/22/2025'), sg.CalendarButton(button_text="choose date",close_when_date_chosen=True, target="report_end", format='%m/%d/%Y')],
+                  [sg.Text('Start date'), sg.Input(key='report_start', default_text='11/05/2024'), sg.CalendarButton(button_text="choose date",close_when_date_chosen=True, target="report_start", format='%m/%d/%Y')],
+                        [sg.Text('End date'), sg.Input(key='report_end', default_text='9/30/2025'), sg.CalendarButton(button_text="choose date",close_when_date_chosen=True, target="report_end", format='%m/%d/%Y')],
                     [sg.Submit(), sg.Cancel()]]
 
         window = sg.Window("Intake Generation Script", layout)
