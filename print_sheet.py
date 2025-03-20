@@ -71,7 +71,7 @@ class PrintSession():
             self.bradys = pd.read_excel(templates, sheet_name=f"{kit_type.replace('_RTC', '')} Brady")
         else:
             self.bradys = None
-        self.get_sample_ids()
+        self.valid_sid_set = self.get_sample_ids()
         self.make_output_path()
 
     def get_sample_ids(self):
@@ -79,6 +79,7 @@ class PrintSession():
         print_planning = pd.read_excel(print_planning_path, sheet_name=self.kit_info['Print Planning Sheet'])
         box_range = print_planning['Box ID'].between(self.box_start, self.box_end)
         self.sample_ids = print_planning.loc[box_range, 'Sample ID'].to_numpy()
+        return self.sample_ids.size == self.kit_info['Boxes per Print Session'] * self.kit_info['IDs per Box']
 
     def make_output_path(self):
         output_prefix = "3CPTs " if self.kit_type == 'SERONET_RTC' else "2CPTs " if self.kit_type == 'SERONET' else ""
@@ -149,10 +150,11 @@ class PrintSession():
         top_data = pd.DataFrame({'c1': top_idxes[:aliquot_ids.shape[0]], 'c2': top_labels, 'c3': aliquot_ids})
         side_data = pd.DataFrame({'c1': side_idxes[:aliquot_ids.shape[0]], 'c2': aliquot_ids, 'c3': side_labels, 'c4': side_c4})
         if self.kit_type == 'SERONETPBMC':
-            side_data['c4'] += np.array([[' 10^7 for NCI', ' 10^7 for NCI', ''] for _ in sids]).flatten()
+            side_data['c5'] = np.array([['10^7 for NCI', '10^7 for NCI', ''] for _ in sids]).flatten()
             top_data['c4'] = np.array([['NCI', 'NCI', ''] for _ in sids]).flatten()
         else:
             top_data['c4'] = np.nan
+            side_data['c5'] = np.nan
         self.future_workbook[top_sheet] = top_data
         self.future_workbook[side_sheet] = side_data
 
@@ -220,7 +222,7 @@ if __name__ == '__main__':
             if print_type == 'SERONET' and session_num < session_counts['SERONET_RTC']:
                 kit_type = 'SERONET_RTC'
             print_session = PrintSession(kit_type, templates, session_num)
-            if not print_session.sample_ids.any():
+            if not print_session.valid_sid_set:
                 print(f"""Need more assigned sample IDs for {print_type}.
                       Could not generate {print_session.box_start} - {print_session.box_end}.""")
                 break
