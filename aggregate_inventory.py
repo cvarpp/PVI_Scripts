@@ -97,9 +97,9 @@ if __name__ == '__main__':
             elif box_sample_type == 'Saliva' or box_sample_type == 'Pellet':
                 level3 = '{} Lab/FF Rack'.format(box_sample_type)
             elif box_sample_type == 'PBMC':
-                freezer = 'LN Tank #3'
-                level1 = 'PBMC SUPER TEMPORARY HOLDING'
-                level2 = ''
+                freezer = 'Annenberg 18'
+                level1 = 'Lab LN Tanks'
+                level2 = 'PBMC TEMPORARY HOLDING'
                 level3 = ''
             else:
                 level3 = '{} {} Rack'.format(box_sample_type, kind)
