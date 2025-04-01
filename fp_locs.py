@@ -36,15 +36,13 @@ if __name__ == '__main__':
     soi = pd.read_excel(args.input_fname)
     if 'Sample ID' in soi.columns:
         soi['sample_id'] = soi['Sample ID'].astype(str).str.strip().str.upper()
-    # What is the purpose of this line? Why are they in a differet order than the numerical ID parser?
-    sample_types = ['Plasma', 'Serum', 'Saliva', 'Pellet', 'PBMC', '4.5 mL Tube']
 
     # Authenticate using username and password, then store token
     username = os.environ.get("FP_USER")
     password = os.environ.get("FP_PASS")
     if not username or not password:
         print("FP_USER and FP_PASS env variables not found. Please update then restart your shell.")
-        manual = input("Input username/password manually? Y/N: ")
+        manual = input("Input username/password manually? Y/N: ").lower()
         if(manual in ["y", "yes", "sure, why not", "ok", "fine", "yes please"]):
             username = input("Input username: ")
             password = input ("Input password: ")
@@ -88,13 +86,18 @@ if __name__ == '__main__':
                     future_sids['Sample ID'].append(sid) # Log the ID
                     future_sids['Sample Type'].append(vial_info.loc[stype, 'Name']) # Lookup and log the sample type
                     future_sids['Vial ID'].append(vial['id'])
-            for vial_data in sid_json['included']:
-                if vial_data['type'] == 'sample_type': # Type is almost always vial
-                    continue
-                future_vials['Vial ID'].append(vial_data['id'])
-                future_vials['Barcode'].append(vial_data['attributes']['barcode_tag'])
-                future_vials['Position'].append(vial_data['attributes']['position_display'])
-                future_vials['Box ID'].append(vial_data['relationships']['box']['data']['id'])
+            try:
+                for vial_data in sid_json['included']:
+                    if vial_data['type'] == 'sample_type': # Type is almost always vial
+                        continue
+                    future_vials['Vial ID'].append(vial_data['id'])
+                    future_vials['Barcode'].append(vial_data['attributes']['barcode_tag'])
+                    future_vials['Position'].append(vial_data['attributes']['position_display'])
+                    future_vials['Box ID'].append(vial_data['relationships']['box']['data']['id'])
+            except KeyError:
+                if args.debug:
+                    print(f"Sample {sid} failed to return box information.")
+
     
     # Convert all of the lists of dicts we made into pandas dataframes
     samples = pd.DataFrame(future_sids)
@@ -104,8 +107,8 @@ if __name__ == '__main__':
 
     # A similar process is done for each unique box ID found above
     print("Querying FP for {} boxes... Estimated time {:.0f}M {:.0f}S".format(vials['Box ID'].unique().shape[0], 
-                                                                         vials['Box ID'].unique().shape[0] * 0.15 // 60,
-                                                                         vials['Box ID'].unique().shape[0] * 0.15 % 60))
+                                                                         vials['Box ID'].unique().shape[0] * 0.05 // 60,
+                                                                         vials['Box ID'].unique().shape[0] * 0.05 % 60)) # This is faster than fetching vials
     for box_id in vials['Box ID'].unique():
         box_response = requests.get(f'{fp_url}/boxes/{box_id}?include=container&fields[box]=name,barcode_tag&fields[container]=name,barcode_tag', headers=headers)
         if box_response.status_code != 200:
@@ -113,8 +116,6 @@ if __name__ == '__main__':
             print(box_response)
         else:
             box_json = box_response.json()
-            with open("Example Box JSON.txt", "a") as f:
-                print(box_json, file=f)
             future_boxes['ID'].append(box_id)
             future_boxes['Box Name'].append(box_json['data']['attributes']['name'])
             future_boxes['Box Barcode'].append(box_json['data']['attributes']['barcode_tag'])
@@ -132,14 +133,14 @@ if __name__ == '__main__':
     if not args.debug:
         with pd.ExcelWriter(args.output_fname) as writer:
             typecounts.fillna(0).to_excel(writer, sheet_name='Summary')
-            for stype in sample_types:
+            for stype in vial_info.index:
                 filtered = reg_boxes[reg_boxes['Sample Type'] == stype]
                 filtered.to_excel(writer, sheet_name=stype, index=False)
             big_boxes.to_excel(writer, sheet_name='Collaborator or Discarded', index=False)
 
     """
     Once upon a morning, bleary, as I sorted, searched, and queried
-    Over many a puzzling dataframe of freezers, racks, and vials and galore
+    Over many a puzzling dataframe of racks and vials and galore
     While I worked (see: mostly yapping), finally I made a mapping
     parsing FreezerPro reponses into human-readable form
     "Tis the API" I muttered "helping me complete this chore-
@@ -149,6 +150,6 @@ if __name__ == '__main__':
     Wrangling data like no wet lab scientist ever had before
     Authenticated with my token, what I read left me heartbroken
     As the words spilled forth like tumbling waves upon a jagged shore
-    read the JSON, clear as moonlight, "{'errors': [{'status': '404'}]}"
+    Quoth the JSON, clear as moonlight, "{'errors': [{'status': '404'}]}"
         Merely this and nothing more.
     """
