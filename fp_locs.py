@@ -42,12 +42,19 @@ if __name__ == '__main__':
     password = os.environ.get("FP_PASS")
     if not username or not password:
         print("FP_USER and FP_PASS env variables not found. Please update then restart your shell.")
-        manual = input("Input username/password manually? Y/N: ").lower()
-        if(manual in ["y", "yes", "sure, why not", "ok", "fine", "yes please"]):
-            username = input("Input username: ")
-            password = input ("Input password: ")
-        else:
-            exit(1)
+        manual_response = ""
+        username = ""
+        password = ""
+        while manual_response == "":
+            manual_response = input("Input username/password manually? Y/N: ").lower()
+            if(manual_response in ["y", "yes", "sure, why not", "ok", "fine", "yes please"]):
+                username = input("Input username: ")
+                password = input ("Input password: ")
+            elif(manual_response == 'n'):
+                continue
+            else:
+                manual_response = ""
+        
     token_response = requests.post(f'{fp_url}/auth/login', json={'username': username, 'password': password})
     if token_response.status_code != 200:
         print("Failed authentication. Fatal Error. Exiting...")
@@ -138,18 +145,4 @@ if __name__ == '__main__':
                 filtered.to_excel(writer, sheet_name=stype, index=False)
             big_boxes.to_excel(writer, sheet_name='Collaborator or Discarded', index=False)
 
-    """
-    Once upon a morning, bleary, as I sorted, searched, and queried
-    Over many a puzzling dataframe of racks and vials and galore
-    While I worked (see: mostly yapping), finally I made a mapping
-    parsing FreezerPro reponses into human-readable form
-    "Tis the API" I muttered "helping me complete this chore-
-        only this and nothing more."
 
-    Deep into that YAML peering, long I sat there wondering, fearing
-    Wrangling data like no wet lab scientist ever had before
-    Authenticated with my token, what I read left me heartbroken
-    As the words spilled forth like tumbling waves upon a jagged shore
-    Quoth the JSON, clear as moonlight, "{'errors': [{'status': '404'}]}"
-        Merely this and nothing more.
-    """
