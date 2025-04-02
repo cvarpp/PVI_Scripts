@@ -139,7 +139,7 @@ if __name__ == '__main__':
     valid_ids = set(pd.read_excel(util.tracking + 'Sample ID Master List.xlsx', sheet_name='Master Sheet').dropna(subset='Location')['Sample ID'].astype(str).unique())
     invalid_ids = df[~df['sample_id'].isin(valid_ids)]
     df_valid = df[df['sample_id'].isin(valid_ids)]
-    recency_date = (datetime.datetime.today() - datetime.timedelta(days=args.recent_cutoff)).date()
+    recency_date = pd.Timestamp.now() - pd.Timedelta(days=args.recent_cutoff)
     if not args.debug:
         write_missing_ids(df_valid, invalid_ids, recency_date)
     inventory = query_import_sheet(df_valid)
