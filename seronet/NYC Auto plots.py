@@ -8,7 +8,7 @@ import seaborn as sns
 import re
 import colorcet as cc
 import matplotlib.dates as mdates
-
+import os
 #%%
 
 #Anything labeled "22" is from the "Now" sheets from NYC which seem to be 2022 onward 
@@ -26,6 +26,7 @@ var_class = pd.read_csv("https://raw.githubusercontent.com/nychealth/coronavirus
 
 variant_reference = pd.read_excel('~/library/CloudStorage/OneDrive-SharedLibraries-TheMountSinaiHospital/Simon Lab - Pathogen Surveillance/Sequencing/Lineage Mappings/variant reference.xlsx', sheet_name='Sheet1', header=0)
 
+outpath = os.path.expanduser("~/library/CloudStorage/OneDrive-SharedLibraries-TheMountSinaiHospital/Simon Lab - Pathogen Surveillance/NYC Auto Charts/")
 
 #%% filling things as a list this is for a later easier automatic conversion!
 
@@ -154,9 +155,21 @@ for n, fig in enumerate(subfigs):
 
     fig.legend(bbox_to_anchor=[1.135,0.5], loc="center right", fontsize=14, fancybox=True)
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b\n%Y'))
-   
-plot.show()
 
+if __name__ == "__main__":
+    try:
+        plot.savefig(outpath + "NYC Variants Per Year Starting 2021 percent.png", dpi=300)   
+        print("Plot output to sharepoint: PSP NYC Auto Charts")
+    except:
+        print("Error in sharepoint plotting")
+        try:
+            plot.savefig(os.path.expanduser("~/Documents/NYC Variants Per Year Starting 2021 Percent.png"), dpi=300)
+            print("Local saved to documents folder")
+        except:
+            print("double Export error showing plot!")
+            plot.show()
+else:
+    plot.show()
 # %%
 #stratified count by years
 years = var_epi_count['Period end date'].dt.year.unique()
@@ -238,9 +251,20 @@ for n, fig in enumerate(subfigs):
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b\n%Y'))
 
     fig.legend(bbox_to_anchor=[1.135,0.5], loc="center right", fontsize=14, fancybox=True)
-
-
-plot.show()
+if __name__ == "__main__":
+    try:
+        plot.savefig(outpath + "NYC Variants Per Year Starting 2021 Direct Count.png", dpi=300)   
+        print("Plot output to sharepoint: PSP NYC Auto Charts")
+    except:
+        print("Error in sharepoint plotting")
+        try:
+            plot.savefig(os.path.expanduser("~/Documents/NYC Variants Per Year Starting 2021 Direct Count.png"), dpi=300)
+            print("Local saved to documents folder")
+        except:
+            print("double Export error showing plot!")
+            plot.show()
+else:
+    plot.show()
 
 # %%
 # All one Graph! --------------------------------------------
@@ -293,7 +317,20 @@ ax.set_ylabel("Percent of Cases", fontsize=18, fontweight="bold")
 
 fig.legend(bbox_to_anchor=[0.5,-0.25], loc="lower center", fontsize=14, fancybox=True, ncol=7)
 
-plot.show()
+if __name__ == "__main__":
+    try:
+        plot.savefig(outpath + "NYC Variants Per Year Starting 2021 Contiguous Percent.png", dpi=300)   
+        print("Plot output to sharepoint: PSP NYC Auto Charts")
+    except:
+        print("Error in sharepoint plotting")
+        try:
+            plot.savefig(os.path.expanduser("~/Documents/NYC Variants Per Year Starting 2021 Contiguous Percent.png"), dpi=300)
+            print("Local saved to documents folder")
+        except:
+            print("double Export error showing plot!")
+            plot.show()
+else:
+    plot.show()
 
 # %%
 
@@ -345,5 +382,21 @@ ax.set_ylabel("Number of Cases", fontsize=18, fontweight="bold")
 ax.set_xlim(df['Period end date'].min(), df['Period end date'].max())
 
 fig.legend(bbox_to_anchor=[0.5,-0.225], loc="lower center", fontsize=14, fancybox=True, ncol=7)
+
+if __name__ == "__main__":
+    try:
+        plot.savefig(outpath + "NYC Variants Per Year Starting 2021 Contiguous Count.png", dpi=300)   
+        print("Plot output to sharepoint: PSP NYC Auto Charts")
+    except:
+        print("Error in sharepoint plotting")
+        try:
+            plot.savefig(os.path.expanduser("~/Documents/NYC Variants Per Year Starting 2021 Contiguous Count.png"), dpi=300)
+            print("Local saved to documents folder")
+        except:
+            print("double Export error showing plot!")
+            plot.show()
+else:
+    plot.show()
+
 
 # %%
