@@ -1,4 +1,5 @@
 import util
+import re
 import hashlib as hlib
 from codecs import encode
 from codecs import decode
@@ -347,3 +348,31 @@ def immune_history(vaccine_dates, vaccine_types, infection_dates, visit_date):
    events_sorted = events_frame.sort_index()
    history = "-".join(events_sorted['Event Type'])
    return history
+
+def data_import(filepath, excel_sheet='Sheet1', head=0):
+    data_frame=[]
+    pathsplit = re.split("\.", filepath)
+    if "xl" in pathsplit[-1].lower():
+        data_frame = pd.read_excel(filepath, sheet_name=excel_sheet, header=head)
+        print("Success! Excel file!")        
+    elif "csv" == pathsplit[-1].lower():
+        data_frame = pd.read_csv(filepath, header=head, sep=',')
+        print("Success! CSV delimited!")        
+    elif "tsv" == pathsplit[-1].lower():
+            data_frame = pd.read_csv(filepath, header=head, sep='\t')
+            print("Success! TAB delimited!")        
+    elif "txt" == pathsplit[-1].lower():
+        try:
+            data_frame = pd.read_csv(filepath, header=head, sep='\t')
+            print("Success! TAB delimited!")
+        except:
+            try:
+                data_frame = pd.read_csv(filepath, header=head, sep=';')
+                print("Success! semi-colon delimited")
+            except:
+                try:
+                    data_frame = pd.read_csv(filepath, header=head, sep=' ')
+                    print("Success! Space delimited")
+                except:
+                    raise ValueError("FileType not found: Please check your Filepath and only use: \n excel ,.csv ,.tsv ,.txt extensions")
+    return(data_frame)
