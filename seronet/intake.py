@@ -20,7 +20,7 @@ def baseline_sunday(visit_num, date):
         return ('N/A')
     
 def visit_purpose(sid, post_inf_sids):
-    if sid in post_inf_sids:
+    if sid in list(post_inf_sids):
         return 'Post-Infection'
     else:
         return 'Post-Vaccine'
@@ -64,7 +64,7 @@ def make_intake(df_accrual, ecrabs, dfs_clin, seronet_key):
     intake_df = (intake_df.join(aliquot_df, rsuffix='_1')
                           .join(kp2_df, rsuffix='_1', on ='Research_Participant_ID'))
     intake_df = intake_df[intake_df['Sample ID'].isin(samples_in_period)]
-    intake_df['Purpose of Visit'] = intake_df.apply(lambda row: visit_purpose(row['Sample ID'], post_inf_visits['Sample ID']))
+    intake_df['Purpose of Visit'] = intake_df['Sample ID'].apply(lambda sid: visit_purpose(sid, post_inf_visits['Sample ID']))
     intake_df['Days from KP.2'] = intake_df.apply(lambda row: days_from_vax(row['Biospecimen_Collection_Date_Duration_From_Index'], row['SARS-CoV-2_Vaccination_Date_Duration_From_Index']), axis=1)
     intake_df['In Window?'] = intake_df.apply(lambda row: in_window(key_no_current_month, row['Research_Participant_ID'], row['Days from KP.2'], row['Purpose of Visit']), axis=1)
     #Create Add to Intake Sheet
