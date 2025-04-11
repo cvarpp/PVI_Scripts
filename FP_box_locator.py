@@ -112,7 +112,6 @@ if __name__ == '__main__':
             with open(args.output_fname, 'w', newline='') as f:
                 writer = csv.writer(f)
                 writer.writerows(all_parent_names)
-        # all_parent_ids.append(parent_ids) not really necessary ig
 
 # Write output to csv
 
