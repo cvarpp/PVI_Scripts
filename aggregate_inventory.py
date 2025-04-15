@@ -30,7 +30,7 @@ if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Aggregate inventory of each sample type for FP upload')
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=81)
     args = argParser.parse_args()
-    inventory_boxes = pd.read_excel(util.inventory_input, sheet_name=None)
+    inventory_boxes = pd.read_excel(util.inventory_input, sheet_name=None, header=0)
     freezer_map = pd.read_excel(util.freezer_map, sheet_name='Racks in Freezers', header=0)
     racks_in_freezers = freezer_map.dropna(subset='Rack ID', axis=0).copy().reset_index()
     freezers_positions = pd.read_excel(util.freezer_map, sheet_name='FP Shelf_Rack Names', header=0, index_col='Concat')
@@ -44,24 +44,57 @@ if __name__ == '__main__':
     box_counts = {}
     aliquot_counts = {}
     completion = []
+    #Maybe Dictionary?
     boxes_lost_name = []
     boxes_lost_reason = []
+
     rack_shelf={}
     rack_rack={}
     rack_freezer={}
     rack_floor={}
     rack_concat={}
 
+    shelf_errorn = 0
+    pos_errorn = 0
+    farm_errorn = 0
+    freezer_errorn = 0
+
     for n, item in enumerate(racks_in_freezers['Rack ID']):
+
+        if racks_in_freezers['Shelf'][n] != racks_in_freezers['Shelf'][n]:
+            racks_in_freezers['Shelf'][n] = int(900+shelf_errorn)
+            shelf_errorn+=1
+
+        if racks_in_freezers['Position'][n] != racks_in_freezers['Position'][n]:
+            racks_in_freezers['Position'][n] = int(911+pos_errorn)
+            pos_errorn+=1
+
+        if racks_in_freezers['Farm'][n] != racks_in_freezers['Farm'][n]:
+            racks_in_freezers['Farm'][n] = "Unknown "+str(farm_errorn)
+            shelf_errorn+=1
+
+        if racks_in_freezers['Freezer'][n] != racks_in_freezers['Freezer'][n]:
+            racks_in_freezers['Freezer'][n] = "Unknown "+str(freezer_errorn)
+            pos_errorn+=1
+
         rack_shelf.update({item:racks_in_freezers['Shelf'][n]})
         rack_rack.update({item:racks_in_freezers['Position'][n]})
         rack_freezer.update({item:racks_in_freezers['Freezer'][n]})
         rack_floor.update({item:racks_in_freezers['Farm'][n]})
+        print({item:str(racks_in_freezers['Farm'][n])+':'+str(racks_in_freezers['Freezer'][n])+':'+str(int(racks_in_freezers['Shelf'][n]))+':'+str(int(racks_in_freezers['Position'][n]))})
         rack_concat.update({item:str(racks_in_freezers['Farm'][n])+':'+str(racks_in_freezers['Freezer'][n])+':'+str(int(racks_in_freezers['Shelf'][n]))+':'+str(int(racks_in_freezers['Position'][n]))})
+
+    #59 shelf errors
+    #70 position errors
+    # 1 freezer error
+    # 1 farm error
+    # 4/14/25
+
+    #%%
 
     for name, sheet in inventory_boxes.items():
         try:
-            box_number = int(name.rstrip('LabFF_ ').split()[-1])
+            box_number = int(name.rstrip('LabFF_)( ').split()[-1])
         except:
             print(name, "has no box number")
             boxes_lost_name.append(name)
