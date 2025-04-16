@@ -1,4 +1,5 @@
 #%%
+import requests
 from matplotlib.pyplot import box
 import pandas as pd
 import numpy as np
@@ -10,7 +11,7 @@ import os
 import argparse
 from helpers import clean_sample_id
 import random
-
+import json
 #%%
 
 # Pull all file/folder locations from util.py
@@ -54,7 +55,7 @@ if __name__ == '__main__':
     box_counts = {}
     aliquot_counts = {}
     completion = []
-
+    warnings = {}
     #Maybe Dictionary?
     boxes_lost_name = []
     boxes_lost_reason = []
@@ -122,8 +123,6 @@ if __name__ == '__main__':
         
         rack_number = sheet['Rack Number'][0]
         
-        print("Rack #: ", rack_number)
-
         if rack_number != rack_number:
             print(name, ": Rack number Not Filled in")
             boxes_lost_name.append(name)
@@ -153,8 +152,6 @@ if __name__ == '__main__':
         
         else:
             team = 'PVI'
-
-        print("Team: ", team)
 
         sample_type = 'N/A'
 
@@ -192,13 +189,37 @@ if __name__ == '__main__':
                 box_counts[box_name] = 0
 
             freezer_index = rack_concat[rack_number]
-            print("freezer_index: ",freezer_index)
-            print("freezer_position: ",freezers_positions.index[rack_number])
-            if freezer_index in freezers_positions.index:
+
+            FP_pos_logic = (freezers_positions.loc[freezer_index,'FP_Freezer'] == freezers_positions.loc[freezer_index,'FP_Freezer'] and
+              freezers_positions.loc[freezer_index,'FP_Level1'] == freezers_positions.loc[freezer_index,'FP_Level1'] and
+                freezers_positions.loc[freezer_index,'FP_Level2'] == freezers_positions.loc[freezer_index,'FP_Level2'] and
+                    freezers_positions.loc[freezer_index,'FP_Level3'] == freezers_positions.loc[freezer_index,'FP_Level3'])
+            
+            print("base: ", freezers_positions.loc[freezer_index,'FP_Freezer'])
+            print("logi FP: ", FP_pos_logic)
+
+            Local_pos_logic = (freezers_positions.loc[freezer_index,'Farm'] == freezers_positions.loc[freezer_index,'Farm'] and
+              freezers_positions.loc[freezer_index,'Freezer'] == freezers_positions.loc[freezer_index,'Freezer'] and
+                freezers_positions.loc[freezer_index,'Shelf'] == freezers_positions.loc[freezer_index,'Shelf'] and
+                    freezers_positions.loc[freezer_index,'Position'] == freezers_positions.loc[freezer_index,'Position'])
+
+            print("logi Local: ", Local_pos_logic)
+
+            if freezer_index in freezers_positions.index and FP_pos_logic == True:
                 freezer = freezers_positions.loc[freezer_index,'FP_Freezer']
                 level1 = freezers_positions.loc[freezer_index,'FP_Level1']
                 level2 = freezers_positions.loc[freezer_index,'FP_Level2']
                 level3 = freezers_positions.loc[freezer_index,'FP_Level3']
+
+            elif freezer_index in freezers_positions.index and Local_pos_logic == True:
+                print("Warning!: Official Freezer Pro positions not given")
+                print("Default Document Positions used! consult with file prior to upload")
+                freezer = freezers_positions.loc[freezer_index,'Farm']
+                level1 = freezers_positions.loc[freezer_index,'Freezer']
+                level2 = "shelf " + freezers_positions.loc[freezer_index,'Shelf']
+                level3 = "rack " + freezers_positions.loc[freezer_index,'Position']
+                warnings.append({name:"Official Freezer Pro positions not given default document positions used!"})
+            
             else:
                 freezer = 'Annenberg 18'
                 level1 = 'Freezer 1 (Eiffel Tower)'
@@ -294,5 +315,9 @@ if __name__ == '__main__':
     for _, row in uploading_boxes.iterrows():
             print(row['Name'])
             uploaded.add(row['Name'])
+    for name, item in warnings.items():
+        print(name, " ", item)
 
-    # %%
+
+#%% FP logi test and grab
+

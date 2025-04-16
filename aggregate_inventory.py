@@ -25,12 +25,11 @@ def filter_box(box_name, uploaded, args, box_df=None):
     if box_df is None:
         return False
     return (box_name not in uploaded) and ((args.min_count <= box_df.set_index('Name').loc[box_name, 'Tube Count'] <= 81) or (box_name in full_des) or (box_df.set_index('Name').loc[box_name, 'Done?'] == "Yes"))
-
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Aggregate inventory of each sample type for FP upload')
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=81)
     args = argParser.parse_args()
-    inventory_boxes = pd.read_excel(util.inventory_input, sheet_name=None, header=0)
+    inventory_boxes = pd.read_excel("~/Downloads/New Import Sheet.xlsx", sheet_name=None)
     freezer_map = pd.read_excel(util.freezer_map, sheet_name='Racks in Freezers', header=0)
     racks_in_freezers = freezer_map.dropna(subset='Rack ID', axis=0).copy().reset_index()
     freezers_positions = pd.read_excel(util.freezer_map, sheet_name='FP Shelf_Rack Names', header=0, index_col='Concat')
@@ -44,6 +43,7 @@ if __name__ == '__main__':
     box_counts = {}
     aliquot_counts = {}
     completion = []
+    warnings = {}
     #Maybe Dictionary?
     boxes_lost_name = []
     boxes_lost_reason = []
@@ -60,15 +60,19 @@ if __name__ == '__main__':
     freezer_errorn = 0
 
     for n, item in enumerate(racks_in_freezers['Rack ID']):
+        
         if racks_in_freezers['Shelf'][n] != racks_in_freezers['Shelf'][n]:
             racks_in_freezers['Shelf'][n] = int(900+shelf_errorn)
-            shelf_errorn+=1        
+            shelf_errorn+=1
+        
         if racks_in_freezers['Position'][n] != racks_in_freezers['Position'][n]:
             racks_in_freezers['Position'][n] = int(900+pos_errorn)
             pos_errorn+=1
+
         if racks_in_freezers['Farm'][n] != racks_in_freezers['Farm'][n]:
             racks_in_freezers['Farm'][n] = "Unknown "+str(farm_errorn)
             shelf_errorn+=1
+
         if racks_in_freezers['Freezer'][n] != racks_in_freezers['Freezer'][n]:
             racks_in_freezers['Freezer'][n] = "Unknown "+str(freezer_errorn)
             pos_errorn+=1
@@ -80,6 +84,7 @@ if __name__ == '__main__':
         print({item:str(racks_in_freezers['Farm'][n])+':'+str(racks_in_freezers['Freezer'][n])+':'+str(int(racks_in_freezers['Shelf'][n]))+':'+str(int(racks_in_freezers['Position'][n]))})
         rack_concat.update({item:str(racks_in_freezers['Farm'][n])+':'+str(racks_in_freezers['Freezer'][n])+':'+str(int(racks_in_freezers['Shelf'][n]))+':'+str(int(racks_in_freezers['Position'][n]))})
         print(rack_concat[item])
+        
 
     #59 shelf errors
     #70 position errors
@@ -106,7 +111,6 @@ if __name__ == '__main__':
         
         rack_number = sheet['Rack Number'][0]
         
-        print("Rack #: ", rack_number)
         if rack_number != rack_number:
             print(name, ": Rack number Not Filled in")
             boxes_lost_name.append(name)
@@ -137,7 +141,6 @@ if __name__ == '__main__':
         else:
             team = 'PVI'
 
-        print("Team: ", team)
         sample_type = 'N/A'
 
         if team == 'APOLLO':
@@ -174,13 +177,37 @@ if __name__ == '__main__':
                 box_counts[box_name] = 0
 
             freezer_index = rack_concat[rack_number]
-            print("freezer_index: ",freezer_index)
-            print("freezer_position: ",freezers_positions.index[rack_number])
-            if freezer_index in freezers_positions.index:
+
+            FP_pos_logic = (freezers_positions.loc[freezer_index,'FP_Freezer'] == freezers_positions.loc[freezer_index,'FP_Freezer'] and
+              freezers_positions.loc[freezer_index,'FP_Level1'] == freezers_positions.loc[freezer_index,'FP_Level1'] and
+                freezers_positions.loc[freezer_index,'FP_Level2'] == freezers_positions.loc[freezer_index,'FP_Level2'] and
+                    freezers_positions.loc[freezer_index,'FP_Level3'] == freezers_positions.loc[freezer_index,'FP_Level3'])
+            
+            print("base: ", freezers_positions.loc[freezer_index,'FP_Freezer'])
+            print("logi FP: ", FP_pos_logic)
+
+            Local_pos_logic = (freezers_positions.loc[freezer_index,'Farm'] == freezers_positions.loc[freezer_index,'Farm'] and
+              freezers_positions.loc[freezer_index,'Freezer'] == freezers_positions.loc[freezer_index,'Freezer'] and
+                freezers_positions.loc[freezer_index,'Shelf'] == freezers_positions.loc[freezer_index,'Shelf'] and
+                    freezers_positions.loc[freezer_index,'Position'] == freezers_positions.loc[freezer_index,'Position'])
+
+            print("logi Local: ", Local_pos_logic)
+
+            if freezer_index in freezers_positions.index and FP_pos_logic == True:
                 freezer = freezers_positions.loc[freezer_index,'FP_Freezer']
                 level1 = freezers_positions.loc[freezer_index,'FP_Level1']
                 level2 = freezers_positions.loc[freezer_index,'FP_Level2']
                 level3 = freezers_positions.loc[freezer_index,'FP_Level3']
+
+            elif freezer_index in freezers_positions.index and Local_pos_logic == True:
+                print("Warning!: Official Freezer Pro positions not given")
+                print("Default Document Positions used! consult with file prior to upload")
+                freezer = freezers_positions.loc[freezer_index,'Farm']
+                level1 = freezers_positions.loc[freezer_index,'Freezer']
+                level2 = "shelf " + str(int(freezers_positions.loc[freezer_index,'Shelf']))
+                level3 = "rack " + str(int(freezers_positions.loc[freezer_index,'Position']))
+                warnings.update({name:"Official Freezer Pro positions not given default document positions used!"})
+            
             else:
                 freezer = 'Annenberg 18'
                 level1 = 'Freezer 1 (Eiffel Tower)'
@@ -240,6 +267,7 @@ if __name__ == '__main__':
                 
                 if (box_name not in completion) and (sheet['Box Done?'][0] == 1.0):
                         completion.append(box_name)
+#%%
 
     uploaded = set()
     full_des = set(inventory_boxes['Full Boxes, DES']['Name'].to_numpy())
@@ -251,6 +279,8 @@ if __name__ == '__main__':
             box_data['Done?'].append("Yes")
         else:
             box_data['Done?'].append("No")
+
+    #%%
 
     box_df = pd.DataFrame(box_data)
     lost_df = pd.DataFrame.from_dict({"Box Name":boxes_lost_name, "Reason Dropped":boxes_lost_reason})
@@ -273,3 +303,5 @@ if __name__ == '__main__':
     for _, row in uploading_boxes.iterrows():
             print(row['Name'])
             uploaded.add(row['Name'])
+    for name, item in warnings.items():
+        print(name, " ", item)
