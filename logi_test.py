@@ -16,9 +16,10 @@ import random
 # Pull all file/folder locations from util.py
 # Pull in sample data from dscf to check (query_dscf in helpers.py)
 
+freezer_map = pd.read_excel(util.freezer_map, sheet_name='Racks in Freezers', header=0)
 inventory_boxes = pd.read_excel(util.inventory_input, sheet_name=None, header=0)
 
-#%%%
+#%%
 def pos_convert(idx):
     '''Converts a 0-80 index to a box position'''
     return str((idx // 9) + 1) + "/" + "ABCDEFGHI"[idx % 9]
@@ -36,6 +37,7 @@ if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Aggregate inventory of each sample type for FP upload')
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=81)
     args = argParser.parse_args()
+
 #%%
 
     inventory_boxes = pd.read_excel("~/Downloads/New Import Sheet.xlsx", sheet_name=None)
@@ -52,6 +54,7 @@ if __name__ == '__main__':
     box_counts = {}
     aliquot_counts = {}
     completion = []
+
     #Maybe Dictionary?
     boxes_lost_name = []
     boxes_lost_reason = []
@@ -68,13 +71,13 @@ if __name__ == '__main__':
     freezer_errorn = 0
 
     for n, item in enumerate(racks_in_freezers['Rack ID']):
-
+        
         if racks_in_freezers['Shelf'][n] != racks_in_freezers['Shelf'][n]:
             racks_in_freezers['Shelf'][n] = int(900+shelf_errorn)
             shelf_errorn+=1
-
+        
         if racks_in_freezers['Position'][n] != racks_in_freezers['Position'][n]:
-            racks_in_freezers['Position'][n] = int(911+pos_errorn)
+            racks_in_freezers['Position'][n] = int(900+pos_errorn)
             pos_errorn+=1
 
         if racks_in_freezers['Farm'][n] != racks_in_freezers['Farm'][n]:
@@ -91,6 +94,8 @@ if __name__ == '__main__':
         rack_floor.update({item:racks_in_freezers['Farm'][n]})
         print({item:str(racks_in_freezers['Farm'][n])+':'+str(racks_in_freezers['Freezer'][n])+':'+str(int(racks_in_freezers['Shelf'][n]))+':'+str(int(racks_in_freezers['Position'][n]))})
         rack_concat.update({item:str(racks_in_freezers['Farm'][n])+':'+str(racks_in_freezers['Freezer'][n])+':'+str(int(racks_in_freezers['Shelf'][n]))+':'+str(int(racks_in_freezers['Position'][n]))})
+        print(rack_concat[item])
+        
 
     #59 shelf errors
     #70 position errors
@@ -117,6 +122,8 @@ if __name__ == '__main__':
         
         rack_number = sheet['Rack Number'][0]
         
+        print("Rack #: ", rack_number)
+
         if rack_number != rack_number:
             print(name, ": Rack number Not Filled in")
             boxes_lost_name.append(name)
@@ -146,6 +153,8 @@ if __name__ == '__main__':
         
         else:
             team = 'PVI'
+
+        print("Team: ", team)
 
         sample_type = 'N/A'
 
@@ -182,7 +191,9 @@ if __name__ == '__main__':
             if box_name not in box_counts.keys():
                 box_counts[box_name] = 0
 
-            freezer_index = rack_concat[rack_number]            
+            freezer_index = rack_concat[rack_number]
+            print("freezer_index: ",freezer_index)
+            print("freezer_position: ",freezers_positions.index[rack_number])
             if freezer_index in freezers_positions.index:
                 freezer = freezers_positions.loc[freezer_index,'FP_Freezer']
                 level1 = freezers_positions.loc[freezer_index,'FP_Level1']
@@ -193,7 +204,7 @@ if __name__ == '__main__':
                 level1 = 'Freezer 1 (Eiffel Tower)'
                 level2 = 'Shelf {}'.format(int(rack_shelf[rack_number]))
                 level3 = 'Rack #{}'.format(int(rack_number))
-            
+
                 if box_sample_type == 'NPS':
                     freezer = 'Temporary PSP NPS'
                     level1 = 'freezer_nps'
@@ -207,7 +218,8 @@ if __name__ == '__main__':
                     level1 = 'PBMC SUPER TEMPORARY HOLDING'
                 else:
                     level3 = 'Rack #{}'.format(rack_number)
-
+            
+            
             for idx, (sample_id, row) in enumerate(sheet.iterrows()):
                 if re.search("[1-9A-Z][0-9]{4,5}", sample_id) is None:
                     continue
@@ -218,7 +230,7 @@ if __name__ == '__main__':
                             sample_type = val
                             break
                     except:
-                        print(box_name)
+                        print("Box Name: ",box_name)
                         exit(1)
                 if sample_type == 'N/A':
                     print(row['Sample ID'], 'in box', box_name, 'has no sample type specified. (', row['Sample Type'], ')')

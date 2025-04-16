@@ -60,19 +60,15 @@ if __name__ == '__main__':
     freezer_errorn = 0
 
     for n, item in enumerate(racks_in_freezers['Rack ID']):
-
         if racks_in_freezers['Shelf'][n] != racks_in_freezers['Shelf'][n]:
             racks_in_freezers['Shelf'][n] = int(900+shelf_errorn)
-            shelf_errorn+=1
-
+            shelf_errorn+=1        
         if racks_in_freezers['Position'][n] != racks_in_freezers['Position'][n]:
-            racks_in_freezers['Position'][n] = int(911+pos_errorn)
+            racks_in_freezers['Position'][n] = int(900+pos_errorn)
             pos_errorn+=1
-
         if racks_in_freezers['Farm'][n] != racks_in_freezers['Farm'][n]:
             racks_in_freezers['Farm'][n] = "Unknown "+str(farm_errorn)
             shelf_errorn+=1
-
         if racks_in_freezers['Freezer'][n] != racks_in_freezers['Freezer'][n]:
             racks_in_freezers['Freezer'][n] = "Unknown "+str(freezer_errorn)
             pos_errorn+=1
@@ -83,14 +79,13 @@ if __name__ == '__main__':
         rack_floor.update({item:racks_in_freezers['Farm'][n]})
         print({item:str(racks_in_freezers['Farm'][n])+':'+str(racks_in_freezers['Freezer'][n])+':'+str(int(racks_in_freezers['Shelf'][n]))+':'+str(int(racks_in_freezers['Position'][n]))})
         rack_concat.update({item:str(racks_in_freezers['Farm'][n])+':'+str(racks_in_freezers['Freezer'][n])+':'+str(int(racks_in_freezers['Shelf'][n]))+':'+str(int(racks_in_freezers['Position'][n]))})
+        print(rack_concat[item])
 
     #59 shelf errors
     #70 position errors
     # 1 freezer error
     # 1 farm error
     # 4/14/25
-
-    #%%
 
     for name, sheet in inventory_boxes.items():
         try:
@@ -111,6 +106,7 @@ if __name__ == '__main__':
         
         rack_number = sheet['Rack Number'][0]
         
+        print("Rack #: ", rack_number)
         if rack_number != rack_number:
             print(name, ": Rack number Not Filled in")
             boxes_lost_name.append(name)
@@ -141,6 +137,7 @@ if __name__ == '__main__':
         else:
             team = 'PVI'
 
+        print("Team: ", team)
         sample_type = 'N/A'
 
         if team == 'APOLLO':
@@ -150,13 +147,13 @@ if __name__ == '__main__':
                 if re.search(str(val).upper().split()[0], name.upper()):
                     sample_type = val
                     break
-        
+
         if sample_type == 'N/A':
             print(name, "has a box number but no valid sample type")
             boxes_lost_name.append(name)
             boxes_lost_reason.append("No Valid Sample ID value")
             continue
-        
+
         box_kinds = re.findall('RESEARCH|NIH|Lab|FF', name)
         if len(box_kinds) == 0:
             if sample_type in ['PBMC', 'HT', '4.5 mL Tube']:
@@ -176,7 +173,9 @@ if __name__ == '__main__':
             if box_name not in box_counts.keys():
                 box_counts[box_name] = 0
 
-            freezer_index = rack_concat[rack_number]            
+            freezer_index = rack_concat[rack_number]
+            print("freezer_index: ",freezer_index)
+            print("freezer_position: ",freezers_positions.index[rack_number])
             if freezer_index in freezers_positions.index:
                 freezer = freezers_positions.loc[freezer_index,'FP_Freezer']
                 level1 = freezers_positions.loc[freezer_index,'FP_Level1']
@@ -187,7 +186,7 @@ if __name__ == '__main__':
                 level1 = 'Freezer 1 (Eiffel Tower)'
                 level2 = 'Shelf {}'.format(int(rack_shelf[rack_number]))
                 level3 = 'Rack #{}'.format(int(rack_number))
-            
+
                 if box_sample_type == 'NPS':
                     freezer = 'Temporary PSP NPS'
                     level1 = 'freezer_nps'
@@ -201,7 +200,8 @@ if __name__ == '__main__':
                     level1 = 'PBMC SUPER TEMPORARY HOLDING'
                 else:
                     level3 = 'Rack #{}'.format(rack_number)
-
+            
+            
             for idx, (sample_id, row) in enumerate(sheet.iterrows()):
                 if re.search("[1-9A-Z][0-9]{4,5}", sample_id) is None:
                     continue
@@ -212,7 +212,7 @@ if __name__ == '__main__':
                             sample_type = val
                             break
                     except:
-                        print(box_name)
+                        print("Box Name: ",box_name)
                         exit(1)
                 if sample_type == 'N/A':
                     print(row['Sample ID'], 'in box', box_name, 'has no sample type specified. (', row['Sample Type'], ')')
@@ -240,7 +240,7 @@ if __name__ == '__main__':
                 
                 if (box_name not in completion) and (sheet['Box Done?'][0] == 1.0):
                         completion.append(box_name)
-    
+
     uploaded = set()
     full_des = set(inventory_boxes['Full Boxes, DES']['Name'].to_numpy())
     box_data = {'Name': [], 'Tube Count': [], 'Done?': []}
@@ -251,7 +251,7 @@ if __name__ == '__main__':
             box_data['Done?'].append("Yes")
         else:
             box_data['Done?'].append("No")
-    
+
     box_df = pd.DataFrame(box_data)
     lost_df = pd.DataFrame.from_dict({"Box Name":boxes_lost_name, "Reason Dropped":boxes_lost_reason})
     print(box_df)
@@ -273,5 +273,3 @@ if __name__ == '__main__':
     for _, row in uploading_boxes.iterrows():
             print(row['Name'])
             uploaded.add(row['Name'])
-
-# %%
