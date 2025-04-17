@@ -112,6 +112,10 @@ if __name__ == '__main__':
         rack_number = sheet['Rack Number'][0]
         
         if rack_number != rack_number:
+            
+            #Add temp upload functionality?
+            #Temp_marker = 1
+
             print(name, ": Rack number Not Filled in")
             boxes_lost_name.append(name)
             boxes_lost_reason.append("Rack Number Empty")
@@ -183,15 +187,10 @@ if __name__ == '__main__':
                 freezers_positions.loc[freezer_index,'FP_Level2'] == freezers_positions.loc[freezer_index,'FP_Level2'] and
                     freezers_positions.loc[freezer_index,'FP_Level3'] == freezers_positions.loc[freezer_index,'FP_Level3'])
             
-            print("base: ", freezers_positions.loc[freezer_index,'FP_Freezer'])
-            print("logi FP: ", FP_pos_logic)
-
             Local_pos_logic = (freezers_positions.loc[freezer_index,'Farm'] == freezers_positions.loc[freezer_index,'Farm'] and
               freezers_positions.loc[freezer_index,'Freezer'] == freezers_positions.loc[freezer_index,'Freezer'] and
                 freezers_positions.loc[freezer_index,'Shelf'] == freezers_positions.loc[freezer_index,'Shelf'] and
                     freezers_positions.loc[freezer_index,'Position'] == freezers_positions.loc[freezer_index,'Position'])
-
-            print("logi Local: ", Local_pos_logic)
 
             if freezer_index in freezers_positions.index and FP_pos_logic == True:
                 freezer = freezers_positions.loc[freezer_index,'FP_Freezer']
@@ -208,6 +207,12 @@ if __name__ == '__main__':
                 level3 = "rack " + str(int(freezers_positions.loc[freezer_index,'Position']))
                 warnings.update({name:"Official Freezer Pro positions not given default document positions used!"})
             
+            #elif Temp_marker == 1:
+                # freezer = 'Temporary Holding'
+                # level1 = sample_type
+                # level2 = 'Shelf1'
+                # level3 = f'{sample_type} Temporary Holding'
+
             else:
                 freezer = 'Annenberg 18'
                 level1 = 'Freezer 1 (Eiffel Tower)'
