@@ -268,7 +268,6 @@ if __name__ == '__main__':
                 if (box_name not in completion) and (sheet['Box Done?'][0] == 1.0):
                         completion.append(box_name)
 #%%
-
     uploaded = set()
     full_des = set(inventory_boxes['Full Boxes, DES']['Name'].to_numpy())
     box_data = {'Name': [], 'Tube Count': [], 'Done?': []}
