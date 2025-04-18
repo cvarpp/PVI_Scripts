@@ -59,33 +59,6 @@ if __name__ == '__main__':
     farm_errorn = 0
     freezer_errorn = 0
 
-    for n, item in enumerate(racks_in_freezers['Rack ID']):
-        
-        if racks_in_freezers['Shelf'][n] != racks_in_freezers['Shelf'][n]:
-            racks_in_freezers['Shelf'][n] = int(900+shelf_errorn)
-            shelf_errorn+=1
-        
-        if racks_in_freezers['Position'][n] != racks_in_freezers['Position'][n]:
-            racks_in_freezers['Position'][n] = int(900+pos_errorn)
-            pos_errorn+=1
-
-        if racks_in_freezers['Farm'][n] != racks_in_freezers['Farm'][n]:
-            racks_in_freezers['Farm'][n] = "Unknown "+str(farm_errorn)
-            shelf_errorn+=1
-
-        if racks_in_freezers['Freezer'][n] != racks_in_freezers['Freezer'][n]:
-            racks_in_freezers['Freezer'][n] = "Unknown "+str(freezer_errorn)
-            pos_errorn+=1
-
-        rack_shelf.update({item:racks_in_freezers['Shelf'][n]})
-        rack_rack.update({item:racks_in_freezers['Position'][n]})
-        rack_freezer.update({item:racks_in_freezers['Freezer'][n]})
-        rack_floor.update({item:racks_in_freezers['Farm'][n]})
-        print({item:str(racks_in_freezers['Farm'][n])+':'+str(racks_in_freezers['Freezer'][n])+':'+str(int(racks_in_freezers['Shelf'][n]))+':'+str(int(racks_in_freezers['Position'][n]))})
-        rack_concat.update({item:str(racks_in_freezers['Farm'][n])+':'+str(racks_in_freezers['Freezer'][n])+':'+str(int(racks_in_freezers['Shelf'][n]))+':'+str(int(racks_in_freezers['Position'][n]))})
-        print(rack_concat[item])
-        
-
     #59 shelf errors
     #70 position errors
     # 1 freezer error
@@ -121,7 +94,7 @@ if __name__ == '__main__':
             boxes_lost_reason.append("Rack Number Empty")
             continue
 
-        if rack_number not in rack_shelf:
+        if rack_number not in freezer_map['Rack ID']:
             print(name, ": Rack number Not in Inventory")
             boxes_lost_name.append(name)
             boxes_lost_reason.append("Rack Number Provided Not in Inventory")
@@ -180,31 +153,25 @@ if __name__ == '__main__':
             if box_name not in box_counts.keys():
                 box_counts[box_name] = 0
 
-            freezer_index = rack_concat[rack_number]
-            
-            Local_pos_logic = (freezers_positions.loc[freezer_index,'Farm'] == freezers_positions.loc[freezer_index,'Farm'] and
-              freezers_positions.loc[freezer_index,'Freezer'] == freezers_positions.loc[freezer_index,'Freezer'] and
-                freezers_positions.loc[freezer_index,'Shelf'] == freezers_positions.loc[freezer_index,'Shelf'] and
-                    freezers_positions.loc[freezer_index,'Position'] == freezers_positions.loc[freezer_index,'Position'])
 
-
-            if freezer_index in freezers_positions.index and Local_pos_logic == True:
-                freezer = freezers_positions.loc[freezer_index,'Farm']
-                level1 = freezers_positions.loc[freezer_index,'Freezer']
-                level2 = "Shelf " + str(int(freezers_positions.loc[freezer_index,'Shelf']))
+            rack_info = freezer_map[freezer_map['Rack ID'] == rack_number]
+            if rack_number in freezer_map['Rack ID']:
+                freezer = str(rack_info['Farm'].to_list()[0]) + " New"
+                level1 = str(rack_info['Freezer'].to_list()[0])
+                level2 = "Shelf " + str(int(rack_info['Shelf']))
                 level3 = "Rack " + str(int(rack_number))
             
-            #elif Temp_marker == 1:
-                # freezer = 'Temporary Holding'
-                # level1 = sample_type
-                # level2 = 'Shelf1'
-                # level3 = f'{sample_type} Temporary Holding'
-
+            # I think this else logic can go?:
+                    
             else:
+                print("Rack number Unknown!")
+                print("Check Format in Sheet")
+                boxes_lost_name.append(name)
+                boxes_lost_reason.append("Rack ID Unknown")
                 freezer = 'Annenberg 18'
-                level1 = 'Freezer 1 (Eiffel Tower)'
-                level2 = 'Shelf {}'.format(int(rack_shelf[rack_number]))
-                level3 = 'Rack #{}'.format(int(rack_number))
+                level1 = 'Freezer UNK'
+                level2 = 'Shelf temp'
+                level3 = 'Rack #UNK'
 
                 if box_sample_type == 'NPS':
                     freezer = 'Temporary PSP NPS'
@@ -278,7 +245,7 @@ if __name__ == '__main__':
     print(box_df)
     pd.DataFrame(samples_data['All']).to_excel(util.proc + 'inventory_in_progress.xlsx')
     uploading_boxes = box_df[box_df['Name'].apply(lambda val: filter_box(val, uploaded, args, box_df=box_df))]
-    with pd.ExcelWriter(util.proc + 'aggregate_inventory_test_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))) as writer:
+    with pd.ExcelWriter(util.proc + 'aggregate_inventory_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))) as writer:
         for sample_type, data in samples_data.items():
             if sample_type != 'All':
                 df = pd.DataFrame(data)
