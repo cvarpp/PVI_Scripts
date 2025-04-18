@@ -25,11 +25,12 @@ def filter_box(box_name, uploaded, args, box_df=None):
     if box_df is None:
         return False
     return (box_name not in uploaded) and (box_df.set_index('Name').loc[box_name, 'Done?'] == "Yes")
+
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Aggregate inventory of each sample type for FP upload')
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=81)
     args = argParser.parse_args()
-    inventory_boxes = pd.read_excel("~/Downloads/New Import Sheet.xlsx", sheet_name=None)
+    inventory_boxes = pd.read_excel(util.inventory_input, sheet_name=None)
     freezer_map = pd.read_excel(util.freezer_map, sheet_name='Racks in Freezers', header=0)
     racks_in_freezers = freezer_map.dropna(subset='Rack ID', axis=0).copy().reset_index()
     freezers_positions = pd.read_excel(util.freezer_map, sheet_name='FP Shelf_Rack Names', header=0, index_col='Concat')
