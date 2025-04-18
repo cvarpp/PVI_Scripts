@@ -24,7 +24,7 @@ def filter_box(box_name, uploaded, args, box_df=None):
     '''
     if box_df is None:
         return False
-    return (box_name not in uploaded) and ((args.min_count <= box_df.set_index('Name').loc[box_name, 'Tube Count'] <= 81) or (box_name in full_des) or (box_df.set_index('Name').loc[box_name, 'Done?'] == "Yes"))
+    return (box_name not in uploaded) and (box_df.set_index('Name').loc[box_name, 'Done?'] == "Yes")
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Aggregate inventory of each sample type for FP upload')
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=81)
@@ -43,7 +43,6 @@ if __name__ == '__main__':
     box_counts = {}
     aliquot_counts = {}
     completion = []
-    warnings = {}
     #Maybe Dictionary?
     boxes_lost_name = []
     boxes_lost_reason = []
@@ -181,31 +180,18 @@ if __name__ == '__main__':
                 box_counts[box_name] = 0
 
             freezer_index = rack_concat[rack_number]
-
-            FP_pos_logic = (freezers_positions.loc[freezer_index,'FP_Freezer'] == freezers_positions.loc[freezer_index,'FP_Freezer'] and
-              freezers_positions.loc[freezer_index,'FP_Level1'] == freezers_positions.loc[freezer_index,'FP_Level1'] and
-                freezers_positions.loc[freezer_index,'FP_Level2'] == freezers_positions.loc[freezer_index,'FP_Level2'] and
-                    freezers_positions.loc[freezer_index,'FP_Level3'] == freezers_positions.loc[freezer_index,'FP_Level3'])
             
             Local_pos_logic = (freezers_positions.loc[freezer_index,'Farm'] == freezers_positions.loc[freezer_index,'Farm'] and
               freezers_positions.loc[freezer_index,'Freezer'] == freezers_positions.loc[freezer_index,'Freezer'] and
                 freezers_positions.loc[freezer_index,'Shelf'] == freezers_positions.loc[freezer_index,'Shelf'] and
                     freezers_positions.loc[freezer_index,'Position'] == freezers_positions.loc[freezer_index,'Position'])
 
-            if freezer_index in freezers_positions.index and FP_pos_logic == True:
-                freezer = freezers_positions.loc[freezer_index,'FP_Freezer']
-                level1 = freezers_positions.loc[freezer_index,'FP_Level1']
-                level2 = freezers_positions.loc[freezer_index,'FP_Level2']
-                level3 = freezers_positions.loc[freezer_index,'FP_Level3']
 
-            elif freezer_index in freezers_positions.index and Local_pos_logic == True:
-                print("Warning!: Official Freezer Pro positions not given")
-                print("Default Document Positions used! consult with file prior to upload")
+            if freezer_index in freezers_positions.index and Local_pos_logic == True:
                 freezer = freezers_positions.loc[freezer_index,'Farm']
                 level1 = freezers_positions.loc[freezer_index,'Freezer']
-                level2 = "shelf " + str(int(freezers_positions.loc[freezer_index,'Shelf']))
-                level3 = "rack " + str(int(freezers_positions.loc[freezer_index,'Position']))
-                warnings.update({name:"Official Freezer Pro positions not given default document positions used!"})
+                level2 = "Shelf " + str(int(freezers_positions.loc[freezer_index,'Shelf']))
+                level3 = "Rack " + str(int(rack_number))
             
             #elif Temp_marker == 1:
                 # freezer = 'Temporary Holding'
@@ -307,5 +293,3 @@ if __name__ == '__main__':
     for _, row in uploading_boxes.iterrows():
             print(row['Name'])
             uploaded.add(row['Name'])
-    for name, item in warnings.items():
-        print(name, " ", item)
