@@ -30,7 +30,7 @@ with warnings.catch_warnings():
     #PARIS
     paris_data = pd.read_excel(util.paris + 'Patient Tracking - PARIS.xlsx', sheet_name='Subgroups', header=4).dropna(subset=['Participant ID'])
     paris_main = pd.read_excel(util.paris + 'Patient Tracking - PARIS.xlsx', sheet_name='Main', header=8).dropna(subset=['Subject ID']).set_index('Subject ID')
-    paris_dems = pd.read_excel(util.projects + 'PARIS/Demographics.xlsx').set_index('Subject ID')
+    paris_dems = pd.read_excel(util.projects + 'PARIS/Demographics.xlsx', sheet_name='inputs').dropna(subset=['Subject ID']).set_index('Subject ID')
     paris_data['Participant ID'] = paris_data['Participant ID'].apply(lambda val: val.strip().upper())
     participants=np.append(participants, paris_data['Participant ID'].unique())
     paris_data.set_index('Participant ID', inplace=True)
@@ -38,7 +38,7 @@ with warnings.catch_warnings():
     paris_data = (paris_data.join(paris_dems, on='Participant ID', rsuffix='_dem')
                             .join(paris_main, on='Participant ID', rsuffix='_main')
                             .copy())
-    paris_data.rename(columns={'E-mail':'Email', 'Date of Birth':'DOB', 'Gender':'Sex', 'NIH Race':'Race', 'NIH Ethnicity':'Ethnicity'}, inplace=True)
+    paris_data.rename(columns={'E-mail':'Email', 'Date of Birth':'DOB', 'Gender':'Sex'}, inplace=True)
     paris_data['Study'] = 'PARIS'
 
     #HD
@@ -113,9 +113,7 @@ with warnings.catch_warnings():
     umb_data = umb_data.join(titan_data, rsuffix='_titan').copy()
 
     all_studies = [apollo_data, paris_data, hd_data, umb_data]
-    for df in all_studies:
-        df = df.reset_index()
-    all_participants = pd.concat(all_studies, ignore_index=True)
+    all_participants = pd.concat(all_studies)
     dem_cols = ['Participant ID', 'Name', 'Email', 'Study', 'Status', 'Date of Consent', 'Baseline Date', 'DOB', 'Age', 'Sex', 'Gender', 'Race', 'Ethnicity']
     dems = all_participants.reset_index().loc[:, dem_cols]
 
