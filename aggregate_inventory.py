@@ -7,27 +7,14 @@ import re
 from copy import deepcopy
 import os
 import argparse
-from helpers import clean_sample_id
-
-freezer_map = pd.read_excel(util.freezer_map, sheet_name='Racks in Freezers', header=0)    
-
-# Pull all file/folder locations from util.py
-# Pull in sample data from dscf to check (query_dscf in helpers.py)
+from helpers import clean_sample_id 
 
 def pos_convert(idx):
     '''Converts a 0-80 index to a box position'''
     return str((idx // 9) + 1) + "/" + "ABCDEFGHI"[idx % 9]
 
-def filter_box(box_name, uploaded, box_df=None):
-    '''
-    Returns True if the box is not in the uploaded list and has a valid number of samples
-    '''
-    if box_df is None:
-        return False
-    return (box_name not in uploaded) and (box_df.set_index('Name').loc[box_name, 'Done?'] == "Yes")
-
 class Box:
-    def __init__(self, name, sheet, freezer_map, boxes_lost):
+    def __init__(self, name, sheet, racks_in_freezers, boxes_lost):
         self.valid = False
         self.name = name
         self.sheet = sheet
@@ -46,7 +33,7 @@ class Box:
         except:
             boxes_lost[name] = "Rack Number Missing"
             return
-        if self.rack_number not in freezer_map['Rack ID']:
+        if self.rack_number not in racks_in_freezers.index:
             boxes_lost[name] = "Rack Number Provided Not in Inventory"
             return
         if "Sample ID" not in sheet.columns:
@@ -73,13 +60,21 @@ class Box:
             return
         self.box_kinds = re.findall('RESEARCH|NIH|Lab|FF', name)
         if len(self.box_kinds) == 0:
-            if sample_type in ['PBMC', 'HT', '4.5 mL Tube']:
+            if self.sample_type in ['PBMC', 'HT', '4.5 mL Tube']:
                 self.box_kinds.append('')
             else:
                 boxes_lost[name] = "Neither lab nor FF"
                 return
         if not self.box_done:
             boxes_lost[name] = 'Not marked complete'
+        rack_info = racks_in_freezers.loc[self.rack_number, :]
+        self.freezer = str(rack_info['Farm']) + " New"
+        self.level1 = str(rack_info['Freezer'])
+        self.level2 = str(rack_info['Level2'])
+        if self.sample_type != 'PBMC':
+            self.level3 = "Rack " + str(int(self.rack_number))
+        else:
+            self.level3 = ""
         self.valid = True
 
 
@@ -88,10 +83,8 @@ if __name__ == '__main__':
     argParser.add_argument('-m', '--min_count', action='store', type=int, default=81)
     args = argParser.parse_args()
     inventory_boxes = pd.read_excel(util.inventory_input, sheet_name=None)
-    freezer_map = pd.read_excel(util.freezer_map, sheet_name='Racks in Freezers', header=0)
-    racks_in_freezers = freezer_map.dropna(subset='Rack ID', axis=0).copy().set_index('Rack ID')
-    freezers_positions = pd.read_excel(util.freezer_map, sheet_name='FP Shelf_Rack Names', header=0, index_col='Concat')
-    sample_types = ['Plasma', 'Serum', 'Pellet', 'Saliva', 'PBMC', 'HT', '4.5 mL Tube', 'NPS', 'All']
+    racks_in_freezers = pd.read_excel(util.freezer_map, sheet_name='Racks in Freezers').dropna(subset='Rack ID', axis=0).copy().set_index('Rack ID')
+    sample_types = ['Plasma', 'Serum', 'Pellet', 'Saliva', 'PBMC', 'HT', '4.5 mL Tube', 'NPS', 'RNA', 'All']
     data = {'Name': [], 'Sample ID': [], 'Sample Type': [],'Freezer': [],'Level1': [],'Level2': [],'Level3': [],'Box': [],'Position': [], 'ALIQUOT': []}
     samples_data = {st: deepcopy(data) for st in sample_types if st != 'HT'}
     samples_data['Serum']['Heat treated?'] = []
@@ -99,13 +92,11 @@ if __name__ == '__main__':
     samples_data['4.5 mL Tube']['Serum or Plasma?'] = []
     samples_data['All'] = deepcopy(data)
     box_counts = {}
-    aliquot_counts = {}
-    completion = []
     boxes_lost = {}
     typeless_samples = []
 
     for name, sheet in inventory_boxes.items():
-        boxx = Box(name, sheet, freezer_map, boxes_lost)
+        boxx = Box(name, sheet, racks_in_freezers, boxes_lost)
         if not boxx.valid or not boxx.box_done:
             continue
         sheet = sheet.assign(sample_id=clean_sample_id).set_index('sample_id')
@@ -117,20 +108,9 @@ if __name__ == '__main__':
             else:
                 box_name = f"{boxx.team} {boxx.sample_type} {kind} {boxx.box_number}"
             box_counts[box_name] = 0
-            rack_info = racks_in_freezers.loc[boxx.rack_number, :]
-            if boxx.sample_type == 'PBMC':
-                freezer = 'LN Tank #3'
-                level1 = 'PBMC SUPER TEMPORARY HOLDING'
-                level2 = ''
-                level3 = ''
-            else:
-                freezer = str(rack_info['Farm']) + " New"
-                level1 = str(rack_info['Freezer'])
-                level2 = "Shelf " + int(rack_info['Shelf'])
-                level3 = "Rack " + int(boxx.rack_number)
             for idx, (sample_id, row) in enumerate(sheet.iterrows()):
                 sample_id = str(sample_id).strip().upper()
-                if re.search("[1-9A-Z][0-9]{4,5}", sample_id) is None:
+                if re.search("((PV)|[1-9A-Z])[0-9]{4,6}", sample_id) is None:
                     continue
                 sample_type = 'N/A'
                 for val in sample_types:
@@ -139,28 +119,26 @@ if __name__ == '__main__':
                         break
                 if sample_type == 'N/A':
                     typeless_samples.append((sample_id, box_name))
-                    continue
-                for sname in [sample_type, 'All']:
-                    data = samples_data[sname]
-                    data['Name'].append(sample_id)
-                    data['Sample ID'].append(sample_id)
-                    data['Sample Type'].append(row['Sample Type'].strip())
-                    data['Freezer'].append(freezer)
-                    data['Level1'].append(level1)
-                    data['Level2'].append(level2)
-                    data['Level3'].append(level3)
-                    data['Box'].append(box_name)
-                    data['Position'].append(pos_convert(idx))
-                    data['ALIQUOT'].append(sample_id)
-                    if sname in ['Serum', 'Plasma']:
-                        if boxx.sample_type == 'HT':
-                            data['Heat treated?'].append('Yes')
-                        else:
-                            data['Heat treated?'].append('No')
-                    if sname == '4.5 mL Tube':
-                        data['Serum or Plasma?'].append(row['Serum or Plasma?'])
-                box_counts[box_name] += 1
-            completion.append(box_name)
+                else:
+                    for sname in [sample_type, 'All']:
+                        data = samples_data[sname]
+                        for col in ['Name', 'Sample ID', 'ALIQUOT']:
+                            data[col].append(sample_id)
+                        data['Sample Type'].append(sample_type)
+                        data['Freezer'].append(boxx.freezer)
+                        data['Level1'].append(boxx.level1)
+                        data['Level2'].append(boxx.level2)
+                        data['Level3'].append(boxx.level3)
+                        data['Box'].append(box_name)
+                        data['Position'].append(pos_convert(idx))
+                        if sname in ['Serum', 'Plasma']:
+                            if boxx.sample_type == 'HT':
+                                data['Heat treated?'].append('Yes')
+                            else:
+                                data['Heat treated?'].append('No')
+                        if sname == '4.5 mL Tube':
+                            data['Serum or Plasma?'].append(row['Serum or Plasma?'])
+                    box_counts[box_name] += 1
     uploaded = set()
     box_data = {'Name': [], 'Tube Count': []}
     for (box_name, tube_count) in box_counts.items():
