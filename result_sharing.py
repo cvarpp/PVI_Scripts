@@ -1,9 +1,6 @@
 import numpy as np
 import pandas as pd
 import util
-from datetime import date
-import datetime
-from dateutil import parser
 from helpers import query_intake, ValuesToClass
 import argparse
 import os
@@ -80,7 +77,7 @@ if __name__ == '__main__':
             args = ValuesToClass(values)        
 
     report = make_report(args.use_cache)
-    recency_cutoff = date.today() - datetime.timedelta(days=args.recency)
+    recency_cutoff = pd.Timestamp.now() - pd.Timedelta(days=args.recency)
     report_old = report[report['Date Collected'] < recency_cutoff]
     report_new = report[report['Date Collected'] >= recency_cutoff]
     report_new_emails = report_new[~report_new['Email'].isna()]
@@ -88,7 +85,7 @@ if __name__ == '__main__':
 
     assert(report_old.shape[0] + report_new.shape[0] == report.shape[0])
     assert(report_new_emails.shape[0] + report_new_no_emails.shape[0] == report_new.shape[0])
-    output_filename = util.sharing + 'result_reporting_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
+    output_filename = util.sharing + 'result_reporting_{}.xlsx'.format(pd.Timestamp.now().strftime("%m.%d.%y"))
     if not args.debug:
         with pd.ExcelWriter(output_filename) as writer:
             report_new_emails.to_excel(writer, sheet_name='Results to Share', index=False)

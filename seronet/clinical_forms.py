@@ -2,6 +2,7 @@ import pandas as pd
 import datetime
 import argparse
 import util
+import warnings
 
 # Priority does not use CRF or CPT
 
@@ -18,14 +19,21 @@ def specimenize(row):
         return "OOPS"
 
 def write_clinical(input_df, output_fname, debug=False):
-    base_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Date_Duration_From_Index', 'Lost_to_Follow_Up', 'Final_Visit', 'Age', 'Sex_At_Birth', 'Race', 'Ethnicity', 'Height', 'Weight', 'BMI', 'Location', 'Biospecimens_Collected', 'Diabetes', 'Diabetes_Description_Or_ICD10_codes', 'Hypertension', 'Hypertension_Description_Or_ICD10_codes', 'Obesity', 'Obesity_Description_Or_ICD10_codes', 'Cardiovascular_Disease', 'Cardiovascular_Disease_Description_Or_ICD10_codes', 'Chronic_Lung_Disease', 'Chronic_Lung_Disease_Description_Or_ICD10_codes', 'Chronic_Kidney_Disease', 'Chronic_Kidney_Disease_Description_Or_ICD10_codes', 'Chronic_Liver_Disease', 'Chronic_Liver_Disease_Description_Or_ICD10_codes', 'Acute_Liver_Disease', 'Acute_Liver_Disease_Description_Or_ICD10_codes', 'Immunosuppressive_Condition', 'Immunosuppressive_Condition_Description_Or_ICD10_codes', 'Autoimmune_Disorder', 'Autoimmune_Disorder_Description_Or_ICD10_codes', 'Chronic_Neurological_Condition', 'Chronic_Neurological_Condition_Description_Or_ICD10_codes', 'Chronic_Oxygen_Requirement', 'Chronic_Oxygen_Requirement_Description_Or_ICD10_codes', 'Inflammatory_Disease', 'Inflammatory_Disease_Description_Or_ICD10_codes', 'Viral_Infection', 'Viral_Infection_ICD10_codes_Or_Agents', 'Bacterial_Infection', 'Bacterial_Infection_ICD10_codes_Or_Agents', 'Cancer', 'Cancer_Description_Or_ICD10_codes', 'Substance_Abuse_Disorder', 'Substance_Abuse_Disorder_Description_Or_ICD10_codes', 'Organ_Transplant_Recipient', 'Organ_Transplant_Description_Or_ICD10_codes', 'Other_Health_Condition_Description_Or_ICD10_codes', 'ECOG_Status', 'Smoking_Or_Vaping_Status', 'Alcohol_Use', 'Drug_Type', 'Drug_Use', 'Vaccination_Record', 'Pregnancy_Status', 'Comments']
-    follow_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Visit_Date_Duration_From_Index', 'Lost_to_Follow_Up', 'Final_Visit', 'Baseline_Visit', 'Number_of_Missed_Scheduled_Visits', 'Unscheduled_Visit', 'Biospecimens_Collected', 'Diabetes', 'Diabetes_Description_Or_ICD10_codes', 'Hypertension', 'Hypertension_Description_Or_ICD10_codes', 'Obesity', 'Obesity_Description_Or_ICD10_codes', 'Cardiovascular_Disease', 'Cardiovascular_Disease_Description_Or_ICD10_codes', 'Chronic_Lung_Disease', 'Chronic_Lung_Disease_Description_Or_ICD10_codes', 'Chronic_Kidney_Disease', 'Chronic_Kidney_Disease_Description_Or_ICD10_codes', 'Chronic_Liver_Disease', 'Chronic_Liver_Disease_Description_Or_ICD10_codes', 'Acute_Liver_Disease', 'Acute_Liver_Disease_Description_Or_ICD10_codes', 'Immunosuppressive_Condition', 'Immunosuppressive_Condition_Description_Or_ICD10_codes', 'Autoimmune_Disorder', 'Autoimmune_Disorder_Description_Or_ICD10_codes', 'Chronic_Neurological_Condition', 'Chronic_Neurological_Condition_Description_Or_ICD10_codes', 'Chronic_Oxygen_Requirement', 'Chronic_Oxygen_Requirement_Description_Or_ICD10_codes', 'Inflammatory_Disease', 'Inflammatory_Disease_Description_Or_ICD10_codes', 'Viral_Infection', 'Viral_Infection_ICD10_codes_Or_Agents', 'Bacterial_Infection', 'Bacterial_Infection_ICD10_codes_Or_Agents', 'Cancer', 'Cancer_Description_Or_ICD10_codes', 'Substance_Abuse_Disorder', 'Substance_Abuse_Disorder_Description_Or_ICD10_codes', 'Organ_Transplant_Recipient', 'Organ_Transplant_Description_Or_ICD10_codes', 'Other_Health_Condition_Description_Or_ICD10_codes', 'ECOG_Status', 'Smoking_Or_Vaping_Status', 'Alcohol_Use', 'Drug_Type', 'Drug_Use', 'Vaccination_Record', 'Pregnancy_Status', 'Comments']
+    base_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Date_Duration_From_Index', 'Lost_to_Follow_Up',
+                 'Final_Visit', 'Age', 'Sex_At_Birth', 'Race', 'Ethnicity', 'Height', 'Weight', 'BMI', 'Location',
+                 'Biospecimens_Collected',
+                 'Diabetes', 'Diabetes_Provenance', 'Diabetes_Description_Or_ICD10_codes', 'Diabetes_Description_Or_ICD10_codes_Provenance', 'Hypertension', 'Hypertension_Provenance', 'Hypertension_Description_Or_ICD10_codes', 'Hypertension_Description_Or_ICD10_codes_Provenance', 'Obesity', 'Obesity_Provenance', 'Obesity_Description_Or_ICD10_codes', 'Obesity_Description_Or_ICD10_codes_Provenance', 'Cardiovascular_Disease', 'Cardiovascular_Disease_Provenance', 'Cardiovascular_Disease_Description_Or_ICD10_codes', 'Cardiovascular_Disease_Description_Or_ICD10_codes_Provenance', 'Chronic_Lung_Disease', 'Chronic_Lung_Disease_Provenance', 'Chronic_Lung_Disease_Description_Or_ICD10_codes', 'Chronic_Lung_Disease_Description_Or_ICD10_codes_Provenance', 'Chronic_Kidney_Disease', 'Chronic_Kidney_Disease_Provenance', 'Chronic_Kidney_Disease_Description_Or_ICD10_codes', 'Chronic_Kidney_Disease_Description_Or_ICD10_codes_Provenance', 'Chronic_Liver_Disease', 'Chronic_Liver_Disease_Provenance', 'Chronic_Liver_Disease_Description_Or_ICD10_codes', 'Chronic_Liver_Disease_Description_Or_ICD10_codes_Provenance', 'Acute_Liver_Disease', 'Acute_Liver_Disease_Provenance', 'Acute_Liver_Disease_Description_Or_ICD10_codes', 'Acute_Liver_Disease_Description_Or_ICD10_codes_Provenance', 'Immunosuppressive_Condition', 'Immunosuppressive_Condition_Provenance', 'Immunosuppressive_Condition_Description_Or_ICD10_codes', 'Immunosuppressive_Condition_Description_Or_ICD10_codes_Provenance', 'Autoimmune_Disorder', 'Autoimmune_Disorder_Provenance', 'Autoimmune_Disorder_Description_Or_ICD10_codes', 'Autoimmune_Disorder_Description_Or_ICD10_codes_Provenance', 'Chronic_Neurological_Condition', 'Chronic_Neurological_Condition_Provenance', 'Chronic_Neurological_Condition_Description_Or_ICD10_codes', 'Chronic_Neurological_Condition_Description_Or_ICD10_codes_Provenance', 'Chronic_Oxygen_Requirement', 'Chronic_Oxygen_Requirement_Provenance', 'Chronic_Oxygen_Requirement_Description_Or_ICD10_codes', 'Chronic_Oxygen_Requirement_Description_Or_ICD10_codes_Provenance', 'Inflammatory_Disease', 'Inflammatory_Disease_Provenance', 'Inflammatory_Disease_Description_Or_ICD10_codes', 'Inflammatory_Disease_Description_Or_ICD10_codes_Provenance', 'Viral_Infection', 'Viral_Infection_ICD10_codes_Or_Agents', 'Bacterial_Infection', 'Bacterial_Infection_ICD10_codes_Or_Agents',
+                 'Cancer', 'Cancer_Provenance', 'Cancer_Description_Or_ICD10_codes', 'Cancer_Description_Or_ICD10_codes_Provenance',
+                 'Substance_Abuse_Disorder', 'Substance_Abuse_Disorder_Description_Or_ICD10_codes', 'Organ_Transplant_Recipient',
+                 'Organ_Transplant_Description_Or_ICD10_codes', 'Other_Health_Condition_Description_Or_ICD10_codes', 'Other_Health_Condition_Description_Or_ICD10_codes_Provenance', 'ECOG_Status',
+                 'Smoking_Or_Vaping_Status', 'Alcohol_Use', 'Drug_Type', 'Drug_Use', 'Vaccination_Record', 'Pregnancy_Status', 'Comments']
+    follow_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Visit_Date_Duration_From_Index', 'Lost_to_Follow_Up', 'Final_Visit', 'Baseline_Visit', 'Number_of_Missed_Scheduled_Visits', 'Unscheduled_Visit', 'Biospecimens_Collected', 'Diabetes', 'Diabetes_Description_Or_ICD10_codes', 'Hypertension', 'Hypertension_Description_Or_ICD10_codes', 'Obesity', 'Obesity_Description_Or_ICD10_codes', 'Cardiovascular_Disease', 'Cardiovascular_Disease_Description_Or_ICD10_codes', 'Chronic_Lung_Disease', 'Chronic_Lung_Disease_Description_Or_ICD10_codes', 'Chronic_Kidney_Disease', 'Chronic_Kidney_Disease_Description_Or_ICD10_codes', 'Chronic_Liver_Disease', 'Chronic_Liver_Disease_Description_Or_ICD10_codes', 'Acute_Liver_Disease', 'Acute_Liver_Disease_Description_Or_ICD10_codes', 'Immunosuppressive_Condition', 'Immunosuppressive_Condition_Description_Or_ICD10_codes', 'Autoimmune_Disorder', 'Autoimmune_Disorder_Description_Or_ICD10_codes', 'Chronic_Neurological_Condition', 'Chronic_Neurological_Condition_Description_Or_ICD10_codes', 'Chronic_Oxygen_Requirement', 'Chronic_Oxygen_Requirement_Description_Or_ICD10_codes', 'Inflammatory_Disease', 'Inflammatory_Disease_Description_Or_ICD10_codes', 'Viral_Infection', 'Viral_Infection_ICD10_codes_Or_Agents', 'Bacterial_Infection', 'Bacterial_Infection_ICD10_codes_Or_Agents', 'Cancer', 'Cancer_Provenance', 'Cancer_Description_Or_ICD10_codes', 'Cancer_Description_Or_ICD10_codes_Provenance', 'Substance_Abuse_Disorder', 'Substance_Abuse_Disorder_Description_Or_ICD10_codes', 'Organ_Transplant_Recipient', 'Organ_Transplant_Description_Or_ICD10_codes', 'Other_Health_Condition_Description_Or_ICD10_codes', 'ECOG_Status', 'Smoking_Or_Vaping_Status', 'Alcohol_Use', 'Drug_Type', 'Drug_Use', 'Vaccination_Record', 'Pregnancy_Status', 'Comments']
     covid_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'COVID_Status', 'Breakthrough_COVID', 'SARS-CoV-2_Variant', 'PCR_Test_Date_Duration_From_Index', 'Rapid_Antigen_Test_Date_Duration_From_Index', 'Antibody_Test_Date_Duration_From_Index', 'Symptomatic_COVID', 'Recovered_From_COVID', 'Duration_of_Disease', 'Recovery_Date_Duration_From_Index', 'Disease_Severity', 'Level_Of_Care', 'Symptoms', 'Other_Symptoms', 'COVID_complications', 'Long_COVID_symptoms', 'Other_Long_COVID_symptoms', 'COVID_Therapy', 'Comments']
-    vax_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Vaccination_Status', 'SARS-CoV-2_Vaccine_Type', 'SARS-CoV-2_Vaccination_Date_Duration_From_Index', 'SARS-CoV-2_Vaccination_Side_Effects', 'Other_SARS-CoV-2_Vaccination_Side_Effects', 'Comments']
+    vax_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Vaccination_Status', 'SARS-CoV-2_Vaccine_Lot_Number', 'SARS-CoV-2_Vaccine_Type', 'SARS-CoV-2_Vaccination_Date_Duration_From_Index', 'SARS-CoV-2_Vaccination_Side_Effects', 'Other_SARS-CoV-2_Vaccination_Side_Effects', 'Comments']
     meds_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Health_Condition_Or_Disease', 'Treatment', 'Dosage', 'Dosage_Units', 'Dosage_Regimen', 'Start_Date_Duration_From_Index', 'Stop_Date_Duration_From_Index', 'Update', 'Comments']
     auto_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Autoimmune_Condition', 'Autoimmune_Condition_ICD10_code', 'Year_Of_Diagnosis_Duration_to_Index', 'Antibody_Name', 'Antibody_Present', 'Update', 'Comments']
     trans_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Organ Transplant', 'Organ_Transplant_Other', 'Number_of_Hematopoietic_Cell_Transplants', 'Number_Of_Solid_Organ_Transplants', 'Date_of_Latest_Hematopoietic_Cell_Transplant_Duration_From_Index', 'Date_of_Latest_Solid_Organ_Transplant_Duration_From_Index', 'Update', 'Comments']
-    cancer_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Cancer', 'ICD_10_Code', 'Year_Of_Diagnosis_Duration_From_Index', 'Cured', 'In_Remission', 'In_Unspecified_Therapy', 'Chemotherapy', 'Radiation Therapy', 'Surgery', 'Update', 'Comments']
+    cancer_cols = ['Research_Participant_ID', 'Cohort', 'Visit_Number', 'Cancer', 'Cancer_Provenance', 'ICD_10_Code', 'ICD_10_Code_Provenance', 'Year_Of_Diagnosis_Duration_From_Index', 'Year_Of_Diagnosis_Duration_From_Index_Provenance', 'Cured', 'Cured_Provenance', 'In_Remission', 'In_Remission_Provenance', 'In_Unspecified_Therapy', 'In_Unspecified_Therapy_Provenance', 'Chemotherapy', 'Chemotherapy_Provenance', 'Radiation Therapy', 'Radiation Therapy_Provenance', 'Surgery', 'Surgery_Provenance', 'Update', 'Comments']
 
     iris_data = util.iris_folder + 'IRIS for D4 Long.xlsx'
     mars_data = util.mars_folder + 'MARS for D4 Long.xlsx'
@@ -34,14 +42,16 @@ def write_clinical(input_df, output_fname, debug=False):
     gaea_data = util.gaea_folder + 'GAEA for D4 Long.xlsx'
     participant_study = input_df.drop_duplicates(subset='Participant ID').set_index('Participant ID')['Cohort']
 
-    exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
+        exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
     exclude_ppl = set(exclusions['Participant ID'].unique())
     exclude_ids = set(exclusions['Research_Participant_ID'].unique())
     exclude_filter = (input_df['Participant ID'].apply(lambda val: val not in exclude_ppl) & 
                         input_df['Research_Participant_ID'].apply(lambda val: val not in exclude_ids))
     all_samples = input_df[exclude_filter].copy()
     specimen_ids = all_samples['Biospecimen_ID'].unique() # samples to include 
-    one_per = all_samples.drop_duplicates(subset=['Research_Participant_ID', 'Visit_Number'])
+    one_per = all_samples.drop_duplicates(subset=['Research_Participant_ID', 'Visit_Number']).copy()
     one_per['Serum'] = one_per.apply(lambda row: '{}_1{}'.format(row['Research_Participant_ID'], str(row['Visit_Number']).strip("bBaseline()").zfill(2)) in specimen_ids, axis=1)
     one_per['PBMC'] = one_per.apply(lambda row: '{}_2{}'.format(row['Research_Participant_ID'], str(row['Visit_Number']).strip("bBaseline()").zfill(2)) in specimen_ids, axis=1)
     one_per['Biospecimens_Collected'] = one_per.apply(specimenize, axis=1)
@@ -61,12 +71,15 @@ def write_clinical(input_df, output_fname, debug=False):
 
     current_input = {}
     cohort_df_names = [iris_data, mars_data, titan_data, priority_data, gaea_data]
-    current_input['Baseline'] = pd.concat([pd.read_excel(df_name, sheet_name='Baseline Info', keep_default_na=False).set_index('Research_Participant_ID') for df_name in cohort_df_names])
-    current_input['COVID'] = pd.concat([pd.read_excel(df_name, sheet_name='COVID Infections', keep_default_na=False) for df_name in cohort_df_names]).reset_index()
-    current_input['Vax'] = pd.concat([pd.read_excel(df_name, sheet_name='COVID Vaccinations', keep_default_na=False) for df_name in cohort_df_names]).reset_index()
-    current_input['Meds'] = pd.concat([pd.read_excel(df_name, sheet_name='Medications', keep_default_na=False) for df_name in cohort_df_names]).reset_index()
-    current_input['Transplant'] = pd.read_excel(titan_data, sheet_name='Transplant-Specific', keep_default_na=False).set_index('Research_Participant_ID')
-    current_input['Cancer'] = pd.read_excel(mars_data, sheet_name='Cancer-specific', keep_default_na=False).set_index('Research_Participant_ID')
+
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
+        current_input['Baseline'] = pd.concat([pd.read_excel(df_name, sheet_name='Baseline Info', keep_default_na=False).set_index('Research_Participant_ID') for df_name in cohort_df_names])
+        current_input['COVID'] = pd.concat([pd.read_excel(df_name, sheet_name='COVID Infections', keep_default_na=False) for df_name in cohort_df_names]).reset_index()
+        current_input['Vax'] = pd.concat([pd.read_excel(df_name, sheet_name='COVID Vaccinations', keep_default_na=False) for df_name in cohort_df_names]).reset_index()
+        current_input['Meds'] = pd.concat([pd.read_excel(df_name, sheet_name='Medications', keep_default_na=False) for df_name in cohort_df_names]).reset_index()
+        current_input['Transplant'] = pd.read_excel(titan_data, sheet_name='Transplant-Specific', keep_default_na=False).set_index('Research_Participant_ID')
+        current_input['Cancer'] = pd.read_excel(mars_data, sheet_name='Cancer-specific', keep_default_na=False).set_index('Research_Participant_ID')
     current_input['Meds']['Reported'] = 'No'
     current_input['Vax']['Reported'] = 'No'
     current_input['COVID']['Reported'] = 'No'
@@ -77,7 +90,7 @@ def write_clinical(input_df, output_fname, debug=False):
         visit_date = row_outer['Date']
         participant = row_outer['Participant ID']
         study = participant_study[participant]
-        # index_date = row_outer['Index Date'].date()
+        # index_date = row_outer['Index Date']
         # days_from_index = int((visit_date - index_date).days)
         days_from_index = row_outer['Biospecimen_Collection_Date_Duration_From_Index']
         index_date = visit_date - datetime.timedelta(days=days_from_index)
@@ -110,11 +123,22 @@ def write_clinical(input_df, output_fname, debug=False):
         add_to['Lost_to_Follow_Up'].append('No')
         add_to['Final_Visit'].append('No')
         add_to['Biospecimens_Collected'].append(specimens)
-        for col in follow_cols[10:-3]: # hard coded
+        for col in base_cols[14:-3]: # hard coded
             if visit == 'Baseline(1)':
-                add_to[col].append(source_df.loc[seronet_id, col])
-            else:
-                if "ICD10" in col:
+                if 'Provenance' in col:
+                    if study == 'GAEA':
+                        add_to[col].append('Self Reported')
+                    else:
+                        add_to[col].append('EMR')
+                else:
+                    add_to[col].append(source_df.loc[seronet_id, col])
+            elif col in follow_cols:
+                if 'Provenance' in col:
+                    if study == 'GAEA':
+                        add_to[col].append('Self Reported')
+                    else:
+                        add_to[col].append('EMR')
+                elif "ICD10" in col:
                     if source_df.loc[seronet_id, col] == 'N/A':
                         add_to[col].append('Not Reported')
                     else:
@@ -144,13 +168,13 @@ def write_clinical(input_df, output_fname, debug=False):
             add_to['Comments'].append('')
         else:
             for idx, row in source_df[source_df['Participant ID'] == participant].sort_values('Report_Time').iterrows():
-                if row['Reported'] == 'No' and row['Report_Time'].date() < visit_date:
+                if row['Reported'] == 'No' and pd.to_datetime(row['Report_Time'], errors='coerce')  < visit_date:
                     source_df.loc[idx, 'Reported'] = 'Yes'
                     for col in covid_cols[3:-1]:
                         if 'Date' in col:
                             cropped_col = col[:-20] # drop "Duration_From_Index"
                             try:
-                                add_to[col].append(int((row[cropped_col].date() - index_date).days))
+                                add_to[col].append(int((row[cropped_col] - index_date).days))
                             except:
                                 add_to[col].append(row[cropped_col])
                         else:
@@ -184,13 +208,13 @@ def write_clinical(input_df, output_fname, debug=False):
             add_to['Comments'].append('')
         else:
             for idx, row in source_df[source_df['Participant ID'] == participant].iterrows():
-                if row['Reported'] == 'No' and row['SARS-CoV-2_Vaccination_Date'].date() < visit_date:
+                if row['Reported'] == 'No' and pd.to_datetime(row['SARS-CoV-2_Vaccination_Date'], errors='coerce') < visit_date:
                     source_df.loc[idx, 'Reported'] = 'Yes'
                     for col in vax_cols[3:-1]:
                         if 'Date' in col:
                             cropped_col = col[:-20] # drop "_From_Index"
                             try:
-                                add_to[col].append(int((row[cropped_col].date() - index_date).days))
+                                add_to[col].append(int((row[cropped_col] - index_date).days))
                             except:
                                 if row[cropped_col] in ["N/A", "Unknown", "Not Reported"]:
                                     add_to[col].append(row[cropped_col])
@@ -234,22 +258,22 @@ def write_clinical(input_df, output_fname, debug=False):
         #     add_to['Comments'].append('No Treatment Reported')
         for idx, row in source_df[(source_df['Participant ID'] == participant) & source_df['Report_Time'].apply(lambda val: type(val) != str)].sort_values('Report_Time').iterrows():
             try:
-                if row['Reported'] != 'Yes' and row['Report_Time'].date() < visit_date:
+                if row['Reported'] != 'Yes' and pd.to_datetime(row['Report_Time'], errors='coerce') < visit_date:
                     for col in meds_cols[3:-2]:
                         if 'Date' in col:
                             cropped_col = col[:-20] # drop "Duration_From_Index"
                             if cropped_col == 'Start_Date' and source_df.loc[idx, 'Reported'] == 'Partial':
                                 add_to[col].append('Ongoing')
-                            elif cropped_col == 'Stop_Date' and type(row[cropped_col]) == datetime.datetime and row[cropped_col].date() > visit_date:
+                            elif cropped_col == 'Stop_Date' and type(row[cropped_col]) == datetime.datetime and row[cropped_col] > visit_date:
                                 add_to[col].append('Ongoing')
                             else:
                                 try:
                                     if type(row[cropped_col]) == datetime.datetime:
-                                        add_to[col].append(int((row[cropped_col].date() - index_date).days))
+                                        add_to[col].append(int((row[cropped_col] - index_date).days))
                                     else:
                                         add_to[col].append(row[cropped_col])
                                 except:
-                                    print(participant, visit, sample_id, col, row[cropped_col].date())
+                                    print(participant, visit, sample_id, col, row[cropped_col])
                                     add_to[col].append(row[cropped_col])
                         else:
                             add_to[col].append(row[col])
@@ -258,7 +282,7 @@ def write_clinical(input_df, output_fname, debug=False):
                     else:
                         add_to['Update'].append('Not Reported')
                     add_to['Comments'].append(row['Comments'])
-                    if type(row['Stop_Date']) == datetime.datetime and row['Stop_Date'].date() <= visit_date:
+                    if type(row['Stop_Date']) == datetime.datetime and row['Stop_Date'] <= visit_date:
                         source_df.loc[idx, 'Reported'] = 'Yes'
                     else:
                         source_df.loc[idx, 'Reported'] = 'Partial'
@@ -312,7 +336,7 @@ def write_clinical(input_df, output_fname, debug=False):
                         add_to[col].append("N/A")
                     else:
                         try:
-                            add_to[col].append(int((pd.to_datetime(source_df.loc[seronet_id, cropped_col]).date() - index_date).days))
+                            add_to[col].append(int((pd.to_datetime(source_df.loc[seronet_id, cropped_col]) - index_date).days))
                         except:
                             add_to[col].append("N/A")
                 else:
@@ -332,7 +356,9 @@ def write_clinical(input_df, output_fname, debug=False):
             add_to['Cohort'].append(study)
             add_to['Visit_Number'].append(visit)
             for col in cancer_cols[3:-2]:
-                if 'Year' in col:
+                if 'Provenance' in col:
+                    add_to[col].append('EMR')
+                elif 'Year' in col:
                     cropped_col = col[:-20] # drop "Duration_From_Index"
                     if str(source_df.loc[seronet_id, cropped_col]).lower() == "not reported":
                         add_to[col].append("Not Reported")
