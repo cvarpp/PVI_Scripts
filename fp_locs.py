@@ -146,5 +146,3 @@ if __name__ == '__main__':
                     filtered.to_excel(writer, sheet_name=stype, index=False)
             if big_boxes.shape[0] > 0:
                 big_boxes.to_excel(writer, sheet_name='Collaborator or Discarded', index=False)
-
-
