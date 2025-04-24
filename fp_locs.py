@@ -33,9 +33,10 @@ if __name__ == '__main__':
     args = argparser.parse_args()
 
     # Read input excel file into a pandas dataframe and store cleaned inputs in 'soi'
-    soi = pd.read_excel(args.input_fname)
-    if 'Sample ID' in soi.columns:
-        soi['sample_id'] = soi['Sample ID'].astype(str).str.strip().str.upper()
+    if args.input_fname[-3:] == 'csv':
+        soi = pd.read_csv(args.input_fname)['Sample ID'].astype(str).str.strip().str.upper()
+    elif args.input_fname[-4:].isin(['xlsx', 'xlsm', '.xls']):
+        soi = pd.read_excel(args.input_fname)['Sample ID'].astype(str).str.strip().str.upper()
 
     # Authenticate using username and password, then store token
     username = os.environ.get("FP_USER")
@@ -54,7 +55,6 @@ if __name__ == '__main__':
                 continue
             else:
                 manual_response = ""
-        
     token_response = requests.post(f'{fp_url}/auth/login', json={'username': username, 'password': password})
     if token_response.status_code != 200:
         print("Failed authentication. Fatal Error. Exiting...")
@@ -76,7 +76,7 @@ if __name__ == '__main__':
                                                                                   soi.shape[0] * .15 % 60))
 
     # Fetch data for each sample ID
-    for sid in soi['sample_id'].to_numpy():
+    for sid in soi.to_numpy():
         sid_response = requests.get(f'{fp_url}/samples?filter[name_eq]={sid}&{vial_type_suffix}', headers=headers)
         if sid_response.status_code != 200:
             print("Failed to query sample ID {}.".format(sid))
@@ -140,9 +140,11 @@ if __name__ == '__main__':
     if not args.debug:
         with pd.ExcelWriter(args.output_fname) as writer:
             typecounts.fillna(0).to_excel(writer, sheet_name='Summary')
-            for stype in vial_info.index:
+            for stype in vial_info['Name'].unique():
                 filtered = reg_boxes[reg_boxes['Sample Type'] == stype]
-                filtered.to_excel(writer, sheet_name=stype, index=False)
-            big_boxes.to_excel(writer, sheet_name='Collaborator or Discarded', index=False)
+                if filtered.shape[0] > 0:
+                    filtered.to_excel(writer, sheet_name=stype, index=False)
+            if big_boxes.shape[0] > 0:
+                big_boxes.to_excel(writer, sheet_name='Collaborator or Discarded', index=False)
 
 
