@@ -60,7 +60,7 @@ class Box:
             return
         self.box_kinds = re.findall('RESEARCH|NIH|Lab|FF', name)
         if len(self.box_kinds) == 0:
-            if self.sample_type in ['PBMC', 'HT', '4.5 mL Tube']:
+            if self.sample_type in ['PBMC', 'HT', '4.5 mL Tube', 'NPS']:
                 self.box_kinds.append('')
             else:
                 boxes_lost[name] = "Neither lab nor FF"
@@ -71,10 +71,7 @@ class Box:
         self.freezer = str(rack_info['Farm']) + " New"
         self.level1 = str(rack_info['Freezer'])
         self.level2 = str(rack_info['Level2'])
-        if self.sample_type != 'PBMC':
-            self.level3 = "Rack " + str(int(self.rack_number))
-        else:
-            self.level3 = ""
+        self.level3 = "Rack " + str(int(self.rack_number))
         self.valid = True
 
 
@@ -101,7 +98,12 @@ if __name__ == '__main__':
             continue
         sheet = sheet.assign(sample_id=clean_sample_id).set_index('sample_id')
         for kind in boxx.box_kinds:
-            if boxx.team == 'APOLLO':
+            if boxx.sample_type == 'NPS':
+                box_name = name.strip()
+            elif "ATLAS" in name.upper() and boxx.sample_type in ['Serum', 'Plasma', 'Saliva']:
+                kind = boxx.box_kinds[0]
+                box_name = f"ATLAS {boxx.sample_type} {kind} {boxx.box_number}"
+            elif boxx.team == 'APOLLO':
                 box_name = f"{boxx.team} {kind} {boxx.box_number}"
             elif boxx.sample_type in ['PBMC', 'HT', '4.5 mL Tube']:
                 box_name = f"{boxx.team} {boxx.sample_type} {boxx.box_number}"
