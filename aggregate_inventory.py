@@ -71,10 +71,7 @@ class Box:
         self.freezer = str(rack_info['Farm']) + " New"
         self.level1 = str(rack_info['Freezer'])
         self.level2 = str(rack_info['Level2'])
-        if self.sample_type != 'PBMC':
-            self.level3 = "Rack " + str(int(self.rack_number))
-        else:
-            self.level3 = ""
+        self.level3 = "Rack " + str(int(self.rack_number))
         self.valid = True
 
 
