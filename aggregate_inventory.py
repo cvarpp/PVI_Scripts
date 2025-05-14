@@ -101,7 +101,7 @@ if __name__ == '__main__':
         sheet = sheet.assign(sample_id=clean_sample_id).set_index('sample_id')
         for kind in boxx.box_kinds:
             if boxx.sample_type == 'NPS':
-                box_name = name.strip()
+                box_name = name.strip() # TODO: This cedes too much control of box naming, regularize somehow
             elif boxx.team == 'APOLLO':
                 box_name = f"{boxx.team} {kind} {boxx.box_number}"
             elif boxx.sample_type in ['PBMC', 'HT', '4.5 mL Tube']:
