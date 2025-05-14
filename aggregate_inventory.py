@@ -45,6 +45,8 @@ class Box:
             self.team = 'PSP'
         elif re.match("MIT|MARS|IRIS|TITAN|PRIORITY", name.upper()) is not None:
             self.team = 'PVI ' + name.split()[0]
+        elif re.search('ATLAS', name):
+            self.team = 'ATLAS'
         else:
             self.team = 'PVI'
         self.sample_type = None
@@ -100,9 +102,6 @@ if __name__ == '__main__':
         for kind in boxx.box_kinds:
             if boxx.sample_type == 'NPS':
                 box_name = name.strip()
-            elif "ATLAS" in name.upper() and boxx.sample_type in ['Serum', 'Plasma', 'Saliva']:
-                kind = boxx.box_kinds[0]
-                box_name = f"ATLAS {boxx.sample_type} {kind} {boxx.box_number}"
             elif boxx.team == 'APOLLO':
                 box_name = f"{boxx.team} {kind} {boxx.box_number}"
             elif boxx.sample_type in ['PBMC', 'HT', '4.5 mL Tube']:
