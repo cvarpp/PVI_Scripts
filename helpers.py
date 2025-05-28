@@ -41,7 +41,7 @@ def clean_sample_id(df):
     Converts sample IDs to strings, stripping leading and trailing spaces as well as
     converting all alphabetic characters to uppercase.
     '''
-    return df['Sample ID'].astype(str).str.strip().str.upper().str.replace('\.0', '', regex=True)
+    return df['Sample ID'].astype(str).str.strip().str.upper().str.replace(r'\.0', '', regex=True)
 
 def clean_research(df):
     '''
