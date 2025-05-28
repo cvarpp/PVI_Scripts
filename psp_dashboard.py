@@ -74,8 +74,8 @@ def link_log():
         if 'Sample ID ' in df.columns:
             df['Sample ID'] = df['Sample ID ']
         if 'Sample ID' in df.columns:
-            cols_to_swap = [col for col in df[~(df.astype(str).apply(lambda s: s.str.contains('PV')) | df.astype(str).apply(lambda s: s.str.contains('PX')) | df.astype(str).apply(lambda s: s.str.contains('SE'))) & df.astype(str).apply(lambda s: s.str.len() >= 8)].dropna(how='all', axis=1).columns if col not in ['Rack', 'Accession']]
-            if 0 < len(cols_to_swap) < 3:
+            cols_to_swap = [col for col in df[~(df.astype(str).apply(lambda s: s.str.contains('PV')) | df.astype(str).apply(lambda s: s.str.contains('PX')) | df.astype(str).apply(lambda s: s.str.contains('SE'))) & df.astype(str).apply(lambda s: s.str.len() >= 8)].dropna(how='all', axis=1).columns if col not in ['Rack']]
+            if 'Accession' not in df.columns and 0 < len(cols_to_swap) < 3:
                 df['Accession'] = df[cols_to_swap[0]] # a little hacky, hand verified for archive and should be irrelevant for new racks
             df['Sheet Name'] = sname
             to_concat.append(df)
