@@ -54,13 +54,9 @@ def accrue(args):
     intermediate = 'monthly_report'
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
-        if not args.use_cache:
-            all_data = pull_from_source(args.debug).query('Date <= @args.report_end').copy()
-            ecrabs = make_ecrabs(all_data, output_fname=intermediate, debug=args.debug)
-            dfs_clin = write_clinical(pd.DataFrame(ecrabs['Biospecimen']), 'monthly_tmp', debug=args.debug)
-        else:
-            all_data = pd.read_excel(util.unfiltered, keep_default_na=False).query('Date <= @args.report_end').copy()
-            dfs_clin = pd.read_excel(util.cross_d4 + 'monthly_tmp.xlsx', sheet_name = None, keep_default_na=False)
+        all_data = pull_from_source(args.debug).query('Date <= @args.report_end').copy()
+        ecrabs = make_ecrabs(all_data, output_fname=intermediate, debug=args.debug)
+        dfs_clin = write_clinical(pd.DataFrame(ecrabs['Biospecimen']), 'monthly_tmp', debug=args.debug)
         seronet_key = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name=None)
     exclusions = seronet_key['Exclusions']
     exclude_ppl = set(exclusions['Participant ID'].unique())
@@ -157,11 +153,11 @@ def accrue(args):
         pd.concat([vax_data.drop(orig_date, axis='columns'), gaea_vax]).to_excel(output_inner + 'Accrual_Vaccination_Status.xlsx', index=False, na_rep='N/A')
         pd.concat([df_start.loc[:, sample_cols], gaea_samples]).to_excel(output_inner + 'Accrual_Visit_Info.xlsx', index=False, na_rep='N/A')
         df_start.loc[:, sample_cols + ['Sample ID']].to_excel(output_outer + 'Latest_Accrual_SIDs.xlsx', index=False, na_rep='N/A')
+    return df_start.loc[:, sample_cols + ['Sample ID']], ecrabs, dfs_clin, seronet_key
 
 if __name__ == '__main__':
     if len(sys.argv) != 1:
         argParser = argparse.ArgumentParser(description='Make files for monthly data submission.')
-        argParser.add_argument('-c', '--use_cache', action='store_true')
         argParser.add_argument('-s', '--report_start', action='store', type=pd.to_datetime)
         argParser.add_argument('-e', '--report_end', action='store', type=pd.to_datetime)
         argParser.add_argument('-d', '--debug', action='store_true')
@@ -170,8 +166,7 @@ if __name__ == '__main__':
         sg.theme('Dark Blue 17')
 
         layout = [[sg.Text('Accrual')],
-                  [sg.Checkbox("Use Cache", key='use_cache', default=False), \
-                    sg.Checkbox("debug", key='debug', default=False)],
+                  [sg.Checkbox("debug", key='debug', default=False)],
                   [sg.Text('Start date'), sg.Input(key='report_start', default_text='1/1/2021'), sg.CalendarButton(button_text="choose date",close_when_date_chosen=True, target="report_start", format='%m/%d/%Y')],
                         [sg.Text('End date'), sg.Input(key='report_end', default_text='12/31/2025'), sg.CalendarButton(button_text="choose date",close_when_date_chosen=True, target="report_end", format='%m/%d/%Y')],
                     [sg.Submit(), sg.Cancel()]]
