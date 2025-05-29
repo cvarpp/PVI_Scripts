@@ -57,11 +57,6 @@ if __name__ == '__main__':
     token = token_response.json()['data']['attributes']['token']
     headers = {'Authorization': f'token {token}'}
 
-    # Create output list
-    all_parent_names = [["Barcode", "Box Name", "Location"]]
-
-    # Iterate through input IDs and find all parents by repeatedly looking up the immediate parent. Store names.
-    iterator = 0
     # For each box ID
     how_many = len(box_ids)
     duration = int(round(how_many / 6, 0)) # Determined experimentally
