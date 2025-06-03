@@ -15,6 +15,8 @@ def parse_input():
     parser.add_argument('--standard_pbmc', type=int, default=0, help='Number of STANDARD PBMC rounds')
     parser.add_argument('--apollo', type=int, default=0, help='Number of APOLLO rounds')
     parser.add_argument('--nps', type=int, default=0, help='Number of NPS rounds')
+    parser.add_argument('--cells', type=int, default=0, help='Number of CELLS rounds')
+    parser.add_argument('--cells_pbmc', type=int, default=0, help='Number of CELLS PBMC rounds')
     args = parser.parse_args()
 
     session_counts = {
@@ -26,6 +28,8 @@ def parse_input():
         'STANDARDPBMC': args.standard_pbmc,
         'APOLLO': args.apollo,
         'NPS': args.nps,
+        'CELLS': args.cells,
+        'CELLSPBMC': args.cells_pbmc,
     }
     return session_counts
 
@@ -45,6 +49,8 @@ def last_printed_box(print_type):
         'STANDARDPBMC': (plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'] == 'yes'),
         'APOLLO': (plog['Kit Type'] == 'APOLLO'),
         'NPS': (plog['Kit Type'] == 'NPS'),
+        'CELLS': (plog['Kit Type'] == 'CELLS'),
+        'CELLSPBMC': (plog['Kit Type'] == 'CELLS') & (plog['PBMCs'] == 'yes'),
     }
     if print_type not in filter:
         print(f"{print_type} is not a valid option. Exiting...")
