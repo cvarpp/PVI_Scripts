@@ -256,7 +256,7 @@ with warnings.catch_warnings():
     covid_data['Total Immune Events'] = covid_data['Total Vaccine Doses'].fillna(0).astype(int) + covid_data['Total Infections'].fillna(0).astype(int)
     covid_data['Last Immune Event'] = covid_data['Immune History'].str.endswith('I').apply(lambda val: 'Infection' if val else 'Vaccination')
 
-    output_filename = util.pvi + 'Secret Sheets/Jessica/PVI Dashboard Testing/PVI Sampling Dashboard_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
+    output_filename = util.cross_project + 'PVI Sampling Dashboard_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
     with pd.ExcelWriter(output_filename) as writer:
         dems.to_excel(writer, index = False, sheet_name='All Demographics', freeze_panes=(1,1))
         covid_data.to_excel(writer, index = False, sheet_name='SARS-CoV-2 Immune Histories', freeze_panes=(1,1))
