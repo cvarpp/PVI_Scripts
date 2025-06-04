@@ -17,9 +17,7 @@ import argparse
 import re
 
 import pytensor
-
 pytensor.config.cxx = '/usr/bin/clang++'
-
 import pytensor.tensor as pt
 print(f"Running on PyMC v{pm.__version__}")
 
@@ -52,15 +50,15 @@ def fit_logistic(df, save_diagnostics=True):
     samples = df["sample_code"] = df['Sample ID'].replace(sample_lookup).values
     log_dilution = df['log_dilution'].to_numpy()
     plates = df['Plate'].to_numpy() - 1
-    plate_ids = np.arange(5)
+    plate_ids = np.arange(df['Plate'].max())
 
 
     plate_cols = df['Plate_Col'] = (df['Plate'].to_numpy() - 1) * 12 + df['Column'].to_numpy() - 1
     plate_col_list = df['Plate_Col'].unique()
 
-    coords = {"sample": sample_list, "plate": plate_ids, "plate_col": plate_col_list, "obs_id": np.arange(df.shape[0]), 'nevirapine': np.arange(2)}
+    coords = {"sample": sample_list, "plate": plate_ids, "plate_col": plate_col_list, "obs_id": np.arange(df.shape[0]), 'remdesivir': np.arange(2)}
 
-    nevs = df['Nev'] = (df['Sample ID'] == 'Nevirapine').astype(int)
+    rems = df['Rem'] = (df['Sample ID'] == 'Remdesivir').astype(int)
     scaled = df['Normalized'].to_numpy()
 
     with pm.Model(coords=coords) as logistic_model:
@@ -68,34 +66,36 @@ def fit_logistic(df, save_diagnostics=True):
         sample_idx = pm.Data("sample_idx", samples, dims="obs_id")
         plate_idx = pm.Data("plate_idx", plates, dims="obs_id")
         plate_col_idx = pm.Data("plate_col_idx", plate_cols, dims="obs_id")
-        nev_idx = pm.Data("nev_idx", nevs, dims="obs_id")
+        rem_idx = pm.Data("rem_idx", rems, dims="obs_id")
 
-        top = pm.Normal('top', mu=100, sigma=1)
-        hill = pm.Normal('hill', mu=1.1, sigma=0.6, dims="nevirapine")
+        hill = pm.Normal('hill', mu=3, sigma=0.6, dims="remdesivir")
         sigma = pm.Exponential("sigma", lam=0.5)
-        hetero = pm.Exponential("hetero", lam=0.5)
 
         mu_b = pm.Normal('mu_b', mu=0, sigma=50)
         sigma_b = pm.Exponential("sigma_b", lam=0.5)
-        z_b = pm.Normal("z_b", mu=0, sigma=1, dims="plate_col")
-        bottom = pm.Deterministic("bottom", mu_b + z_b * sigma_b, dims="plate_col")
+        z_b = pm.Normal("z_b", mu=0, sigma=1, dims="plate")
+        bottom = pm.Deterministic("bottom", mu_b + z_b * sigma_b, dims="plate")
+
+        mu_t = pm.Normal('mu_t', mu=100, sigma=50)
+        sigma_t = pm.Exponential("sigma_t", lam=1)
+        z_t = pm.Normal("z_t", mu=0, sigma=1, dims="plate")
+        top = pm.Deterministic("top", mu_t + z_t * sigma_t, dims="plate")
 
         mu_i = pm.Normal('mu_i', mu=5, sigma=10)
         sigma_i = pm.Exponential("sigma_i", lam=0.5)
         z_i = pm.Normal("z_i", mu=0, sigma=1, dims="sample")
         id50 = pm.Deterministic("id50", mu_i + z_i * sigma_i, dims="sample")
 
-        y_hat = pm.Deterministic("y_hat", bottom[plate_col_idx] + (top - bottom[plate_col_idx]) / (1 + pt.exp((log_dil - id50[sample_idx]) * hill[nev_idx])), dims='obs_id')
 
-        sigma_proper = pm.Deterministic("sigma_proper", sigma * (1 + hetero * (top - y_hat) / (top - bottom[plate_col_idx])))
-
-        points = pm.Normal("yvals", mu=y_hat, sigma=sigma_proper, observed=scaled)
+        y_hat = pm.Deterministic("y_hat", bottom[plate_idx] + (top[plate_idx] - bottom[plate_idx]) / (1 + pt.exp((log_dil - id50[sample_idx]) * hill[rem_idx])), dims='obs_id')
+        points = pm.Normal("yvals", mu=y_hat, sigma=sigma, observed=scaled)
         logistic_trace = pm.sample(4000, tune=3000, cores=4)
 
     az.plot_trace(logistic_trace)
     plt.tight_layout()
     if save_diagnostics:
         plt.savefig('tmp.png', dpi=100)
+    plt.close()
     plt.show()
 
     df_summary = az.summary(logistic_trace, round_to=2)
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     id50_idx = [idx for idx in df_summary.index if 'id50' in idx]
     mapper = {}
     for col in id50_idx:
-        mapper[col] = re.search(".*\[(.*)\]", col)[1]
+        mapper[col] = re.search(r".*\[(.*)\]", col)[1]
     with pd.ExcelWriter(args.workbook_out) as writer:
         df_summary.loc[id50_idx, :].rename(index=mapper).to_excel(writer, sheet_name='ID50s')
         df_summary.to_excel(writer, sheet_name='Full')
