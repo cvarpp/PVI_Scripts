@@ -49,7 +49,7 @@ def last_printed_box(print_type):
         'STANDARDPBMC': (plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'] == 'yes'),
         'APOLLO': (plog['Kit Type'] == 'APOLLO'),
         'NPS': (plog['Kit Type'] == 'NPS'),
-        'CELLS': (plog['Kit Type'] == 'CELLS'),
+        'CELLS': (plog['Kit Type'] == 'CELLS') & (plog['PBMCs'] == 'no'),
         'CELLSPBMC': (plog['Kit Type'] == 'CELLS') & (plog['PBMCs'] == 'yes'),
     }
     if print_type not in filter:
