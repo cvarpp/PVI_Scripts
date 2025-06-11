@@ -235,6 +235,27 @@ with warnings.catch_warnings():
     titan_output = titan_data.reset_index().loc[:, titan_cols]
     #umb_data = umb_data.join(titan_data, rsuffix='_titan').copy()
 
+    #Lookup Tab
+    lookup = {'idx':[], 'Participant ID':[], 'Name':[], 'Email':[], 'Study':[], 'Status':[], 'Date of Consent':[], 'Baseline Date':[], 'DOB':[], 'Age':[], 'Sex':[], 'Gender':[], 'Race':[], 'Ethnicity':[]}
+    lookup_df = pd.DataFrame(lookup)
+    lookup_len = range(0,100)
+    lookup_df['idx']=lookup_len
+    lookup_df['Participant ID']=''
+    for idx in lookup_len:
+        lookup_df.loc[idx,'Email']="=IF($A2>0, XLOOKUP($A{},'All Demographics'!$A:$A,'All Demographics'!C:C), "")".format(int(idx+2))
+        lookup_df.loc[idx,'Name']="=IF($A2>0, XLOOKUP($A{},'All Demographics'!$A:$A,'All Demographics'!B:B), "")".format(int(idx+2))
+        lookup_df.loc[idx,'Study']="=IF($A2>0, XLOOKUP($A{},'All Demographics'!$A:$A,'All Demographics'!D:D), "")".format(int(idx+2))
+        lookup_df.loc[idx,'Status']="=IF($A2>0, XLOOKUP($A{},'All Demographics'!$A:$A,'All Demographics'!E:E), "")".format(int(idx+2))
+        lookup_df.loc[idx,'Date of Consent']="=IF($A2>0, XLOOKUP($A{},'All Demographics'!$A:$A,'All Demographics'!F:F), "")".format(int(idx+2))
+        lookup_df.loc[idx,'Baseline Date']="=IF($A2>0, XLOOKUP($A{},'All Demographics'!$A:$A,'All Demographics'!G:G), "")".format(int(idx+2))
+        lookup_df.loc[idx,'DOB']="=IF($A2>0, XLOOKUP($A{},'All Demographics'!$A:$A,'All Demographics'!H:H), "")".format(int(idx+2))
+        lookup_df.loc[idx,'Age']="=IF($A2>0, XLOOKUP($A{},'All Demographics'!$A:$A,'All Demographics'!I:I), "")".format(int(idx+2))
+        lookup_df.loc[idx,'Sex']="=IF($A2>0, XLOOKUP($A{},'All Demographics'!$A:$A,'All Demographics'!J:J), "")".format(int(idx+2))
+        lookup_df.loc[idx,'Gender']="=IF($A2>0, XLOOKUP($A{},'All Demographics'!$A:$A,'All Demographics'!K:K), "")".format(int(idx+2))
+        lookup_df.loc[idx,'Race']="=IF($A2>0, XLOOKUP($A{},'All Demographics'!$A:$A,'All Demographics'!L:L), "")".format(int(idx+2))
+        lookup_df.loc[idx,'Ethnicity']="=IF($A2>0, XLOOKUP($A{},'All Demographics'!$A:$A,'All Demographics'!M:M), "")".format(int(idx+2))
+    lookup_df.set_index('idx', inplace=True)
+    
     all_studies = [apollo_data, paris_data, hd_data, umb_data]
     all_participants = pd.concat(all_studies)
 
@@ -259,6 +280,7 @@ with warnings.catch_warnings():
     output_filename = util.cross_project + 'PVI Sampling Dashboard_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
     with pd.ExcelWriter(output_filename) as writer:
         dems.to_excel(writer, index = False, sheet_name='All Demographics', freeze_panes=(1,1))
+        lookup_df.to_excel(writer, index=False, sheet_name='Demographic Lookup', freeze_panes=(1,1))
         covid_data.to_excel(writer, index = False, sheet_name='SARS-CoV-2 Immune Histories', freeze_panes=(1,1))
         apollo_data.to_excel(writer, sheet_name='All APOLLO', freeze_panes=(1,1))
         paris_data.to_excel(writer, sheet_name='All PARIS', freeze_panes=(1,1))
