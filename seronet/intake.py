@@ -27,7 +27,7 @@ def days_from_vax(idxtocollection, idxtovaccination):
 
 def in_window(key, rpid, days):
     tps = [30, 60, 90, 120, 180, 360]
-    if days == 'Pre-Vaccine':
+    if days == 'Pre-Vaccine' or days <= 0:
         if rpid in key['Research_Participant_ID'].unique():
             return 'No'
         else:
