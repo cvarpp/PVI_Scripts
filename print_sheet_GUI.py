@@ -37,8 +37,9 @@ def last_printed_box(print_type):
 class PrintSession():
     def __init__(self, kit_type, templates, session_num,):
         self.kit_type = kit_type
+        self.recent_box_max = last_printed_box(self.kit_type)
         self.kit_info = pd.read_excel(templates, sheet_name='Tube Counts', index_col='Kit Type').loc[kit_type, :]
-        self.box_start = int(recent_box_max) + 1 + session_num * self.kit_info['Boxes per Print Session']
+        self.box_start = int(self.recent_box_max) + 1 + session_num * self.kit_info['Boxes per Print Session']
         self.box_end = self.box_start + self.kit_info['Boxes per Print Session'] - 1
         self.fiveml = self.kit_info['4.5 mL'] > 0
         self.pbmc = self.kit_info['PBMC'] > 0
@@ -63,7 +64,7 @@ class PrintSession():
 
     def make_output_path(self):
         output_prefix = "3CPTs " if self.kit_type == 'SERONET_RTC' else "2CPTs " if self.kit_type == 'SERONET' else ""
-        workbook_name = f"{output_prefix}{print_type} {self.box_start}-{self.box_end}".strip()
+        workbook_name = f"{output_prefix}{self.kit_type} {self.box_start}-{self.box_end}".strip()
         self.output_path = os.path.join(util.tube_print, 'Future Sheets',
                                         self.kit_info['Future Sheets Folder'], f"{workbook_name}.xlsx")
 
@@ -261,7 +262,8 @@ class GUI(tk.CTk):
                                'CELLS': 0,
                                'CELLSPBMC': 0
                                 }
-        session_counts = self.session_counts[self.kit_type_dropdown.get()] = int(self.print_number_dropdown.get())
+        self.session_counts[self.kit_type_dropdown.get()] = int(self.print_number_dropdown.get())
+        session_counts = self.session_counts
         templates = pd.ExcelFile(util.tube_print + 'Future Sheets' + os.sep + 'Central Template Sheet.xlsx')
         for print_type, sessions in session_counts.items():
             if print_type == 'SERONET_RTC':
