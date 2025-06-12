@@ -94,7 +94,7 @@ if __name__ == '__main__':
     cols_to_drop = [col for col in col_info[col_info['Action'] == 'Drop']['Column Name'].to_numpy() if col in df.columns]
     extract_cols_to_drop = [col for col in col_info[col_info['Action'] == 'Drop']['Column Name'].to_numpy() if col in extraction_df.columns]
     link_cols_to_drop = [col for col in col_info[col_info['Action'] == 'Drop']['Column Name'].to_numpy() if col in linking_df.columns]
-    with pd.ExcelWriter('~/Downloads/psp_combined_draft.xlsx') as writer:
+    with pd.ExcelWriter(util.psp + 'script_output/psp_combined_draft.xlsx') as writer:
         df.drop(cols_to_drop, axis='columns').to_excel(writer, sheet_name='Combined')
         extraction_df.drop(extract_cols_to_drop, axis='columns').to_excel(writer, sheet_name='Extractions')
         linking_df.drop(link_cols_to_drop, axis='columns').to_excel(writer, sheet_name='Linking')
