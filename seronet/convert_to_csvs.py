@@ -83,4 +83,7 @@ if __name__ == '__main__':
             print(fname, "converted!")
     else:
         app = Converter()
+        app.attributes('-topmost', True)
+        app.lift()
+        app.attributes('-topmost', False)
         app.mainloop()
