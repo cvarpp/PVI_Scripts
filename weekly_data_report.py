@@ -22,6 +22,7 @@ df_report_cleaned = df_report[
 
 # Convert 'Date Processing Started' to datetime, coerce errors to NaT & drop NaT
 df_report_cleaned['Date Processing Started'] = pd.to_datetime(df_report_cleaned['Date Processing Started'], errors='coerce')
+df_report_cleaned['Date Processing Started'] = df_report_cleaned['Date Processing Started'].dt.date
 df_report_cleaned = df_report_cleaned.dropna(subset=['Date Processing Started'])
 
 # Convert cell count & viability to numeric, drop NaN
@@ -35,8 +36,21 @@ df_report_cleaned['Cell Count (x10^6) per mL of Whole Blood'] = df_report_cleane
 df_report_cleaned.tail()
 
 # %%
-current_date = pd.Timestamp.now().normalize()
-one_week_ago = current_date - pd.Timedelta(days=current_date.weekday())  # Most recent Monday to today
+#Amendment to allow the script to be run on other days (Mainly Monday of the next week)
+
+Bypass = 0 # if you would like to run a day other than Friday of the same week change this to 1
+
+if pd.Timestamp.now().weekday() == 4 or Bypass == 1:
+    current_date = pd.Timestamp.now().normalize()
+    current_date = current_date.date()
+    current_date-pd.Timedelta(days=current_date.weekday())
+
+else:
+    current_date = pd.Timestamp.now().normalize()
+    current_date = current_date.date()
+    current_date = current_date + pd.Timedelta(days=(4-current_date.weekday())-7)
+
+one_week_ago = current_date - pd.Timedelta(days=current_date.weekday()) # Most recent Monday to today
 # one_week_ago = current_date - pd.Timedelta(days=(current_date.weekday() + 7))  # Previous Monday to today
 # one_week_ago = current_date - pd.Timedelta(weeks=1) # Exact one week earlier
 four_weeks_ago = current_date - pd.Timedelta(weeks=4)
@@ -113,6 +127,8 @@ plt.show()
 # %%
 # ### Sample Distribution - Last Week (Bar Plot)
 df_intake['Date Collected'] = pd.to_datetime(df_intake['Date Collected'], errors='coerce')
+df_intake['Date Collected'] = df_intake['Date Collected'].dt.date
+
 df_intake_past = df_intake[(df_intake['Date Collected'] >= one_week_ago) & (df_intake['Date Collected'] <= current_date)]
 
 study_data = df_intake_past['Study'].value_counts().reset_index()
@@ -133,3 +149,5 @@ plt.pie(study_data['Number of Samples'], labels=study_data['Study'], autopct='%1
         colors=plt.cm.Blues(np.linspace(0.3, 0.7, len(study_data['Study']))))
 plt.title('Percentage of Samples by Study')
 plt.show()
+
+# %%
