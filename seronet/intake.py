@@ -36,10 +36,7 @@ def in_window(key, rpid, days, purpose):
     if purpose == 'Post-Infection':
         return 'Yes'
     elif days == 'Pre-Vaccine' or days <=0:
-        if rpid in key['Research_Participant_ID'].unique():
-            return 'No'
-        else:
-            return 'Yes'
+        return 'Yes'
     else:
         for tp in tps:
             if days >= tp-11 and days <= tp +11:
