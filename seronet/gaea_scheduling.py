@@ -67,7 +67,7 @@ def main(sunday_of_interest):
     destination = util.gaea_folder + 'GAEA Scheduling Copilot v2 Refactor Week of {}.xlsx'.format(sunday_of_interest.strftime("%m.%d.%Y"))
     with pd.ExcelWriter(destination) as writer:
         schedule_for_week.to_excel(writer, sheet_name='{}-{}'.format(sunday_of_interest.strftime("%m.%d.%y"),
-                                                         (sunday_of_interest + pd.Timedelta(days=4)).strftime("%m.%d.%y")), index=False)
+                                                         (sunday_of_interest + pd.Timedelta(days=6)).strftime("%m.%d.%y")), index=False)
         print("Written to", destination)
 
 if __name__ == '__main__':

@@ -19,6 +19,7 @@ extractions = sequencing + 'Extraction' + os.sep
 
 shared_samples = tracking + 'Released Samples/Collaborator Samples Tracker.xlsx'
 intake = tracking + 'Sample Intake Log Historian.xlsx'
+freezer_map = tracking + 'New Freezer Map.xlsx'
 
 clin_ops = pvi + 'Clinical Research Study Operations' + os.sep
 umbrella = clin_ops + 'Umbrella Viral Sample Collection Protocol' + os.sep
