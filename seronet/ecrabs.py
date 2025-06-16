@@ -6,7 +6,7 @@ from seronet.d4_all_data import pull_from_source
 from helpers import clean_sample_id
 from lots_consolidated import compress_lots
 
-PVI_list = ['MVK','NL','ACA','JN']
+PVI_list = ['MVK','NL','ACA','JN','YF']
 
 def process_lots():
     equip_lots = compress_lots().set_index(['Date Used', 'Material'])
@@ -42,7 +42,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
     consum_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Consumable_Name', 'Consumable_Catalog_Number', 'Consumable_Lot_Number', 'Consumable_Expiration_Date', 'Comments']
     reag_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Reagent_Name', 'Reagent_Catalog_Number', 'Reagent_Lot_Number', 'Reagent_Expiration_Date', 'Comments']
     aliq_cols = ['Participant ID', 'Sample ID', 'Date', 'Biospecimen_ID', 'Aliquot_ID', 'Aliquot_Volume', 'Aliquot_Units', 'Aliquot_Concentration', 'Aliquot_Initials', 'Aliquot_Tube_Type', 'Aliquot_Tube_Type_Catalog_Number', 'Aliquot_Tube_Type_Lot_Number', 'Aliquot_Tube_Type_Expiration_Date', 'Comments']
-    biospec_cols = ['Participant ID', 'Sample ID', 'Date', 'Proc Comments', 'Time Collected', 'Time Received', 'Time Processed', 'Time Serum Frozen', 'Time Cells Frozen', 'Time in LN', 'Research_Participant_ID', 'Cohort', 'Visit_Number', 'Biospecimen_ID', 'Biospecimen_Type', 'Biospecimen_Collection_Date_Duration_From_Index', 'Biospecimen_Processing_Batch_ID', 'Initial_Volume_of_Biospecimen', 'Biospecimen_Collection_Company_Clinic', 'Biospecimen_Collector_Initials', 'Biospecimen_Collection_Year', 'Collection_Tube_Type', 'Collection_Tube_Type_Catalog_Number', 'Collection_Tube_Type_Lot_Number', 'Collection_Tube_Type_Expiration_Date', 'Storage_Time_at_2_8_Degrees_Celsius', 'Storage_Start_Time_at_2-8_Initials', 'Storage_End_Time_at_2-8_Initials', 'Biospecimen_Processing_Company_Clinic', 'Biospecimen_Processor_Initials', 'Biospecimen_Collection_to_Receipt_Duration', 'Biospecimen_Receipt_to_Storage_Duration', 'Centrifugation_Time', 'RT_Serum_Clotting_Time', 'Live_Cells_Hemocytometer_Count', 'Total_Cells_Hemocytometer_Count', 'Viability_Hemocytometer_Count', 'Live_Cells_Automated_Count', 'Total_Cells_Automated_Count', 'Viability_Automated_Count', 'Storage_Time_in_Mr_Frosty', 'Comments']
+    biospec_cols = ['Participant ID', 'Sample ID', 'Date', 'Proc Comments', 'Time Collected', 'Time Received', 'Time Processed', 'Time Serum Frozen', 'Time Cells Frozen', 'Time in LN', 'Research_Participant_ID', 'Cohort', 'Visit_Number', 'Biospecimen_ID', 'Biospecimen_Type', 'Biospecimen_Collection_Date_Duration_From_Index', 'Biospecimen_Processing_Batch_ID', 'Initial_Volume_of_Biospecimen', 'Biospecimen_Collection_Company_Clinic', 'Biospecimen_Collector_Initials', 'Biospecimen_Collection_Year', 'Collection_Tube_Type', 'Collection_Tube_Type_Catalog_Number', 'Collection_Tube_Type_Lot_Number', 'Collection_Tube_Type_Expiration_Date', 'Storage_Time_at_2_8_Degrees_Celsius', 'Storage_Start_Time_at_2-8_Initials', 'Storage_End_Time_at_2-8_Initials', 'Biospecimen_Processing_Company_Clinic', 'Biospecimen_Processor_Initials', 'Biospecimen_Collection_to_Receipt_Duration', 'Biospecimen_Receipt_to_Storage_Duration', 'Biospecimen_Collection_to_Storage_Duration', 'Centrifugation_Time', 'RT_Serum_Clotting_Time', 'Live_Cells_Hemocytometer_Count', 'Total_Cells_Hemocytometer_Count', 'Viability_Hemocytometer_Count', 'Live_Cells_Automated_Count', 'Total_Cells_Automated_Count', 'Viability_Automated_Count', 'Storage_Time_in_Mr_Frosty', 'Fasting_Time_30_Minutes', 'Passive Drool Cycles', 'Comments']
     ship_cols = ['Participant ID', 'Sample ID', 'Date', 'Study ID', 'Current Label', 'Material Type', 'Volume', 'Volume Unit', 'Volume Estimate', 'Vial Type', 'Vial Warnings', 'Vial Modifiers']
 
     exclusions = pd.read_excel(util.seronet_data + 'SERONET Key.xlsx', sheet_name='Exclusions')
@@ -50,6 +50,10 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
     exclude_ids = set(exclusions['Research_Participant_ID'].unique())
     # ecrabs_sheets = ['Equipment', 'Consumables', 'Reagent', 'Aliquot', 'Biospecimen', 'Shipping Manifest']
     necessities_df = pd.read_excel(util.script_input + 'ECRAB_SERONET.xlsx', sheet_name=None)
+
+    post_inf_proc = pd.read_excel(util.proc_ntbk, sheet_name='Post-Infection SeroNet').set_index('Sample ID')
+    post_inf_cam = pd.read_excel(util.clin_ops + 'CAM Clinic Schedule.xlsx', sheet_name='SeroNet Post Infection Log').set_index('Sample ID')
+    source = source.join(post_inf_proc, on='Sample ID', rsuffix='proc').join(post_inf_cam, on='Sample ID', rsuffix='cam')
 
     lot_log = process_lots()
 
@@ -87,6 +91,8 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             visit = visit_num
         serum_id = '{}_1{}'.format(seronet_id, str(visit_num).zfill(2))
         cells_id = '{}_2{}'.format(seronet_id, str(visit_num).zfill(2))
+        saliva_id ='{}_3{}'.format(seronet_id, str(visit_num).zfill(2))
+        swab_id ='{}_4{}'.format(seronet_id, str(visit_num).zfill(2))
         serum_vol = row['Volume of Serum Collected (mL)']
         total_cell_count = row['Total Cell Count (x10^6)']
         aliq_cell_count = row['PBMC concentration per mL (x10^6)']
@@ -99,7 +105,6 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
         coll_inits = str(row['coll_inits']).strip().upper()
         if coll_inits not in PVI_list:
             coll_inits = "CCT (Clinical Care Team)"
-
         serum_freeze_time = pd.to_datetime(str(row['serum_freeze_time']), errors='coerce')
         cell_freeze_time = pd.to_datetime(str(row['cell_freeze_time']), errors='coerce')
         if pd.isna(serum_freeze_time):
@@ -112,6 +117,21 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
         viability = row['viability']
         cpt_vol = row['cpt_vol']
         sst_vol = row['sst_vol']
+
+        saliva_proc_inits = row['Saliva Processed By']
+        saliva_vol = row['Saliva Volume (mL)']
+        saliva_freeze_time = row['Saliva Freeze Time']
+        saliva_fast = row['Did they fast for 30 minutes prior to collection?']
+        saliva_pooling_sessions = row['Number of 2 minute saliva pooling sessions to reach at least 1mL saliva (max 5)']
+        saliva_vial_count = row['Saliva Aliquots']
+        swab_proc_inits = row['Swab Processed By']
+        swab_vol = row['Swab Volume (mL)']
+        swab_freeze_time = row['Swab Aliquots Freeze Time']
+        swab_cat = row['Swab Catalog']
+        swab_lot = row['Swab Lot']
+        swab_exp = row['Swab Exp Date']
+        swab_vial_count = row['Swab Aliquots']
+        
         try:
             total_live_cells = total_cell_count * (10**6)
             aliq_live_cells = aliq_cell_count * (10**6)
@@ -175,8 +195,12 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
                 _odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], cname, lot_log)
                 add_to['Consumable_Catalog_Number'].append(cat)
                 add_to['Consumable_Lot_Number'].append(lot)
-                add_to['Consumable_Expiration_Date'].append(exp)
-                add_to['Comments'].append('')
+                if exp == 'Unavailable':
+                    add_to['Consumable_Expiration_Date'].append('N/A')
+                    add_to['Comments'].append('Expiration date unavailable')  
+                else:  
+                    add_to['Consumable_Expiration_Date'].append(exp)
+                    add_to['Comments'].append('')
         '''
         Reagents Next
         '''
@@ -198,8 +222,12 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
                 _odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], rname, lot_log)
                 add_to['Reagent_Catalog_Number'].append(cat)
                 add_to['Reagent_Lot_Number'].append(lot)
-                add_to['Reagent_Expiration_Date'].append(exp)
-                add_to['Comments'].append('')
+                if exp == 'Unavailable':
+                    add_to['Reagent_Expiration_Date'].append('N/A')
+                    add_to['Comments'].append('No expiration date listed')  
+                else:  
+                    add_to['Reagent_Expiration_Date'].append(exp)
+                    add_to['Comments'].append('')
         '''
         Aliquot Penultimate
         '''
@@ -252,6 +280,43 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
                 add_to['Aliquot_Tube_Type_Lot_Number'].append(lot)
                 add_to['Aliquot_Tube_Type_Expiration_Date'].append(exp)
                 add_to['Comments'].append('')
+        if sample_id in post_inf_proc.index:
+            #Saliva
+            for i in range(min(int(saliva_vial_count), 2)):
+                add_to['Participant ID'].append(participant)
+                add_to['Sample ID'].append(sample_id)
+                add_to['Date'].append(row['Date'])
+                add_to['Biospecimen_ID'].append(saliva_id)
+                add_to['Aliquot_ID'].append("{}_{}".format(saliva_id, i + 1))
+                add_to['Aliquot_Volume'].append(.1)
+                add_to['Aliquot_Units'].append('mL')
+                add_to['Aliquot_Concentration'].append("N/A")
+                add_to['Aliquot_Initials'].append(saliva_proc_inits)
+                tname = 'CRYOTUBE 1.8ML'
+                add_to['Aliquot_Tube_Type'].append(tname)
+                _odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], tname, lot_log)
+                add_to['Aliquot_Tube_Type_Catalog_Number'].append(cat)
+                add_to['Aliquot_Tube_Type_Lot_Number'].append(lot)
+                add_to['Aliquot_Tube_Type_Expiration_Date'].append(exp)
+                add_to['Comments'].append('')
+            #Swab
+            for i in range(min(int(swab_vial_count), 2)):
+                add_to['Participant ID'].append(participant)
+                add_to['Sample ID'].append(sample_id)
+                add_to['Date'].append(row['Date'])
+                add_to['Biospecimen_ID'].append(swab_id)
+                add_to['Aliquot_ID'].append("{}_{}".format(swab_id, i + 1))
+                add_to['Aliquot_Volume'].append((float(swab_vol)/2))
+                add_to['Aliquot_Units'].append('mL')
+                add_to['Aliquot_Concentration'].append("N/A")
+                add_to['Aliquot_Initials'].append(swab_proc_inits)
+                tname = '2mL Cryovial'
+                add_to['Aliquot_Tube_Type'].append(tname)
+                _odate, lot, exp, cat = get_catalog_lot_exp(row['Date'], tname, lot_log)
+                add_to['Aliquot_Tube_Type_Catalog_Number'].append(cat)
+                add_to['Aliquot_Tube_Type_Lot_Number'].append(lot)
+                add_to['Aliquot_Tube_Type_Expiration_Date'].append(exp)
+                add_to['Comments'].append('')
         '''
         Biospecimen Last
         '''
@@ -287,21 +352,20 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             add_to['Collection_Tube_Type_Catalog_Number'].append(cat)
             add_to['Collection_Tube_Type_Lot_Number'].append(lot)
             add_to['Collection_Tube_Type_Expiration_Date'].append(exp)
-            add_to['Storage_Time_at_2_8_Degrees_Celsius'].append('N/A')
-            add_to['Storage_Start_Time_at_2-8_Initials'].append('N/A')
-            add_to['Storage_End_Time_at_2-8_Initials'].append('N/A')
             add_to['Biospecimen_Processing_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
             add_to['Biospecimen_Processor_Initials'].append(proc_inits)
             time_diff = time_diff_wrapper(coll_time, rec_time, "collection to receipt {}".format(sample_id))
             add_to['Biospecimen_Collection_to_Receipt_Duration'].append(time_diff)
             time_diff = time_diff_wrapper(rec_time, serum_freeze_time, "receipt to serum storage {}".format(sample_id))
             add_to['Biospecimen_Receipt_to_Storage_Duration'].append(time_diff)
+            time_diff = time_diff_wrapper(coll_time, serum_freeze_time, "receipt to serum storage {}".format(sample_id))
+            add_to['Biospecimen_Collection_to_Storage_Duration'].append(time_diff)
             time_diff = time_diff_wrapper(coll_time, proc_time, "clot time {}".format(sample_id))
             if time_diff != 'Missing':
                 time_diff = round(time_diff * 60., 2)
             add_to['RT_Serum_Clotting_Time'].append(time_diff)
             add_to['Centrifugation_Time'].append(10)
-            for col in ['Live_Cells_Hemocytometer_Count', 'Total_Cells_Hemocytometer_Count', 'Viability_Hemocytometer_Count', 'Live_Cells_Automated_Count', 'Total_Cells_Automated_Count', 'Viability_Automated_Count', 'Storage_Time_in_Mr_Frosty']:
+            for col in ['Storage_Time_at_2_8_Degrees_Celsius','Storage_Start_Time_at_2-8_Initials','Storage_End_Time_at_2-8_Initials','Live_Cells_Hemocytometer_Count', 'Total_Cells_Hemocytometer_Count', 'Viability_Hemocytometer_Count', 'Live_Cells_Automated_Count', 'Total_Cells_Automated_Count', 'Viability_Automated_Count', 'Storage_Time_in_Mr_Frosty','Fasting_Time_30_Minutes','Passive Drool Cycles']:
                 add_to[col].append('N/A')
             add_to['Comments'].append('')
         if not (type(vial_count) == str or (type(vial_count) == float and pd.isna(vial_count))) and row['# of PBMC vials'] > 0:
@@ -321,7 +385,7 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             add_to['Biospecimen_ID'].append(cells_id)
             add_to['Biospecimen_Type'].append('PBMC')
             add_to['Biospecimen_Collection_Date_Duration_From_Index'].append(row['Days from Index'])
-            add_to['Biospecimen_Processing_Batch_ID'].append('Missing') # decide how to handle
+            add_to['Biospecimen_Processing_Batch_ID'].append('Please calculate using "Seronet Batch ID.xlsx"')
             add_to['Initial_Volume_of_Biospecimen'].append(cpt_vol)
             add_to['Biospecimen_Collection_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
             add_to['Biospecimen_Collector_Initials'].append(coll_inits)
@@ -332,20 +396,14 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             add_to['Collection_Tube_Type_Catalog_Number'].append(cat)
             add_to['Collection_Tube_Type_Lot_Number'].append(lot)
             add_to['Collection_Tube_Type_Expiration_Date'].append(exp)
-            add_to['Storage_Time_at_2_8_Degrees_Celsius'].append('N/A')
-            add_to['Storage_Start_Time_at_2-8_Initials'].append('N/A')
-            add_to['Storage_End_Time_at_2-8_Initials'].append('N/A')
             add_to['Biospecimen_Processing_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
             add_to['Biospecimen_Processor_Initials'].append(proc_inits)
             time_diff = time_diff_wrapper(coll_time, rec_time, "collection to receipt {}".format(sample_id))
             add_to['Biospecimen_Collection_to_Receipt_Duration'].append(time_diff)
             time_diff = time_diff_wrapper(rec_time, cell_freeze_time, "receipt to cell storage {}".format(sample_id))
             add_to['Biospecimen_Receipt_to_Storage_Duration'].append(time_diff)
-            add_to['Centrifugation_Time'].append("N/A")
-            add_to['RT_Serum_Clotting_Time'].append('N/A')
-            add_to['Live_Cells_Hemocytometer_Count'].append('N/A')
-            add_to['Total_Cells_Hemocytometer_Count'].append('N/A')
-            add_to['Viability_Hemocytometer_Count'].append('N/A')
+            time_diff = time_diff_wrapper(coll_time, cell_freeze_time, "receipt to cell storage {}".format(sample_id))
+            add_to['Biospecimen_Collection_to_Storage_Duration'].append(time_diff)
             add_to['Live_Cells_Automated_Count'].append(total_live_cells)
             add_to['Total_Cells_Automated_Count'].append(total_all_cells)
             add_to['Viability_Automated_Count'].append(viability)
@@ -355,6 +413,85 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
                 time_diff = time_diff_wrapper(cell_freeze_time, ln_time + pd.Timedelta(hours=24),"Time in Mr Frosty {}".format(sample_id))
                 add_to['Storage_Time_in_Mr_Frosty'].append(time_diff)
             add_to['Comments'].append('')
+            for col in ['Storage_Time_at_2_8_Degrees_Celsius','Storage_Start_Time_at_2-8_Initials','Storage_End_Time_at_2-8_Initials','Centrifugation_Time','RT_Serum_Clotting_Time','Live_Cells_Hemocytometer_Count','Total_Cells_Hemocytometer_Count','Viability_Hemocytometer_Count','Fasting_Time_30_Minutes','Passive Drool Cycles']:
+                add_to[col].append('N/A')
+        if sample_id in post_inf_proc.index:
+            #Saliva
+            add_to['Participant ID'].append(participant)
+            add_to['Sample ID'].append(sample_id)
+            add_to['Date'].append(row['Date'])
+            add_to['Proc Comments'].append(proc_comment)
+            add_to['Time Collected'].append(coll_time)
+            add_to['Time Received'].append(rec_time)
+            add_to['Time Processed'].append(proc_time)
+            add_to['Time Serum Frozen'].append(serum_freeze_time)
+            add_to['Time Cells Frozen'].append(cell_freeze_time)
+            add_to['Time in LN'].append(ln_time)
+            add_to['Research_Participant_ID'].append(seronet_id)
+            add_to['Cohort'].append(cohort)
+            add_to['Visit_Number'].append(visit)
+            add_to['Biospecimen_ID'].append(saliva_id)
+            add_to['Biospecimen_Type'].append('Saliva')
+            add_to['Biospecimen_Collection_Date_Duration_From_Index'].append(row['Days from Index'])
+            add_to['Biospecimen_Processing_Batch_ID'].append('Please calculate using "Seronet Batch ID.xlsx"')
+            add_to['Initial_Volume_of_Biospecimen'].append(saliva_vol)
+            add_to['Biospecimen_Collection_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
+            add_to['Biospecimen_Collector_Initials'].append(coll_inits)
+            add_to['Biospecimen_Collection_Year'].append(row['Date'].year)
+            add_to['Collection_Tube_Type'].append('Salimetrics')
+            add_to['Collection_Tube_Type_Catalog_Number'].append('5016.04')
+            add_to['Collection_Tube_Type_Lot_Number'].append('2407124')
+            add_to['Collection_Tube_Type_Expiration_Date'].append('N/A')
+            add_to['Biospecimen_Processing_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
+            add_to['Biospecimen_Processor_Initials'].append(saliva_proc_inits)
+            time_diff = time_diff_wrapper(coll_time, rec_time, "collection to receipt {}".format(sample_id))
+            add_to['Biospecimen_Collection_to_Receipt_Duration'].append(time_diff)
+            time_diff = time_diff_wrapper(rec_time, saliva_freeze_time, "receipt to saliva storage {}".format(sample_id))
+            add_to['Biospecimen_Receipt_to_Storage_Duration'].append(time_diff)
+            time_diff = time_diff_wrapper(coll_time, saliva_freeze_time, "receipt to saliva storage {}".format(sample_id))
+            add_to['Biospecimen_Collection_to_Storage_Duration'].append(time_diff)
+            add_to['Fasting_Time_30_Minutes'].append(saliva_fast)
+            add_to['Passive Drool Cycles'].append(saliva_pooling_sessions)
+            add_to['Comments'].append('')
+            for col in ['Storage_Time_at_2_8_Degrees_Celsius','Storage_Start_Time_at_2-8_Initials','Storage_End_Time_at_2-8_Initials','Centrifugation_Time','RT_Serum_Clotting_Time','Live_Cells_Hemocytometer_Count', 'Total_Cells_Hemocytometer_Count', 'Viability_Hemocytometer_Count', 'Live_Cells_Automated_Count', 'Total_Cells_Automated_Count', 'Viability_Automated_Count', 'Storage_Time_in_Mr_Frosty']:
+                add_to[col].append('N/A')
+            #Swabs
+            add_to['Participant ID'].append(participant)
+            add_to['Sample ID'].append(sample_id)
+            add_to['Date'].append(row['Date'])
+            add_to['Proc Comments'].append(proc_comment)
+            add_to['Time Collected'].append(coll_time)
+            add_to['Time Received'].append(rec_time)
+            add_to['Time Processed'].append(proc_time)
+            add_to['Time Serum Frozen'].append(serum_freeze_time)
+            add_to['Time Cells Frozen'].append(cell_freeze_time)
+            add_to['Time in LN'].append(ln_time)
+            add_to['Research_Participant_ID'].append(seronet_id)
+            add_to['Cohort'].append(cohort)
+            add_to['Visit_Number'].append(visit)
+            add_to['Biospecimen_ID'].append(swab_id)
+            add_to['Biospecimen_Type'].append('Nasal swab')
+            add_to['Biospecimen_Collection_Date_Duration_From_Index'].append(row['Days from Index'])
+            add_to['Biospecimen_Processing_Batch_ID'].append('Please calculate using "Seronet Batch ID.xlsx"')
+            add_to['Initial_Volume_of_Biospecimen'].append(swab_vol)
+            add_to['Biospecimen_Collection_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
+            add_to['Biospecimen_Collector_Initials'].append(coll_inits)
+            add_to['Biospecimen_Collection_Year'].append(row['Date'].year)
+            add_to['Collection_Tube_Type'].append('Anterior Nare')
+            add_to['Collection_Tube_Type_Catalog_Number'].append(swab_cat)
+            add_to['Collection_Tube_Type_Lot_Number'].append(swab_lot)
+            add_to['Collection_Tube_Type_Expiration_Date'].append(swab_exp)
+            add_to['Biospecimen_Processing_Company_Clinic'].append('Icahn School of Medicine at Mount Sinai')
+            add_to['Biospecimen_Processor_Initials'].append(swab_proc_inits)
+            time_diff = time_diff_wrapper(coll_time, rec_time, "collection to receipt {}".format(sample_id))
+            add_to['Biospecimen_Collection_to_Receipt_Duration'].append(time_diff)
+            time_diff = time_diff_wrapper(rec_time, swab_freeze_time, "receipt to swab storage {}".format(sample_id))
+            add_to['Biospecimen_Receipt_to_Storage_Duration'].append(time_diff)
+            time_diff = time_diff_wrapper(coll_time, swab_freeze_time, "receipt to swab storage {}".format(sample_id))
+            add_to['Biospecimen_Collection_to_Storage_Duration'].append(time_diff)
+            add_to['Comments'].append('')
+            for col in ['Storage_Time_at_2_8_Degrees_Celsius','Storage_Start_Time_at_2-8_Initials','Storage_End_Time_at_2-8_Initials','Centrifugation_Time','RT_Serum_Clotting_Time','Live_Cells_Hemocytometer_Count', 'Total_Cells_Hemocytometer_Count', 'Viability_Hemocytometer_Count', 'Live_Cells_Automated_Count', 'Total_Cells_Automated_Count', 'Viability_Automated_Count', 'Storage_Time_in_Mr_Frosty','Fasting_Time_30_Minutes','Passive Drool Cycles']:
+                add_to[col].append('N/A')
         '''
         Just Kidding Shipping Manifest
         '''
@@ -391,8 +528,6 @@ def make_ecrabs(source, first_date=pd.to_datetime('1/1/2021'), last_date=pd.to_d
             for sample in issues:
                 print(sample, file=f)
     return output
-
-
 
 if __name__ == '__main__':
     argParser = argparse.ArgumentParser(description='Create processing information sheets for SERONET data submissions.')
