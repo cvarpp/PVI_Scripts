@@ -167,8 +167,8 @@ def pull_trackers():
         umbrella_tracker = pd.ExcelFile(util.umbrella_tracker)
         umb_data = load_and_clean_sheet(umbrella_tracker, sheet_name='Summary', index_col='Subject ID')
         umb_vaccines = load_and_clean_sheet(umbrella_tracker, sheet_name='COVID-19 Vaccine Type & Dates!!')
-    cohorts = pull_cohorts()
-    umb_data = (umb_data
+        cohorts = pull_cohorts()
+        umb_data = (umb_data
                 .rename(columns={'Cohort':'Study', 'Study Status':'Status', 'Date of ICF':'Date of Consent', 'Baseline Visit Date':'Baseline Date'})
                 .join(umb_vaccines)
                 .join(cohorts['ROBIN'], rsuffix='_robin')
@@ -256,14 +256,25 @@ def make_lookup_sheet():
         lookup_df[dem_name] += f",'All Demographics'!$A:$A,'All Demographics'!{dem_col}), \"\")"
     return lookup_df
 
+def make_sheet(col_list):
+    all_studies = pd.concat(studies.values())
+    all_cohorts = pd.concat(cohorts.values())
+    all_data = all_studies.join(all_cohorts, on='Participant ID', rsuffix='_cohort')
+    sheet = all_data.reset_index().loc[:, col_list]
+    return pd.DataFrame(sheet)
+
+test_cols = ['Name', 'Participant ID', 'Study', 'Email', 'Dose #1 Date']
+
 if __name__ == '__main__':
     studies, cohorts = pull_trackers()
     dems = make_dems_sheet(studies)
     covid_data = make_covid_sheet(studies, cohorts)
     lookup_df = make_lookup_sheet()
+    test_df = make_sheet(test_cols)
 
-    output_filename = util.cross_project + 'PVI Sampling Dashboard_{}.xlsx'.format(date.today().strftime("%m.%d.%y"))
+    output_filename = util.cross_project + 'PVI Sampling Dashboard {} TEST.xlsx'.format(date.today().strftime("%m.%d.%y"))
     with pd.ExcelWriter(output_filename) as writer:
+        test_df.to_excel(writer, index=False, sheet_name='Test', freeze_panes=(1,1))
         dems.to_excel(writer, index = False, sheet_name='All Demographics', freeze_panes=(1,1))
         lookup_df.to_excel(writer, index=False, sheet_name='Demographic Lookup', freeze_panes=(1,1))
         covid_data.to_excel(writer, index = False, sheet_name='SARS-CoV-2 Immune Histories', freeze_panes=(1,1))
