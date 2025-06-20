@@ -2,11 +2,10 @@ import pandas as pd
 import numpy as np
 import util
 import os
+import cmath
 import customtkinter as tk
 
 
-
-#TODO: ADDRESS ERROR: PATH NOT FOUND
 def last_printed_box(print_type):
     plog = (pd.read_excel(util.print_log, sheet_name='LOG', header=0)
             .rename(columns={'Box numbers': 'Box Min', 'Unnamed: 4': 'Box Max', 'Study': 'Kit Type'})
@@ -282,4 +281,7 @@ class GUI(tk.CTk):
                 self.statusvar.set(f"'{print_session.output_path.split(os.sep)[-1]}' workbook generated in {print_session.kit_info['Future Sheets Folder']}.")
 
 app = GUI()
+#icon = Image.open('no_bg_squar.png')
+#tkicon = ImageTk.PhotoImage(icon)
+#app.wm_iconphoto(False, tkicon)
 app.mainloop()
