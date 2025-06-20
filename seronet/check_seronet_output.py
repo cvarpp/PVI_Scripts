@@ -127,11 +127,9 @@ def validate_files(input_folder, output_path, use_xlsx):
             for cohort in all_cohorts:
                 future_df[cohort].append(cohort_counts[fname][cohort])
     future_output['cohort_count'] = pd.DataFrame(future_df)
-    writer = pd.ExcelWriter(output_path)
-    for sname, df in future_output.items():
-        df.to_excel(writer, sheet_name=sname, index=False)
-    writer.save()
-    writer.close()
+    with pd.ExcelWriter(output_path) as writer:
+        for sname, df in future_output.items():
+            df.to_excel(writer, sheet_name=sname, index=False)
     print("Summary written to {}".format(output_path))
     n1 = future_output['visit_found'].drop_duplicates(subset=['Participant_ID']).shape[0]
     n2 = num_ppl
