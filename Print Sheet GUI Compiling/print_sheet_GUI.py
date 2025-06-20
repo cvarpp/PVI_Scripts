@@ -280,8 +280,9 @@ class GUI(tk.CTk):
                 print_session.write_workbook()
                 self.statusvar.set(f"'{print_session.output_path.split(os.sep)[-1]}' workbook generated in {print_session.kit_info['Future Sheets Folder']}.")
 
-app = GUI()
-#icon = Image.open('no_bg_squar.png')
-#tkicon = ImageTk.PhotoImage(icon)
-#app.wm_iconphoto(False, tkicon)
-app.mainloop()
+if __name__ == '__main__':
+    app = GUI()
+    app.attributes('-topmost', True)
+    app.lift()
+    app.attributes('-topmost', False)
+    app.mainloop()

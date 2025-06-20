@@ -4,6 +4,7 @@ import glob
 import os
 import argparse
 import customtkinter as tk
+from argparse import RawDescriptionHelpFormatter
 
 class Converter(tk.CTk):
     def __init__(self, fg_color = None, **kwargs):
@@ -71,7 +72,10 @@ class Converter(tk.CTk):
 
 if __name__ == '__main__':
     if len(sys.argv) != 1:
-        argParser = argparse.ArgumentParser(description='Read Excel files in input_dir and create corresponding csv files in output_dir')
+        argParser = argparse.ArgumentParser(description="""
+Read Excel files in input_dir and create corresponding csv files in output_dir.
+Run without arguments to enter GUI mode""",
+            formatter_class=RawDescriptionHelpFormatter)
         argParser.add_argument('-i', '--input_dir', action='store', required=True)
         argParser.add_argument('-o', '--output_dir', action='store', required=True)
         args = argParser.parse_args()
@@ -83,4 +87,7 @@ if __name__ == '__main__':
             print(fname, "converted!")
     else:
         app = Converter()
+        app.attributes('-topmost', True)
+        app.lift()
+        app.attributes('-topmost', False)
         app.mainloop()
