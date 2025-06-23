@@ -1,13 +1,17 @@
 import pandas as pd
 import numpy as np
-import util
 import os
 import cmath
 import customtkinter as tk
 
+home = os.path.expanduser('~') + os.sep
+onedrive = home + os.environ.get('SHAREPOINT_DIR', 'The Mount Sinai Hospital') + os.sep
+printing = onedrive + os.environ.get('PRINT_DIR', 'Simon Lab - Print Shop') + os.sep
+tube_print = printing + 'Tube Printing' + os.sep
+print_log = tube_print + 'Printing Log.xlsx'
 
 def last_printed_box(print_type):
-    plog = (pd.read_excel(util.print_log, sheet_name='LOG', header=0)
+    plog = (pd.read_excel(print_log, sheet_name='LOG', header=0)
             .rename(columns={'Box numbers': 'Box Min', 'Unnamed: 4': 'Box Max', 'Study': 'Kit Type'})
             .drop(1))
     plog['PBMCs'] = plog['PBMCs'].str.strip().str.lower()
@@ -55,7 +59,7 @@ class PrintSession():
         self.make_output_path()
 
     def get_sample_ids(self):
-        print_planning_path = os.path.join(util.tube_print, 'Print Planning.xlsx')
+        print_planning_path = os.path.join(tube_print, 'Print Planning.xlsx')
         print_planning = pd.read_excel(print_planning_path, sheet_name=self.kit_info['Print Planning Sheet'])
         box_range = print_planning['Box ID'].between(self.box_start, self.box_end)
         self.sample_ids = print_planning.loc[box_range, 'Sample ID'].to_numpy()
@@ -64,7 +68,7 @@ class PrintSession():
     def make_output_path(self):
         output_prefix = "3CPTs " if self.kit_type == 'SERONET_RTC' else "2CPTs " if self.kit_type == 'SERONET' else ""
         workbook_name = f"{output_prefix}{self.kit_type} {self.box_start}-{self.box_end}".strip()
-        self.output_path = os.path.join(util.tube_print, 'Future Sheets',
+        self.output_path = os.path.join(tube_print, 'Future Sheets',
                                         self.kit_info['Future Sheets Folder'], f"{workbook_name}.xlsx")
 
     def write_workbook(self):
@@ -263,7 +267,7 @@ class GUI(tk.CTk):
                                 }
         self.session_counts[self.kit_type_dropdown.get()] = int(self.print_number_dropdown.get())
         session_counts = self.session_counts
-        templates = pd.ExcelFile(util.tube_print + 'Future Sheets' + os.sep + 'Central Template Sheet.xlsx')
+        templates = pd.ExcelFile(tube_print + 'Future Sheets' + os.sep + 'Central Template Sheet.xlsx')
         for print_type, sessions in session_counts.items():
             if print_type == 'SERONET_RTC':
                 continue
