@@ -19,19 +19,24 @@ def baseline_sunday(visit_num, date):
     else:
         return ('N/A')
     
+def visit_purpose(sid, post_inf_sids):
+    if sid in list(post_inf_sids):
+        return 'Post-Infection'
+    else:
+        return 'Post-Vaccine'
+    
 def days_from_vax(idxtocollection, idxtovaccination):
     if pd.isna(idxtovaccination):
         return 'Pre-Vaccine'
     else:
         return idxtocollection-idxtovaccination
 
-def in_window(key, rpid, days):
+def in_window(key, rpid, days, purpose):
     tps = [30, 60, 90, 120, 180, 360]
-    if days == 'Pre-Vaccine':
-        if rpid in key['Research_Participant_ID'].unique():
-            return 'No'
-        else:
-            return 'Yes'
+    if purpose == 'Post-Infection':
+        return 'Yes'
+    elif days == 'Pre-Vaccine' or days <=0:
+        return 'Yes'
     else:
         for tp in tps:
             if days >= tp-11 and days <= tp +11:
@@ -45,6 +50,7 @@ def make_intake(df_accrual, ecrabs, dfs_clin, seronet_key):
     #Calculate List of Samples to Include
     accrued_in_period = df_accrual[df_accrual['Collected_In_This_Reporting_Period'] == 'Yes']
     samples_in_period = accrued_in_period['Sample ID']
+    post_inf_visits = pd.read_excel(util.proc_ntbk, sheet_name='Post-Infection SeroNet')
     intake_df = ecrabs['Biospecimen'].set_index('Biospecimen_ID')
     aliquot_df = ecrabs['Aliquot'].drop_duplicates(subset='Biospecimen_ID').set_index('Biospecimen_ID')
     vax_df = dfs_clin['Vax']
@@ -55,13 +61,14 @@ def make_intake(df_accrual, ecrabs, dfs_clin, seronet_key):
     intake_df = (intake_df.join(aliquot_df, rsuffix='_1')
                           .join(kp2_df, rsuffix='_1', on ='Research_Participant_ID'))
     intake_df = intake_df[intake_df['Sample ID'].isin(samples_in_period)]
+    intake_df['Purpose of Visit'] = intake_df['Sample ID'].apply(lambda sid: visit_purpose(sid, post_inf_visits['Sample ID']))
     intake_df['Days from KP.2'] = intake_df.apply(lambda row: days_from_vax(row['Biospecimen_Collection_Date_Duration_From_Index'], row['SARS-CoV-2_Vaccination_Date_Duration_From_Index']), axis=1)
-    intake_df['In Window?'] = intake_df.apply(lambda row: in_window(key_no_current_month, row['Research_Participant_ID'], row['Days from KP.2']), axis=1)
+    intake_df['In Window?'] = intake_df.apply(lambda row: in_window(key_no_current_month, row['Research_Participant_ID'], row['Days from KP.2'], row['Purpose of Visit']), axis=1)
     #Create Add to Intake Sheet
     intake_df.rename(columns={'Visit_Number':'Visit_ID', 'Aliquot_Volume':'Total Volume/Sample Yield'}, inplace=True)
     intake_df.loc[intake_df['Biospecimen_Type'] == 'PBMC', 'Total Volume/Sample Yield'] = 'N/A'
     intake_df['Sunday_Prior_To_Visit_1'] = intake_df.apply(lambda row: baseline_sunday(row['Visit_ID'], row['Date']), axis=1)
-    intake_df['Purpose of Visit'] = 'Post-Vaccine'
+
     intake_col_order = ['Research_Participant_ID', 'Cohort', 'Visit_ID', 'Biospecimen_ID', 'Biospecimen_Type', 'Initial_Volume_of_Biospecimen',
                         'Total Volume/Sample Yield', 'Collection_Tube_Type', 'Live_Cells_Hemocytometer_Count', 'Total_Cells_Hemocytometer_Count',
                         'Viability_Hemocytometer_Count', 'Live_Cells_Automated_Count', 'Total_Cells_Automated_Count', 'Viability_Automated_Count',

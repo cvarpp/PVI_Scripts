@@ -154,7 +154,8 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=Fals
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
             new_samples = pd.read_excel(util.proc + 'Processing Notebook.xlsx', sheet_name='Specimen Dashboard', header=1).rename(columns=correct_new)
-        dataframe_list = [bsl2p_archive, bsl2_archive, bsl2p_samples, bsl2_samples, crp_samples, new_samples]
+            less_new_samples = pd.read_excel(util.proc + 'Processing Notebook Archive.xlsx', sheet_name='Specimen Dashboard', header=1).rename(columns=correct_new)
+        dataframe_list = [bsl2p_archive, bsl2_archive, bsl2p_samples, bsl2_samples, crp_samples, less_new_samples, new_samples]
         all_samples = (pd.concat(dataframe_list)
                         .assign(sample_id=clean_sample_id)
                         .drop_duplicates(subset=['sample_id'], keep='last')
