@@ -263,18 +263,14 @@ def make_sheet(col_list):
     sheet = all_data.reset_index().loc[:, col_list]
     return pd.DataFrame(sheet)
 
-test_cols = ['Name', 'Participant ID', 'Study', 'Email', 'Dose #1 Date']
-
 if __name__ == '__main__':
     studies, cohorts = pull_trackers()
     dems = make_dems_sheet(studies)
     covid_data = make_covid_sheet(studies, cohorts)
     lookup_df = make_lookup_sheet()
-    test_df = make_sheet(test_cols)
 
     output_filename = util.cross_project + 'PVI Sampling Dashboard {} TEST.xlsx'.format(date.today().strftime("%m.%d.%y"))
     with pd.ExcelWriter(output_filename) as writer:
-        test_df.to_excel(writer, index=False, sheet_name='Test', freeze_panes=(1,1))
         dems.to_excel(writer, index = False, sheet_name='All Demographics', freeze_panes=(1,1))
         lookup_df.to_excel(writer, index=False, sheet_name='Demographic Lookup', freeze_panes=(1,1))
         covid_data.to_excel(writer, index = False, sheet_name='SARS-CoV-2 Immune Histories', freeze_panes=(1,1))
