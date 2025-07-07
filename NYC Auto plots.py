@@ -253,7 +253,7 @@ for n, fig in enumerate(subfigs):
     fig.legend(bbox_to_anchor=[1.135,0.5], loc="center right", fontsize=14, fancybox=True)
 if __name__ == "__main__":
     try:
-        plot.savefig(outpath + "NYC Variants Per Year Starting 2021 Direct Count.png", dpi=300)   
+        plot.savefig(outpath + f"NYC Variants Per Year Starting 2021 Direct Count {datetime.today()}.png", dpi=300)   
         print("Plot output to sharepoint: PSP NYC Auto Charts")
     except:
         print("Error in sharepoint plotting")
@@ -319,7 +319,7 @@ fig.legend(bbox_to_anchor=[0.5,-0.25], loc="lower center", fontsize=14, fancybox
 
 if __name__ == "__main__":
     try:
-        plot.savefig(outpath + "NYC Variants Per Year Starting 2021 Contiguous Percent.png", dpi=300)   
+        plot.savefig(outpath + f"NYC Variants Per Year Starting 2021 Contiguous Percent {datetime.today()}.png", dpi=300)   
         print("Plot output to sharepoint: PSP NYC Auto Charts")
     except:
         print("Error in sharepoint plotting")
@@ -385,7 +385,7 @@ fig.legend(bbox_to_anchor=[0.5,-0.225], loc="lower center", fontsize=14, fancybo
 
 if __name__ == "__main__":
     try:
-        plot.savefig(outpath + "NYC Variants Per Year Starting 2021 Contiguous Count.png", dpi=300)   
+        plot.savefig(outpath + f"NYC Variants Per Year Starting 2021 Contiguous Count {datetime.today()}.png", dpi=300)   
         print("Plot output to sharepoint: PSP NYC Auto Charts")
     except:
         print("Error in sharepoint plotting")
