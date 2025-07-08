@@ -39,7 +39,7 @@ These scripts (in the `results` folder) bring together sample information (antib
     - Focuses on splitting out data by transplant type and HIV status. TITAN is uniquely suited to wide-form datasets, with a strong adherence to specific timepoints anchored to the third dose.
 
 
-## SERONET Scripts
+## SERONET Scripts (Inactive)
 
 These scripts (in the `seronet` folder) are meant to assist with preparing data for quarterly data submissions and monthly accrual reporting. Some scripts directly pull together data for those various reports, and some are utilities.
 
