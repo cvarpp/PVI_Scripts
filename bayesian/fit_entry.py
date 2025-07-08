@@ -73,7 +73,7 @@ def fit_logistic(df, save_diagnostics=True):
         top = pm.Normal('top', mu=100, sigma=1)
         hill = pm.Normal('hill', mu=1.1, sigma=0.6, dims="nevirapine")
         sigma = pm.Exponential("sigma", lam=0.5)
-        hetero = pm.Exponential("hetero", lam=0.5)
+        hetero = pm.Exponential("hetero", lam=2)
 
         mu_b = pm.Normal('mu_b', mu=0, sigma=50)
         sigma_b = pm.Exponential("sigma_b", lam=0.5)
@@ -90,7 +90,7 @@ def fit_logistic(df, save_diagnostics=True):
         sigma_proper = pm.Deterministic("sigma_proper", sigma * (1 + hetero * (top - y_hat) / (top - bottom[plate_col_idx])))
 
         points = pm.Normal("yvals", mu=y_hat, sigma=sigma_proper, observed=scaled)
-        logistic_trace = pm.sample(4000, tune=3000, cores=4)
+        logistic_trace = pm.sample(1000, tune=3000, cores=4)
 
     az.plot_trace(logistic_trace)
     plt.tight_layout()
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     id50_idx = [idx for idx in df_summary.index if 'id50' in idx]
     mapper = {}
     for col in id50_idx:
-        mapper[col] = re.search(".*\[(.*)\]", col)[1]
+        mapper[col] = re.search(r".*\[(.*)\]", col)[1]
     with pd.ExcelWriter(args.workbook_out) as writer:
         df_summary.loc[id50_idx, :].rename(index=mapper).to_excel(writer, sheet_name='ID50s')
         df_summary.to_excel(writer, sheet_name='Full')
