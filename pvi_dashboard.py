@@ -211,7 +211,7 @@ def make_covid_sheet(studies, cohorts):
                                'Dose #8 Date', 'Dose #8 Type', 'Dose #9 Date', 'Dose #9 Type',
                                'Infection 3 Date', 'Infection 4 Date']
     mars_output = cohorts['MARS'].reset_index().loc[:, mars_cols]
-    gaea_cols= ['Dose #6 Date', 'Dose #6 Type', 'Dose #7 Date', 'Dose #7 Type',
+    gaea_cols = shared_cols + ['Dose #6 Date', 'Dose #6 Type', 'Dose #7 Date', 'Dose #7 Type',
                 'Dose #8 Date', 'Dose #8 Type', 'Dose #9 Date', 'Dose #9 Type',
                 'Infection 3 Date']
     gaea_output = cohorts['GAEA'].reset_index().loc[:, gaea_cols]
@@ -269,7 +269,7 @@ if __name__ == '__main__':
     covid_data = make_covid_sheet(studies, cohorts)
     lookup_df = make_lookup_sheet()
 
-    output_filename = util.cross_project + 'PVI Sampling Dashboard {} TEST.xlsx'.format(date.today().strftime("%m.%d.%y"))
+    output_filename = util.cross_project + 'PVI Sampling Dashboard {}.xlsx'.format(date.today().strftime("%m.%d.%y"))
     with pd.ExcelWriter(output_filename) as writer:
         dems.to_excel(writer, index = False, sheet_name='All Demographics', freeze_panes=(1,1))
         lookup_df.to_excel(writer, index=False, sheet_name='Demographic Lookup', freeze_panes=(1,1))
