@@ -53,6 +53,8 @@ def fit_logistic(df, save_diagnostics=True):
     log_dilution = df['log_dilution'].to_numpy()
     plates = df['Plate'].to_numpy() - 1
     plate_ids = np.arange(5)
+    early_top = np.array([100] * df['Sample ID'].unique().size)
+    late_bottom = np.array([0] * df['Sample ID'].unique().size)
 
 
     plate_cols = df['Plate_Col'] = (df['Plate'].to_numpy() - 1) * 12 + df['Column'].to_numpy() - 1
@@ -69,28 +71,31 @@ def fit_logistic(df, save_diagnostics=True):
         plate_idx = pm.Data("plate_idx", plates, dims="obs_id")
         plate_col_idx = pm.Data("plate_col_idx", plate_cols, dims="obs_id")
         nev_idx = pm.Data("nev_idx", nevs, dims="obs_id")
+        y_ceil = pm.Data("y_ceil", early_top, dims="sample")
+        y_floor = pm.Data("y_floor", late_bottom, dims="sample")
 
         top = pm.Normal('top', mu=100, sigma=1)
         hill = pm.Normal('hill', mu=1.1, sigma=0.6, dims="nevirapine")
-        sigma = pm.Exponential("sigma", lam=0.5)
-        hetero = pm.Exponential("hetero", lam=2)
+        # sigma_1 = pm.Exponential("sigma_1", lam=0.5)
+        sigma_2 = pm.Exponential("sigma_2", lam=0.1)
 
         mu_b = pm.Normal('mu_b', mu=0, sigma=50)
         sigma_b = pm.Exponential("sigma_b", lam=0.5)
         z_b = pm.Normal("z_b", mu=0, sigma=1, dims="plate_col")
         bottom = pm.Deterministic("bottom", mu_b + z_b * sigma_b, dims="plate_col")
 
-        mu_i = pm.Normal('mu_i', mu=5, sigma=10)
-        sigma_i = pm.Exponential("sigma_i", lam=0.5)
-        z_i = pm.Normal("z_i", mu=0, sigma=1, dims="sample")
-        id50 = pm.Deterministic("id50", mu_i + z_i * sigma_i, dims="sample")
+        id50 = pm.Normal('id50', mu=6, sigma=3, dims="sample")
 
         y_hat = pm.Deterministic("y_hat", bottom[plate_col_idx] + (top - bottom[plate_col_idx]) / (1 + pt.exp((log_dil - id50[sample_idx]) * hill[nev_idx])), dims='obs_id')
+        y_hat_ceil = pm.Deterministic("y_hat_ceil", 100 / (1 + pt.exp((0 - id50) * 3)), dims='sample')
+        y_hat_floor = pm.Deterministic("y_hat_floor", 100 / (1 + pt.exp((15 - id50) * 3)), dims='sample')
 
-        sigma_proper = pm.Deterministic("sigma_proper", sigma * (1 + hetero * (top - y_hat) / (top - bottom[plate_col_idx])))
+        sigma_proper = pm.Deterministic("sigma_proper", 1 + sigma_2 * (top - y_hat) / (top - bottom[plate_col_idx]))
 
         points = pm.Normal("yvals", mu=y_hat, sigma=sigma_proper, observed=scaled)
-        logistic_trace = pm.sample(1000, tune=3000, cores=4)
+        points_ceil = pm.Normal("yvals_ceil", mu=y_hat_ceil, sigma=1, observed=y_ceil)
+        points_floor = pm.Normal("yvals_floor", mu=y_hat_floor, sigma=1, observed=y_floor)
+        logistic_trace = pm.sample(2000, tune=3000, cores=4)
 
     az.plot_trace(logistic_trace)
     plt.tight_layout()
