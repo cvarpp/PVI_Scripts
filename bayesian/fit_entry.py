@@ -52,7 +52,7 @@ def fit_logistic(df, save_diagnostics=True):
     samples = df["sample_code"] = df['Sample ID'].replace(sample_lookup).values
     log_dilution = df['log_dilution'].to_numpy()
     plates = df['Plate'].to_numpy() - 1
-    plate_ids = np.arange(5)
+    plate_ids = np.arange(20)
     early_top = np.array([100] * df['Sample ID'].unique().size)
     late_bottom = np.array([0] * df['Sample ID'].unique().size)
 
@@ -75,35 +75,53 @@ def fit_logistic(df, save_diagnostics=True):
         y_floor = pm.Data("y_floor", late_bottom, dims="sample")
 
         top = pm.Normal('top', mu=100, sigma=1)
-        hill = pm.Normal('hill', mu=1.1, sigma=0.6, dims="nevirapine")
+        hill = pm.Normal('hill', mu=2, sigma=0.8, dims="nevirapine")
         # sigma_1 = pm.Exponential("sigma_1", lam=0.5)
         sigma_2 = pm.Exponential("sigma_2", lam=0.1)
 
+        # mu_b = pm.Normal('mu_b', mu=0, sigma=50)
+        # sigma_b = pm.Exponential("sigma_b", lam=0.5)
+        # z_b = pm.Normal("z_b", mu=0, sigma=1, dims="plate_col")
+        # bottom = pm.Deterministic("bottom", mu_b + z_b * sigma_b, dims="plate_col")
+
         mu_b = pm.Normal('mu_b', mu=0, sigma=50)
         sigma_b = pm.Exponential("sigma_b", lam=0.5)
-        z_b = pm.Normal("z_b", mu=0, sigma=1, dims="plate_col")
-        bottom = pm.Deterministic("bottom", mu_b + z_b * sigma_b, dims="plate_col")
+        z_b = pm.Normal("z_b", mu=0, sigma=1, dims="plate")
+        bottom = pm.Deterministic("bottom", mu_b + z_b * sigma_b, dims="plate")
 
         id50 = pm.Normal('id50', mu=6, sigma=3, dims="sample")
 
-        y_hat = pm.Deterministic("y_hat", bottom[plate_col_idx] + (top - bottom[plate_col_idx]) / (1 + pt.exp((log_dil - id50[sample_idx]) * hill[nev_idx])), dims='obs_id')
+        y_hat = pm.Deterministic("y_hat", bottom[plate_idx] + (top - bottom[plate_idx]) / (1 + pt.exp((log_dil - id50[sample_idx]) * hill[nev_idx])), dims='obs_id')
         y_hat_ceil = pm.Deterministic("y_hat_ceil", 100 / (1 + pt.exp((0 - id50) * 3)), dims='sample')
         y_hat_floor = pm.Deterministic("y_hat_floor", 100 / (1 + pt.exp((15 - id50) * 3)), dims='sample')
 
-        sigma_proper = pm.Deterministic("sigma_proper", 1 + sigma_2 * (top - y_hat) / (top - bottom[plate_col_idx]))
+        sigma_proper = pm.Deterministic("sigma_proper", 1 + sigma_2 * (top - y_hat) / (top - bottom[plate_idx]))
 
         points = pm.Normal("yvals", mu=y_hat, sigma=sigma_proper, observed=scaled)
         points_ceil = pm.Normal("yvals_ceil", mu=y_hat_ceil, sigma=1, observed=y_ceil)
         points_floor = pm.Normal("yvals_floor", mu=y_hat_floor, sigma=1, observed=y_floor)
-        logistic_trace = pm.sample(2000, tune=3000, cores=4)
+        logistic_trace = pm.sample(2000, tune=2000, cores=4)
 
-    az.plot_trace(logistic_trace)
+    az.plot_trace(logistic_trace, var_names=('mu', 'sigma_2', 'sigma_b', 'bottom', 'top', 'hill'), filter_vars='like')
     plt.tight_layout()
     if save_diagnostics:
         plt.savefig('tmp.png', dpi=100)
-    plt.show()
+    # plt.show()
+    plt.close()
 
     df_summary = az.summary(logistic_trace, round_to=2)
+    pred_rows = [row for row in df_summary.index if row[:6] == 'y_hat[']
+    df['Pred'] = df_summary.loc[pred_rows, 'mean'].to_numpy()
+    df['Resid'] = df['Normalized'] - df['Pred']
+    sigma_rows = [row for row in df_summary.index if row[:13] == 'sigma_proper[']
+    df['Sigma Pred'] = df_summary.loc[sigma_rows, 'mean'].to_numpy()
+    df['Z Score'] = df['Resid'] / df['Sigma Pred']
+    sns.scatterplot(data=df, x='Pred', y='Resid')
+    plt.savefig('Residuals by Prediction SCV2.png')
+    plt.show()
+    sns.scatterplot(data=df, x='Pred', y='Z Score')
+    plt.savefig('Scaled Residuals by Prediction SCV2.png')
+    plt.show()
     return df_summary
 
 if __name__ == '__main__':
