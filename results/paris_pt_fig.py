@@ -76,6 +76,7 @@ def main(pid, output_dir):
             cov22_proportion = cov22_length/total_length
 
             fig, axes = plt.subplots(1, 2,figsize=(10, 5), dpi=300, layout='tight', width_ratios=[covqa_proportion, cov22_proportion])
+            plt.suptitle('SARS-CoV-2 Binding Antibodies', fontsize=14)
 
             def plot_raster(ax, dates, color):
                 plt.sca(ax)
@@ -89,7 +90,6 @@ def main(pid, output_dir):
             plt.sca(ax)
             sns.lineplot(data=results, x='Date Collected', y='Quantitative', color='green', ax=ax, zorder=9, linewidth=3)
             sns.scatterplot(data=results, x='Date Collected', y='Quantitative', color='green', ax=ax, linewidth=.5, edgecolor='white', zorder=10, s=60)
-            plt.title('Kantaro SeroKlir Assay', fontsize=14)
             xticks = ['7.1.20', '1.1.21', '7.1.21', '1.1.22', '7.1.22', '1.1.23', '7.1.23']
             xticklabels = ['', '2021', '', '2022', '',  '2023', '']
             plt.xticks([pd.to_datetime(xtick) for xtick in xticks], xticklabels, fontsize=11)
@@ -101,7 +101,7 @@ def main(pid, output_dir):
             yticks=[5,10,100,1000]
             yticklabels=['LOD', '10', '100', '1000']
             plt.yticks(yticks, yticklabels, fontsize=11)
-            plt.ylabel('SARS-CoV-2 Antibody Concentration (AU/mL)', fontsize=12)
+            plt.ylabel('Kantaro SeroKlir Assay \n Antibody Concentration (AU/mL)', fontsize=12)
 
             x_limits = ax.get_xlim()
             vax_dates, inf_dates = pull_immune_events(pid)
@@ -116,7 +116,6 @@ def main(pid, output_dir):
             plt.sca(ax)
             sns.lineplot(data=results, x='Date Collected', y='COV22', color='purple', ax=ax, zorder=9, linewidth=3)
             sns.scatterplot(data=results, x='Date Collected', y='COV22', color='purple', ax=ax, linewidth=.5, edgecolor='white', zorder=10, s=60)
-            plt.title('Abbott AdviseDx Assay', fontsize=14)
             xticks = ['1.1.23', '7.1.23', '1.1.24', '7.1.24', '1.1.25', '7.1.25']
             xticklabels = ['2023', '', '2024', '',  '2025', '']
             plt.xticks([pd.to_datetime(xtick) for xtick in xticks], xticklabels, fontsize=11)
@@ -134,7 +133,7 @@ def main(pid, output_dir):
                 cov22 = 20.88063*covqa**1.132526536
                 return cov22
             ax.set(ylim=(convert_limits(qalower),convert_limits(qaupper)))
-            plt.ylabel('SARS-CoV-2 Antibody Concentration (AU/mL)', fontsize=12)
+            plt.ylabel('Abbott AdviseDx Assay \n Antibody Concentration (AU/mL)', fontsize=12)
 
             x_limits = ax.get_xlim()
             plot_raster(ax,vax_dates,'blue')
@@ -154,7 +153,7 @@ def main(pid, output_dir):
             
             sns.lineplot(data=results, x='Date Collected', y='Quantitative', color='green', zorder=9, linewidth=3)
             sns.scatterplot(data=results, x='Date Collected', y='Quantitative', color='green', linewidth=.5, edgecolor='white', zorder=10, s=60)
-            plt.title('Kantaro SeroKlir Assay', fontsize=14)
+            plt.title('SARS-CoV-2 Binding Antibodies', fontsize=14)
             xticks = ['7.1.20', '1.1.21', '7.1.21', '1.1.22', '7.1.22', '1.1.23', '7.1.23']
             xticklabels = ['', '2021', '', '2022', '',  '2023', '']
             plt.xticks([pd.to_datetime(xtick) for xtick in xticks], xticklabels, fontsize=11)
@@ -166,7 +165,7 @@ def main(pid, output_dir):
             yticks=[5,10,100,1000]
             yticklabels=['LOD', '10', '100', '1000']
             plt.yticks(yticks, yticklabels, fontsize=11)
-            plt.ylabel('SARS-CoV-2 Antibody Concentration (AU/mL)', fontsize=12)
+            plt.ylabel('Kantaro SeroKlir Assay \n Antibody Concentration (AU/mL)', fontsize=12)
 
             x_limits = plt.xlim()
             vax_dates, inf_dates = pull_immune_events(pid)
