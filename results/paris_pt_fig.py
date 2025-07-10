@@ -59,18 +59,24 @@ def main(pid, output_dir):
 
         results.sort_values(by=['Date Collected'], inplace=True)
         all_covqa=results['Quantitative']
+        if all_covqa.isna().all():
+            print('Participant {} has no shareable results.'.format(pid))
+            quit()
         first_covqa = results.loc[all_covqa.first_valid_index(), 'Date Collected']
         last_covqa = results.loc[all_covqa.last_valid_index(), 'Date Collected']
+        covqa_length = (pd.to_datetime(last_covqa)-pd.to_datetime(first_covqa)).days
 
-        if pd.to_datetime(results['Date Collected'].values[-1]) >= pd.to_datetime('1.18.23'):
-            #Calculate Relative Figure Widths Based on Date
-            covqa_length = (pd.to_datetime(last_covqa)-pd.to_datetime(first_covqa)).days
-
-            all_cov22=results['COV22']
+        all_cov22=results['COV22']
+        if all_cov22.isna().all():
+            print('Participant {} has no COV22 results, only COVQA will be graphed.'.format(pid))
+            cov22_length = 0
+        else:
             first_cov22 = results.loc[all_cov22.first_valid_index(), 'Date Collected']
             last_cov22 = results.loc[all_cov22.last_valid_index(), 'Date Collected']
             cov22_length = (pd.to_datetime(last_cov22)-pd.to_datetime(first_cov22)).days
-
+        
+        if (pd.to_datetime(results['Date Collected'].values[-1]) >= pd.to_datetime('1.18.23')) and cov22_length != 0:
+            #Calculate Relative Figure Widths Based on Date
             total_length = covqa_length+cov22_length
             covqa_proportion = covqa_length/total_length
             cov22_proportion = cov22_length/total_length
@@ -101,6 +107,7 @@ def main(pid, output_dir):
             yticks=[5,10,100,1000]
             yticklabels=['LOD', '10', '100', '1000']
             plt.yticks(yticks, yticklabels, fontsize=11)
+            plt.axhline(y=5, color='black', linewidth=2, linestyle='--')
             plt.ylabel('Kantaro SeroKlir Assay \n Antibody Concentration (AU/mL)', fontsize=12)
 
             x_limits = ax.get_xlim()
@@ -109,7 +116,7 @@ def main(pid, output_dir):
             plot_raster(ax,inf_dates,'orange')
             vax_line = mlines.Line2D([], [], color='blue', linewidth=3, linestyle='--', label='COVID Vaccine')
             inf_line = mlines.Line2D([], [], color='orange', linewidth=3, linestyle='--', label='SARS-CoV-2 Infection')
-            plt.legend(handles=[vax_line, inf_line], fontsize=11)
+            plt.legend(handles=[vax_line, inf_line], fontsize=11, framealpha=.9)
 
             #Right Plot
             ax=axes[1]
@@ -165,6 +172,7 @@ def main(pid, output_dir):
             yticks=[5,10,100,1000]
             yticklabels=['LOD', '10', '100', '1000']
             plt.yticks(yticks, yticklabels, fontsize=11)
+            plt.axhline(y=5, color='black', linewidth=2, linestyle='--')
             plt.ylabel('Kantaro SeroKlir Assay \n Antibody Concentration (AU/mL)', fontsize=12)
 
             x_limits = plt.xlim()
@@ -173,7 +181,7 @@ def main(pid, output_dir):
             plot_raster(inf_dates,'orange')
             vax_line = mlines.Line2D([], [], color='blue', linewidth=3, linestyle='--', label='COVID Vaccine')
             inf_line = mlines.Line2D([], [], color='orange', linewidth=3, linestyle='--', label='SARS-CoV-2 Infection')
-            plt.legend(handles=[vax_line, inf_line], fontsize=11)
+            plt.legend(handles=[vax_line, inf_line], fontsize=11,framealpha=.9)
 
             plt.savefig(output_dir + '{}.png'.format(pid), dpi=200)
             plt.show()
