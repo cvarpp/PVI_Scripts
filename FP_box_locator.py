@@ -19,8 +19,8 @@ if __name__ == '__main__':
     # Handle arguments
     argparser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     argparser.add_argument('-i', '--input_fname', action='store', required=True)
-    argparser.add_argument('-o', '--output_fname', action='store', default="9x9_box_locations.csv")
-    argparser.add_argument('-t', '--sleep_time', action='store', default=.04)
+    argparser.add_argument('-o', '--output_fname', action='store', default="box_locations.xlsx")
+    argparser.add_argument('-t', '--sleep_time', action='store', default=0.05)
     args = argparser.parse_args()
 
     assert 'xls' in args.output_fname[-4:], "Output filename should end in xls[xm]?"
@@ -64,10 +64,10 @@ if __name__ == '__main__':
     duration = duration if duration < 60 else int(duration / 60)
     print(f"Searching for {how_many} boxes. This will take at least {duration} {time_units}.")
     last_call = [time.time()]
-    def make_request(s, headers=headers, last_call=last_call):
+    def make_request(s, headers=headers, last_call=last_call, sleep_time=args.sleep_time):
         diff = time.time() - last_call[0]
-        if diff < 0.05:
-            time.sleep(0.05 - diff + 0.005)
+        if diff < sleep_time:
+            time.sleep(sleep_time - diff + 0.005)
         last_call[0] = time.time()
         response = requests.get(s, headers=headers)
         return response
@@ -81,7 +81,7 @@ if __name__ == '__main__':
         box_response = make_request(f'{util.fp_url}boxes/{box_id}?include=parents')
         if box_response.status_code != 200:
             print("Failed to query box {}.".format(box_id))
-            time.sleep(0.05)
+            time.sleep(args.sleep_time)
             freezers[box_id] = np.nan
             for i in range(5):
                 levels[i][box_id] = np.nan
