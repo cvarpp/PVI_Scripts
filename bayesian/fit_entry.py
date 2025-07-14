@@ -78,10 +78,11 @@ def fit_logistic(df, exp_tag, save_diagnostics=True):
         sigma_1 = 1
         sigma_2 = pm.Exponential("sigma_2", lam=0.1)
 
-        mu_b = pm.Normal('mu_b', mu=0, sigma=50)
-        sigma_b = pm.Exponential("sigma_b", lam=0.5)
-        z_b = pm.Normal("z_b", mu=0, sigma=1, dims="plate")
-        bottom = pm.Deterministic("bottom", mu_b + z_b * sigma_b, dims="plate")
+        # mu_b = pm.Normal('mu_b', mu=0, sigma=50)
+        # sigma_b = pm.Exponential("sigma_b", lam=0.5)
+        # z_b = pm.Normal("z_b", mu=0, sigma=1, dims="plate")
+        # bottom = pm.Deterministic("bottom", mu_b + z_b * sigma_b, dims="plate")
+        bottom = pm.Normal("bottom", mu=0, sigma=20, dims="plate")
 
         id50 = pm.Normal('id50', mu=6, sigma=3, dims="sample")
 
@@ -177,7 +178,9 @@ if __name__ == '__main__':
     mapper = {}
     for col in id50_idx:
         mapper[col] = re.search(r".*\[(.*)\]", col)[1]
+    df_id50s = df_summary.loc[id50_idx, :].rename(index=mapper)
+    df_id50s['id50'] = np.exp(df_id50s['mean'])
     with pd.ExcelWriter(args.workbook_out) as writer:
-        df_summary.loc[id50_idx, :].rename(index=mapper).to_excel(writer, sheet_name='ID50s')
+        df_id50s.to_excel(writer, sheet_name='ID50s')
         df_summary.to_excel(writer, sheet_name='Full')
         scaled_input.to_excel(writer, sheet_name='Annotated Input')
