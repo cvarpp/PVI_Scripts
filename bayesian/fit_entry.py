@@ -8,10 +8,6 @@ import statsmodels.api as sm
 import os
 
 import arviz as az
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-
 import pymc as pm
 
 import argparse
