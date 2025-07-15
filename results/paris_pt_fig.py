@@ -8,6 +8,7 @@ import argparse
 import util
 from helpers import query_intake
 from PIL import Image
+import os
 
 def load_and_clean_sheet(excel_file, sheet_name, index_col='Participant ID', **excel_kwargs):
     df = pd.read_excel(excel_file, sheet_name=sheet_name, **excel_kwargs)
@@ -50,7 +51,7 @@ def pull_immune_events(pid):
     inf_dates = pt_info[infection_date_cols]
     return vax_dates, inf_dates
 
-def main(pid, output_dir):
+def main(pid, output_dir, display):
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         results = query_intake(participants=pid, include_research=True)
@@ -175,7 +176,10 @@ def main(pid, output_dir):
             plt.figimage(np.asarray(qr), xo=1775, yo=5)
 
             plt.savefig(output_dir + 'CLIA Antibody Figure.png'.format(pid), dpi=200, edgecolor=fig.get_edgecolor())
-            plt.show()
+            if display:
+                plt.show()
+            else:
+                plt.close()
         
         #If ppl only have Kantaro results
         else:
@@ -236,13 +240,18 @@ def main(pid, output_dir):
             plt.figimage(np.asarray(qr), xo=1475, yo=5)
 
             plt.savefig(output_dir + 'CLIA Antibody Figure.png'.format(pid), dpi=200, edgecolor=fig.get_edgecolor())
-            plt.show()
+            if display:
+                plt.show()
+            else:
+                plt.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate a figure displaying all antibody results for a given PARIS participant.')
     parser.add_argument('pid', type=str, help='PARIS Participant ID in 03374-XXX format')
+    parser.add_argument('-o', '--output_dir', action='store', default=util.cross_project + '/Participant Plots', help='Directory where figures will output')
+    parser.add_argument('-d', '--display', action='store_true', help='Show plots in addition to saving')
     args = parser.parse_args()
-    parser.add_argument('-o', '--output_dir', action='store', default=util.cross_project + '/Participant Plots/{}/'.format(args.pid), help='Directory where figures will output')
-    args = parser.parse_args()
+    args.output_dir = args.output_dir + '/{}/'.format(args.pid)
+    os.makedirs(args.output_dir, exist_ok=True)
 
-    main(args.pid, args.output_dir)
+    main(args.pid, args.output_dir, args.display)
