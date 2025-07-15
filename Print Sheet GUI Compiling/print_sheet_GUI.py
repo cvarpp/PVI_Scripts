@@ -1,40 +1,17 @@
 import pandas as pd
 import numpy as np
-import argparse
-import util
 import os
-import warnings
+import cmath
+import customtkinter as tk
 
-def parse_input():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--seronet_cam', type=int, default=0, help='Number of SERONET CAM rounds')
-    parser.add_argument('--seronet_rtc', type=int, default=0, help='Number of SERONET RTC rounds')
-    parser.add_argument('--serum', type=int, default=0, help='Number of SERUM rounds')
-    parser.add_argument('--standard', type=int, default=0, help='Number of STANDARD rounds')
-    parser.add_argument('--seronet_pbmc', type=int, default=0, help='Number of SERONET PBMC rounds')
-    parser.add_argument('--standard_pbmc', type=int, default=0, help='Number of STANDARD PBMC rounds')
-    parser.add_argument('--apollo', type=int, default=0, help='Number of APOLLO rounds')
-    parser.add_argument('--nps', type=int, default=0, help='Number of NPS rounds')
-    parser.add_argument('--cells', type=int, default=0, help='Number of CELLS rounds')
-    parser.add_argument('--cells_pbmc', type=int, default=0, help='Number of CELLS PBMC rounds')
-    args = parser.parse_args()
-
-    session_counts = {
-        'SERONET': args.seronet_cam + args.seronet_rtc,
-        'SERONET_RTC': args.seronet_rtc,
-        'SERUM': args.serum,
-        'STANDARD': args.standard,
-        'SERONETPBMC': args.seronet_pbmc,
-        'STANDARDPBMC': args.standard_pbmc,
-        'APOLLO': args.apollo,
-        'NPS': args.nps,
-        'CELLS': args.cells,
-        'CELLSPBMC': args.cells_pbmc,
-    }
-    return session_counts
+home = os.path.expanduser('~') + os.sep
+onedrive = home + os.environ.get('SHAREPOINT_DIR', 'The Mount Sinai Hospital') + os.sep
+printing = onedrive + os.environ.get('PRINT_DIR', 'Simon Lab - Print Shop') + os.sep
+tube_print = printing + 'Tube Printing' + os.sep
+print_log = tube_print + 'Printing Log.xlsx'
 
 def last_printed_box(print_type):
-    plog = (pd.read_excel(util.print_log, sheet_name='LOG', header=0)
+    plog = (pd.read_excel(print_log, sheet_name='LOG', header=0)
             .rename(columns={'Box numbers': 'Box Min', 'Unnamed: 4': 'Box Max', 'Study': 'Kit Type'})
             .drop(1))
     plog['PBMCs'] = plog['PBMCs'].str.strip().str.lower()
@@ -49,7 +26,7 @@ def last_printed_box(print_type):
         'STANDARDPBMC': (plog['Kit Type'] == 'STANDARD') & (plog['PBMCs'] == 'yes'),
         'APOLLO': (plog['Kit Type'] == 'APOLLO'),
         'NPS': (plog['Kit Type'] == 'NPS'),
-        'CELLS': (plog['Kit Type'] == 'CELLS') & (plog['PBMCs'] == 'no'),
+        'CELLS': (plog['Kit Type'] == 'CELLS'),
         'CELLSPBMC': (plog['Kit Type'] == 'CELLS') & (plog['PBMCs'] == 'yes'),
     }
     if print_type not in filter:
@@ -63,8 +40,9 @@ def last_printed_box(print_type):
 class PrintSession():
     def __init__(self, kit_type, templates, session_num,):
         self.kit_type = kit_type
+        self.recent_box_max = last_printed_box(self.kit_type)
         self.kit_info = pd.read_excel(templates, sheet_name='Tube Counts', index_col='Kit Type').loc[kit_type, :]
-        self.box_start = int(recent_box_max) + 1 + session_num * self.kit_info['Boxes per Print Session']
+        self.box_start = int(self.recent_box_max) + 1 + session_num * self.kit_info['Boxes per Print Session']
         self.box_end = self.box_start + self.kit_info['Boxes per Print Session'] - 1
         self.fiveml = self.kit_info['4.5 mL'] > 0
         self.pbmc = self.kit_info['PBMC'] > 0
@@ -81,7 +59,7 @@ class PrintSession():
         self.make_output_path()
 
     def get_sample_ids(self):
-        print_planning_path = os.path.join(util.tube_print, 'Print Planning.xlsx')
+        print_planning_path = os.path.join(tube_print, 'Print Planning.xlsx')
         print_planning = pd.read_excel(print_planning_path, sheet_name=self.kit_info['Print Planning Sheet'])
         box_range = print_planning['Box ID'].between(self.box_start, self.box_end)
         self.sample_ids = print_planning.loc[box_range, 'Sample ID'].to_numpy()
@@ -89,8 +67,8 @@ class PrintSession():
 
     def make_output_path(self):
         output_prefix = "3CPTs " if self.kit_type == 'SERONET_RTC' else "2CPTs " if self.kit_type == 'SERONET' else ""
-        workbook_name = f"{output_prefix}{print_type} {self.box_start}-{self.box_end}".strip()
-        self.output_path = os.path.join(util.tube_print, 'Future Sheets',
+        workbook_name = f"{output_prefix}{self.kit_type} {self.box_start}-{self.box_end}".strip()
+        self.output_path = os.path.join(tube_print, 'Future Sheets',
                                         self.kit_info['Future Sheets Folder'], f"{workbook_name}.xlsx")
 
     def write_workbook(self):
@@ -214,24 +192,101 @@ class PrintSession():
         self.future_workbook['4.5mL Tops'] = top_data
         self.future_workbook['4.5mL Sides'] = side_data
 
+class GUI(tk.CTk):
+    def __init__(self, fg_color = None, **kwargs):
+
+        # Setup
+        super().__init__(fg_color, **kwargs)
+        self.minsize(500, 100)
+        self.resizable(True, True)
+        self.title("Print File Generator")
+        tk.set_appearance_mode("System")
+        tk.set_default_color_theme("blue")
+        
+        # Instance Variables
+        self.statusvar = tk.StringVar(master=self, value="Select type and quantity, then press Generate.")
+        self.session_counts = {'SERONET': 0,
+                               'SERONET_RTC': 0,
+                               'SERUM': 0,
+                               'STANDARD': 0,
+                               'SERONETPBMC': 0,
+                               'STANDARDPBMC': 0,
+                               'APOLLO': 0,
+                               'NPS': 0,
+                               'CELLS': 0,
+                               'CELLSPBMC': 0
+                                }
+
+        # Widgets
+        self.kit_type_dropdown = tk.CTkOptionMenu(master=self, values=['SERONET',
+                                                                       'SERONET_RTC',
+                                                                       'SERUM',
+                                                                       'STANDARD',
+                                                                       'SERONETPBMC',
+                                                                       'STANDARDPBMC',
+                                                                       'APOLLO',
+                                                                       'NPS',
+                                                                       'CELLS',
+                                                                       'CELLSPBMC'])
+        self.print_number_dropdown = tk.CTkOptionMenu(master=self, values=['1',
+                                                                           '2',
+                                                                           '3',
+                                                                           '4',
+                                                                           '5',
+                                                                           '6',
+                                                                           '7',
+                                                                           '8',
+                                                                           '9',
+                                                                           '0'])
+        self.generate_file_button = tk.CTkButton(master=self, text="Generate", command = self.generate_file)
+        self.status_label = tk.CTkLabel(master=self, textvariable = self.statusvar, wraplength=300)
+        self.status_label_label = tk.CTkLabel(master=self, text="Status:")
+
+        # Layout
+        self.kit_type_dropdown.grid(row=0, column=0, padx=20, pady=20, sticky="w")
+        self.print_number_dropdown.grid(row=0, column=1, padx=20, pady=20, sticky="ew")
+        self.generate_file_button.grid(row=0, column=2, padx=20, pady=20)
+        self.status_label.grid(row=1, column=1, padx=20, pady=20, sticky="ew")
+        self.status_label_label.grid(row=1, column=0, padx=20, pady=20, sticky="e")
+
+    # Methods
+    
+    def generate_file(self):
+        # This is just a way of resetting the user input. A later version may allow the user to select multiple
+        # kit types and multiple rounds, which will be easier to implement with this inelegant solution in place.
+        self.session_counts = {'SERONET': 0,
+                               'SERONET_RTC': 0,
+                               'SERUM': 0,
+                               'STANDARD': 0,
+                               'SERONETPBMC': 0,
+                               'STANDARDPBMC': 0,
+                               'APOLLO': 0,
+                               'NPS': 0,
+                               'CELLS': 0,
+                               'CELLSPBMC': 0
+                                }
+        self.session_counts[self.kit_type_dropdown.get()] = int(self.print_number_dropdown.get())
+        session_counts = self.session_counts
+        templates = pd.ExcelFile(tube_print + 'Future Sheets' + os.sep + 'Central Template Sheet.xlsx')
+        for print_type, sessions in session_counts.items():
+            if print_type == 'SERONET_RTC':
+                continue
+            recent_box_max = last_printed_box(print_type)
+            for session_num in range(sessions):
+                kit_type = print_type
+                if print_type == 'SERONET' and session_num < session_counts['SERONET_RTC']:
+                    kit_type = 'SERONET_RTC'
+                print_session = PrintSession(kit_type, templates, session_num)
+                if not print_session.valid_sid_set:
+                    self.statusvar.set(f"""Need more assigned sample IDs for {print_type}.
+                        Could not generate {print_session.box_start} - {print_session.box_end}.""")
+                    break
+                print_session.write_workbook()
+                self.statusvar.set(f"'{print_session.output_path.split(os.sep)[-1]}' workbook generated in {print_session.kit_info['Future Sheets Folder']}.")
+
 if __name__ == '__main__':
-    warnings.filterwarnings('ignore', category=UserWarning, module='openpyxl')
-    session_counts = parse_input()
-
-    templates = pd.ExcelFile(util.tube_print + 'Future Sheets' + os.sep + 'Central Template Sheet.xlsx')
-    for print_type, sessions in session_counts.items():
-        if print_type == 'SERONET_RTC':
-            continue
-        recent_box_max = last_printed_box(print_type)
-        for session_num in range(sessions):
-            kit_type = print_type
-            if print_type == 'SERONET' and session_num < session_counts['SERONET_RTC']:
-                kit_type = 'SERONET_RTC'
-            print_session = PrintSession(kit_type, templates, session_num)
-            if not print_session.valid_sid_set:
-                print(f"""Need more assigned sample IDs for {print_type}.
-                      Could not generate {print_session.box_start} - {print_session.box_end}.""")
-                break
-
-            print_session.write_workbook()
-            print(f"'{print_session.output_path.split(os.sep)[-1]}' workbook generated in {print_session.kit_info['Future Sheets Folder']}.")
+    app = GUI()
+    app.attributes('-topmost', True)
+    app.lift()
+    app.attributes('-topmost', False)
+    app.mainloop()
