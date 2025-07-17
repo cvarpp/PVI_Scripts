@@ -269,12 +269,14 @@ else:
 # %%
 # All one Graph! --------------------------------------------
 
-fig, ax = plot.subplots(1,1, figsize=[20,7])
+fig, ax = plot.subplots(2,1, height_ratios=[1,0.2], figsize=[25,5])
 
 dat = []
 labels = []
 
 color_assignments_percent={}
+
+palette = list(sns.color_palette(cc.glasbey_cool).as_hex())
 
 for n, item in enumerate(var_epi_percent.columns[2:]):
     color_assignments_percent.update({item:palette[n]})
@@ -292,30 +294,32 @@ for column in df.columns[2:]:
     if column in color_assignments_percent.keys():
         plot_colors.append(color_assignments_percent[column])
 
-plot.stackplot(df['Period end date'], dat, labels=labels, colors=plot_colors, alpha=0.85, edgecolor='black')
+ax[0].stackplot(df['Period end date'], dat, labels=labels, colors=plot_colors, alpha=0.85, edgecolor='black')
 
 fig.suptitle(f"COVID Variants in NYC Over Time", fontsize=24)
 
-ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=range(1,12,3)))
-ax.xaxis.set_major_formatter(mdates.DateFormatter('%b\n%Y'))
+ax[0].xaxis.set_major_locator(mdates.MonthLocator(bymonth=range(1,12,3)))
+ax[0].xaxis.set_major_formatter(mdates.DateFormatter('%b\n%Y'))
 
-ticks = ax.get_xticks()
-labels = ax.get_xticklabels()
+ticks = ax[0].get_xticks()
+labels = ax[0].get_xticklabels()
 
-ax.set_xticks(ticks,labels,fontweight='bold',fontsize=15)
+ax[0].set_xticks(ticks,labels,fontweight='bold',fontsize=15)
 
-ax.set_xlim(df['Period end date'].min(), df['Period end date'].max())
+ax[0].set_xlim(df['Period end date'].min(), df['Period end date'].max())
 
-ticks = ax.get_yticks()
-labels = ax.get_yticklabels()
+ticks = ax[0].get_yticks()
+labels = ax[0].get_yticklabels()
 
-ax.set_yticks(ticks,labels,fontweight='bold',fontsize=15)
+ax[0].set_yticks(ticks,labels,fontweight='bold',fontsize=15)
 
-ax.set_ylim(0,100)
+ax[0].set_ylim(0,100)
 
-ax.set_ylabel("Percent of Cases", fontsize=18, fontweight="bold")
+ax[0].set_ylabel("Percent of Cases", fontsize=18, fontweight="bold")
 
 fig.legend(bbox_to_anchor=[0.5,-0.25], loc="lower center", fontsize=14, fancybox=True, ncol=7)
+
+ax[1].set_axis_off()
 
 if __name__ == "__main__":
     try:
@@ -334,7 +338,7 @@ else:
 
 # %%
 
-fig, ax = plot.subplots(1,1, figsize=[20,7])
+fig, ax = plot.subplots(2,1, height_ratios=[1,0.2], figsize=[25,5])
 
 dat = []
 labels = []
@@ -357,31 +361,33 @@ for column in df.columns[2:]:
     if column in color_assignments_count.keys():
         plot_colors.append(color_assignments_count[column])
 
-plot.stackplot(df['Period end date'], dat, labels=labels, colors=plot_colors, alpha=0.85, edgecolor='black')
+ax[0].stackplot(df['Period end date'], dat, labels=labels, colors=plot_colors, alpha=0.85, edgecolor='black')
 # sns.lineplot(data=var_epi_count, x="Period end date", y=col, ax=axes)
 
-ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=range(1,12,3)))
-ax.xaxis.set_major_formatter(mdates.DateFormatter('%b\n%Y'))
+ax[0].xaxis.set_major_locator(mdates.MonthLocator(bymonth=range(1,12,3)))
+ax[0].xaxis.set_major_formatter(mdates.DateFormatter('%b\n%Y'))
 
-ticks = ax.get_xticks()
-labels = ax.get_xticklabels()
+ticks = ax[0].get_xticks()
+labels = ax[0].get_xticklabels()
 
-ax.set_xticks(ticks,labels,fontweight='bold',fontsize=15)
+ax[0].set_xticks(ticks,labels,fontweight='bold',fontsize=15)
 
-ax.set_xlim(df['Period end date'].min(), df['Period end date'].max())
+ax[0].set_xlim(df['Period end date'].min(), df['Period end date'].max())
 
-ticks = ax.get_yticks()
-labels = ax.get_yticklabels()
+ticks = ax[0].get_yticks()
+labels = ax[0].get_yticklabels()
 
-ax.set_yticks(ticks,labels,fontweight='bold',fontsize=15)
+ax[0].set_yticks(ticks,labels,fontweight='bold',fontsize=15)
 
 fig.suptitle(f"COVID Variants in NYC Over Time", fontsize=24)
 
-ax.set_ylabel("Number of Cases", fontsize=18, fontweight="bold")
+ax[0].set_ylabel("Number of Cases", fontsize=18, fontweight="bold")
 
-ax.set_xlim(df['Period end date'].min(), df['Period end date'].max())
+ax[0].set_xlim(df['Period end date'].min(), df['Period end date'].max())
 
 fig.legend(bbox_to_anchor=[0.5,-0.225], loc="lower center", fontsize=14, fancybox=True, ncol=7)
+
+ax[1].set_axis_off()
 
 if __name__ == "__main__":
     try:
@@ -398,5 +404,3 @@ if __name__ == "__main__":
 else:
     plot.show()
 
-
-# %%
