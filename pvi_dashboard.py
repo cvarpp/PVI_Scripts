@@ -1,13 +1,10 @@
 import pandas as pd
 import numpy as np
 from datetime import date
-from dateutil import parser
 import util
-import argparse
-import sys
-import PySimpleGUI as sg
-from helpers import try_datediff, permissive_datemax, query_intake, map_dates, immune_history, ValuesToClass
+from helpers import permissive_datemax, query_intake, query_dscf, immune_history
 import warnings
+import cam_convert
 
 def load_and_clean_sheet(excel_file, sheet_name, index_col='Participant ID', **excel_kwargs):
     df = pd.read_excel(excel_file, sheet_name=sheet_name, **excel_kwargs)
@@ -229,7 +226,7 @@ def make_covid_sheet(studies, cohorts):
     covid_data['Immune History'] = covid_data.apply(lambda row: immune_history(row[vaccine_date_cols], row[vaccine_type_cols], row[infection_date_cols], pd.Timestamp.today()), axis=1)
     covid_data['Total Immune Events'] = covid_data['Total Vaccine Doses'].fillna(0).astype(int) + covid_data['Total Infections'].fillna(0).astype(int) #TODO: Update to be correct for non-APOLLO
     covid_data['Last Immune Event'] = covid_data['Immune History'].str.endswith('I').apply(lambda val: 'Infection' if val else 'Vaccination')
-    return covid_data
+    return covid_data.drop_duplicates(subset='Participant ID', keep='last')
 
 def make_lookup_sheet():
     lookup = {'Participant ID': ['']*100}
@@ -256,6 +253,23 @@ def make_lookup_sheet():
         lookup_df[dem_name] += f",'All Demographics'!$A:$A,'All Demographics'!{dem_col}), \"\")"
     return lookup_df
 
+def aggregate_sample_data():
+     with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", message=".*extension is not supported.*")
+        cam_data=cam_convert.transform_cam()
+        cam_data.rename(columns={'sample_id':'Sample ID'}, inplace=True)
+        cam_data.set_index('Sample ID')
+        intake = query_intake(include_research=True).reset_index()
+        intake.rename(columns={'sample_id':'Sample ID'}, inplace=True)
+        intake.set_index('Sample ID')
+        proc_data = query_dscf().reset_index()
+        proc_data.rename(columns={'sample_id':'Sample ID'}, inplace=True)
+        proc_data.set_index('Sample ID')
+        sample_data=(intake.join(cam_data, rsuffix='_cam')
+                        .join(proc_data, rsuffix='_proc'))
+        sample_cols = []
+        return sample_data
+
 def make_sheet(col_list):
     all_studies = pd.concat(studies.values())
     all_cohorts = pd.concat(cohorts.values())
@@ -268,12 +282,14 @@ if __name__ == '__main__':
     dems = make_dems_sheet(studies)
     covid_data = make_covid_sheet(studies, cohorts)
     lookup_df = make_lookup_sheet()
+    sample_data = aggregate_sample_data()
 
-    output_filename = util.cross_project + 'PVI Sampling Dashboard {}.xlsx'.format(date.today().strftime("%m.%d.%y"))
+    output_filename = util.cross_project + 'PVI Dashboard {}.xlsx'.format(date.today().strftime("%m.%d.%y"))
     with pd.ExcelWriter(output_filename) as writer:
         dems.to_excel(writer, index = False, sheet_name='All Demographics', freeze_panes=(1,1))
         lookup_df.to_excel(writer, index=False, sheet_name='Demographic Lookup', freeze_panes=(1,1))
         covid_data.to_excel(writer, index = False, sheet_name='SARS-CoV-2 Immune Histories', freeze_panes=(1,1))
+        sample_data.to_excel(writer, sheet_name='Sample Data', freeze_panes=(1,1))
         studies['APOLLO'].to_excel(writer, sheet_name='All APOLLO', freeze_panes=(1,1))
         studies['PARIS'].to_excel(writer, sheet_name='All PARIS', freeze_panes=(1,1))
         studies['Healthy Donors'].to_excel(writer, sheet_name='All Healthy Donors', freeze_panes=(1,1))

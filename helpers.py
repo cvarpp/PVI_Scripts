@@ -124,14 +124,35 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=Fals
     if use_cache and os.path.exists('local_cache/dscf.h5') and '/proc_info' in pd.HDFStore('local_cache/dscf.h5', mode='r').keys():
         all_samples = pd.read_hdf(util.proc + 'dscf.h5', key='proc_info')
     else:
-        correct_2p = {'Comments': 'COMMENTS',
-                    'Date of specimen processed ': 'Date Processing Started',}
+        correct_2={'#SST':'#SSTs',
+                     '# CPT/EDTA':'# Cell Tubes',
+                     'Date of specimen processed':'Date Processing Started',
+                     'Total # Aliqots frozen':'# Plasma Aliquots',
+                     'Aliquoted by: PLASMA':'Plasma Aliquoted by',
+                     'Total # Aliqots frozen.1':'# Serum Aliquots',
+                     'Aliquoted by: SERUM':'Serum Aliquoted by',
+                     'AVERAGE COUNT per mL (x10^6)':'Average Cell Count per mL (x10^6)',
+                     'CELL COUNTER CELL COUNT':'Total Cell Count (x10^6)',
+                     'VOL PBS':'Total Cell Volume'}
+        correct_2p = {'#SST':'#SSTs',
+                      'CPT/EDTA VOLUME':'CPT/EDTA VOL',
+                      'Plasma Freeze Time':'Time put in -80: PLASMA',
+                      'Total # Aliqots frozen':'# Plasma Aliquots',
+                      'Serum Freeze Time':'Time put in -80: SERUM',
+                      'Total # Aliqots frozen.1':'# Serum Aliquots',
+                      'Average Count per mL (x10^6)':'Average Cell Count per mL (x10^6)',
+                      'Total cell count (x 10^6)':'Total Cell Count (x10^6)',
+                      '# cell per aliquot (x 10^6)':'# cells per aliquot',
+                      'Volume of PBS':'Total Cell Volume',
+                      'PBMC Freeze Time (in -80 in a frosty)':'Time put in -80: PBMC',
+                      'Comments': 'COMMENTS',
+                      'Date of specimen processed ': 'Date Processing Started',}
         dscf_info = pd.ExcelFile(util.dscf)
         bsl2p_samples = dscf_info.parse(sheet_name='BSL2+ Samples', header=1).rename(columns=correct_2p)
-        bsl2_samples = dscf_info.parse(sheet_name='BSL2 Samples')
+        bsl2_samples = dscf_info.parse(sheet_name='BSL2 Samples').rename(columns=correct_2)
         dscf_archive = pd.ExcelFile(util.proc + 'DSCF Archive/Data Sample Collection Form Archive.xlsx')
         bsl2p_archive = dscf_archive.parse(sheet_name='BSL2+ Samples', header=1).rename(columns=correct_2p)
-        bsl2_archive = dscf_archive.parse(sheet_name='BSL2 Samples')
+        bsl2_archive = dscf_archive.parse(sheet_name='BSL2 Samples').rename(columns=correct_2)
         correct_crp = {'CELL COUNTER (Total)': 'Cell Count',
                     '# Aliquots Frozen': '# of aliquots frozen',
                     'Total Volume of Serum after first spin (ml)': 'Total volume of serum (mL)',
@@ -150,7 +171,10 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=Fals
                     'SST Volume': 'SST VOL',
                     'Cell Tube Volume (mL)': 'CPT/EDTA VOL',
                     'Time in -80C (Serum)': 'Time put in -80: SERUM',
-                    'Time in Freezing Device': 'Time put in -80: PBMC',}
+                    'Time in -80C (Plasma)':'Time put in -80: PLASMA',
+                    'Time in Freezing Device': 'Time put in -80: PBMC',
+                    'Actual Aliquots':'# Plasma Aliquots',
+                    'Actual Aliquots.1':'# Serum Aliquots'}
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", message=".*extension is not supported.*", module='openpyxl')
             new_samples = pd.read_excel(util.proc + 'Processing Notebook.xlsx', sheet_name='Specimen Dashboard', header=1).rename(columns=correct_new)
@@ -178,6 +202,7 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=Fals
         'Time Received': 'rec_time',
         'Time Started Processing': 'proc_time',
         'Time put in -80: SERUM': 'serum_freeze_time',
+        'Time put in -80: PLASMA': 'plasma_freeze_time',
         'Time put in -80: PBMC': 'cell_freeze_time',
         'Processed by (initials)': 'proc_inits',
         '% Viability': 'viability',
