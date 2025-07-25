@@ -126,7 +126,6 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=Fals
     else:
         correct_2={'#SST':'#SSTs',
                      '# CPT/EDTA':'# Cell Tubes',
-                     'Date of specimen processed':'Date Processing Started',
                      'Total # Aliqots frozen':'# Plasma Aliquots',
                      'Aliquoted by: PLASMA':'Plasma Aliquoted by',
                      'Total # Aliqots frozen.1':'# Serum Aliquots',
@@ -142,11 +141,10 @@ def query_dscf(sid_list=None, no_pbmcs=set(), use_cache=False, update_cache=Fals
                       'Total # Aliqots frozen.1':'# Serum Aliquots',
                       'Average Count per mL (x10^6)':'Average Cell Count per mL (x10^6)',
                       'Total cell count (x 10^6)':'Total Cell Count (x10^6)',
-                      '# cell per aliquot (x 10^6)':'# cells per aliquot',
                       'Volume of PBS':'Total Cell Volume',
                       'PBMC Freeze Time (in -80 in a frosty)':'Time put in -80: PBMC',
                       'Comments': 'COMMENTS',
-                      'Date of specimen processed ': 'Date Processing Started',}
+                      'Date of specimen processed ': 'Date Processing Started'}
         dscf_info = pd.ExcelFile(util.dscf)
         bsl2p_samples = dscf_info.parse(sheet_name='BSL2+ Samples', header=1).rename(columns=correct_2p)
         bsl2_samples = dscf_info.parse(sheet_name='BSL2 Samples').rename(columns=correct_2)
